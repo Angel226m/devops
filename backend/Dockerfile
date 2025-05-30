@@ -1,5 +1,5 @@
 # Usar Go 1.23 (1.24 aún no existe)
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24.3-alpine AS builder
 
 WORKDIR /app
 
