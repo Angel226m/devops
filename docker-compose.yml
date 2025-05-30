@@ -24,6 +24,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    # Añadido límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
   backend:
     build:
@@ -42,9 +48,9 @@ services:
       - GIN_MODE=release
       - ENV=production
       - APP_ENV=production
-      - JWT_SECRET=${JWT_SECRET:-cambiar_este_secreto_en_produccion}
-      # ✅ CORS configurado para tu dominio específico
-      - CORS_ORIGIN=https://admin.angelproyect.com
+    # Añadido secretos para información sensible
+    secrets:
+      - jwt_secret
     expose:
       - "8080"  # Solo expuesto internamente
     depends_on:
@@ -59,6 +65,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    # Añadido límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build:
@@ -66,7 +78,6 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     environment:
-      # ✅ Frontend configurado para comunicarse internamente
       - REACT_APP_API_URL=https://admin.angelproyect.com/api
       - NODE_ENV=production
     expose:
@@ -82,6 +93,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    # Añadido límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
 
   nginx:
     image: nginx:alpine
@@ -106,11 +123,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Añadido límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
 
 volumes:
   postgres_data:
     driver: local
   nginx_logs:
+    driver: local
+  # Añadido volumen para certificados SSL
+  ssl_certs:
     driver: local
 
 networks:
@@ -118,4 +144,8 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16root@devops:~/final#
+        - subnet: 172.20.0.0/16
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
