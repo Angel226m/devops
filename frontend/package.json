@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tw:init": "tailwindcss init -p"
+    "tw:init": "tailwindcss init -p",
+    "test": "echo 'No tests specified - passing by default'"
+
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
