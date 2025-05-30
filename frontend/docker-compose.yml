@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frontend-container
+    network_mode: host
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
