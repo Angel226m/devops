@@ -1,0 +1,286 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+	"sistema-toursseft/internal/config"
+	"sistema-toursseft/internal/controladores"
+	"sistema-toursseft/internal/repositorios"
+	"sistema-toursseft/internal/rutas"
+	"sistema-toursseft/internal/servicios"
+	"sistema-toursseft/internal/utils"
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
+)
+
+func main() {
+	// Cargar configuración
+	cfg := config.LoadConfig()
+
+	// Configurar modo de Gin según entorno
+	if cfg.Env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Inicializar router
+	router := gin.Default()
+
+	// Middleware de recuperación y logging
+	router.Use(gin.Recovery())
+	router.Use(gin.Logger())
+
+	// ✅ CORS configurado para recibir desde admin.angelproyect.com
+	corsConfig := cors.Config{
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+			"X-CSRF-Token",
+		},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+		AllowWildcard:    false, // ⚠️ Seguridad en producción
+		AllowWebSockets:  true,
+	}
+
+	// 🔄 Configurar orígenes según el entorno
+	if cfg.Env == "production" {
+		corsConfig.AllowOrigins = []string{
+			"https://admin.angelproyect.com",
+			"https://www.admin.angelproyect.com",
+		}
+		log.Println("✅ CORS configurado para producción: admin.angelproyect.com")
+	} else {
+		corsConfig.AllowOrigins = []string{
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+			"https://localhost:5173",
+		}
+		log.Println("ℹ️ CORS configurado para desarrollo")
+	}
+
+	router.Use(cors.New(corsConfig))
+
+	// ✅ Health check mejorado
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":    "ok",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"version":   "1.0.0",
+			"service":   "sistema-tours-api",
+			"env":       cfg.Env,
+			"cors":      corsConfig.AllowOrigins,
+		})
+	})
+
+	// ✅ Health check adicional para API
+	router.GET("/api/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "ok",
+			"api":     "sistema-tours",
+			"version": "1.0.0",
+		})
+	})
+
+	utils.InitValidator()
+
+	// Conectar a la base de datos con reintentos
+	db, err := connectDBWithRetry(cfg)
+	if err != nil {
+		log.Fatalf("❌ Error al conectar a la base de datos: %v", err)
+	}
+	defer db.Close()
+
+	log.Println("📋 Ejecutando migraciones...")
+	if err := runMigrations(db); err != nil {
+		log.Fatalf("❌ Error al ejecutar migraciones: %v", err)
+	}
+
+	// Inicializar repositorios
+	usuarioRepo := repositorios.NewUsuarioRepository(db)
+	idiomaRepo := repositorios.NewIdiomaRepository(db)
+	embarcacionRepo := repositorios.NewEmbarcacionRepository(db)
+	usuarioIdiomaRepo := repositorios.NewUsuarioIdiomaRepository(db)
+	sedeRepo := repositorios.NewSedeRepository(db)
+	tipoTourRepo := repositorios.NewTipoTourRepository(db)
+	tipoTourGaleriaRepo := repositorios.NewTipoTourGaleriaRepository(db)
+	horarioTourRepo := repositorios.NewHorarioTourRepository(db)
+	horarioChoferRepo := repositorios.NewHorarioChoferRepository(db)
+	tourProgramadoRepo := repositorios.NewTourProgramadoRepository(db)
+	metodoPagoRepo := repositorios.NewMetodoPagoRepository(db)
+	tipoPasajeRepo := repositorios.NewTipoPasajeRepository(db)
+	canalVentaRepo := repositorios.NewCanalVentaRepository(db)
+	clienteRepo := repositorios.NewClienteRepository(db)
+	reservaRepo := repositorios.NewReservaRepository(db)
+	pagoRepo := repositorios.NewPagoRepository(db)
+	comprobantePagoRepo := repositorios.NewComprobantePagoRepository(db)
+
+	// Inicializar servicios
+	authService := servicios.NewAuthService(usuarioRepo, sedeRepo, cfg)
+	usuarioService := servicios.NewUsuarioService(usuarioRepo, usuarioIdiomaRepo)
+	usuarioIdiomaService := servicios.NewUsuarioIdiomaService(usuarioIdiomaRepo, idiomaRepo, usuarioRepo)
+	idiomaService := servicios.NewIdiomaService(idiomaRepo)
+	sedeService := servicios.NewSedeService(sedeRepo)
+	embarcacionService := servicios.NewEmbarcacionService(embarcacionRepo, sedeRepo)
+	tipoTourService := servicios.NewTipoTourService(tipoTourRepo, sedeRepo, idiomaRepo)
+	tipoTourGaleriaService := servicios.NewTipoTourGaleriaService(tipoTourGaleriaRepo, tipoTourRepo)
+	horarioTourService := servicios.NewHorarioTourService(horarioTourRepo, tipoTourRepo, sedeRepo)
+	horarioChoferService := servicios.NewHorarioChoferService(horarioChoferRepo, usuarioRepo, sedeRepo)
+
+	tourProgramadoService := servicios.NewTourProgramadoService(
+		tourProgramadoRepo, tipoTourRepo, embarcacionRepo,
+		horarioTourRepo, sedeRepo, usuarioRepo,
+	)
+
+	metodoPagoService := servicios.NewMetodoPagoService(metodoPagoRepo, sedeRepo)
+	tipoPasajeService := servicios.NewTipoPasajeService(tipoPasajeRepo, sedeRepo)
+	canalVentaService := servicios.NewCanalVentaService(canalVentaRepo, sedeRepo)
+	clienteService := servicios.NewClienteService(clienteRepo, cfg)
+
+	reservaService := servicios.NewReservaService(
+		db, reservaRepo, clienteRepo, tourProgramadoRepo,
+		canalVentaRepo, tipoPasajeRepo, usuarioRepo, sedeRepo,
+	)
+
+	pagoService := servicios.NewPagoService(
+		pagoRepo, reservaRepo, metodoPagoRepo, canalVentaRepo, sedeRepo,
+	)
+
+	comprobantePagoService := servicios.NewComprobantePagoService(
+		comprobantePagoRepo, reservaRepo, pagoRepo, sedeRepo,
+	)
+
+	// Middleware global para configuración
+	router.Use(func(c *gin.Context) {
+		c.Set("config", cfg)
+		c.Next()
+	})
+
+	// Inicializar controladores
+	authController := controladores.NewAuthController(authService)
+	usuarioController := controladores.NewUsuarioController(usuarioService)
+	idiomaController := controladores.NewIdiomaController(idiomaService)
+	usuarioIdiomaController := controladores.NewUsuarioIdiomaController(usuarioIdiomaService)
+	embarcacionController := controladores.NewEmbarcacionController(embarcacionService)
+	tipoTourController := controladores.NewTipoTourController(tipoTourService)
+	tipoTourGaleriaController := controladores.NewTipoTourGaleriaController(tipoTourGaleriaService)
+	horarioTourController := controladores.NewHorarioTourController(horarioTourService)
+	horarioChoferController := controladores.NewHorarioChoferController(horarioChoferService)
+	tourProgramadoController := controladores.NewTourProgramadoController(tourProgramadoService)
+	metodoPagoController := controladores.NewMetodoPagoController(metodoPagoService)
+	tipoPasajeController := controladores.NewTipoPasajeController(tipoPasajeService)
+	canalVentaController := controladores.NewCanalVentaController(canalVentaService)
+	sedeController := controladores.NewSedeController(sedeService)
+	clienteController := controladores.NewClienteController(clienteService, cfg)
+	reservaController := controladores.NewReservaController(reservaService)
+	pagoController := controladores.NewPagoController(pagoService)
+	comprobantePagoController := controladores.NewComprobantePagoController(comprobantePagoService)
+
+	// Configurar rutas
+	rutas.SetupRoutes(
+		router, cfg, authController, usuarioController, idiomaController,
+		usuarioIdiomaController, embarcacionController, tipoTourController,
+		horarioTourController, horarioChoferController, tourProgramadoController,
+		tipoPasajeController, metodoPagoController, canalVentaController,
+		clienteController, reservaController, pagoController,
+		comprobantePagoController, sedeController, tipoTourGaleriaController,
+	)
+
+	// Iniciar servidor
+	serverAddr := fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort)
+	log.Printf("🚀 Servidor iniciado en %s (entorno: %s)", serverAddr, cfg.Env)
+	if err := router.Run(serverAddr); err != nil {
+		log.Fatalf("❌ Error al iniciar servidor: %v", err)
+	}
+}
+
+// ✅ Función de conexión mejorada
+func connectDBWithRetry(cfg *config.Config) (*sql.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode,
+	)
+
+	if cfg.Env != "production" {
+		log.Printf("🔗 DSN: %s", dsn)
+	} else {
+		log.Printf("🔗 Conectando a: %s:%s/%s", cfg.DBHost, cfg.DBPort, cfg.DBName)
+	}
+
+	var db *sql.DB
+	var err error
+	maxRetries := 10
+	retryInterval := 5 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		log.Printf("🔄 Conectando a DB (intento %d/%d)...", i+1, maxRetries)
+
+		db, err = sql.Open("postgres", dsn)
+		if err != nil {
+			log.Printf("❌ Error al abrir conexión: %v. Reintentando en %s...", err, retryInterval)
+			time.Sleep(retryInterval)
+			continue
+		}
+
+		// Configurar pool de conexiones
+		db.SetMaxOpenConns(25)
+		db.SetMaxIdleConns(5)
+		db.SetConnMaxLifetime(5 * time.Minute)
+
+		err = db.Ping()
+		if err == nil {
+			log.Println("✅ Conexión exitosa a la base de datos")
+			return db, nil
+		}
+
+		log.Printf("❌ Error al verificar conexión: %v. Reintentando en %s...", err, retryInterval)
+		db.Close()
+		time.Sleep(retryInterval)
+	}
+
+	return nil, fmt.Errorf("❌ No se pudo conectar a la base de datos después de %d intentos: %v", maxRetries, err)
+}
+
+// ✅ Migraciones mejoradas
+func runMigrations(db *sql.DB) error {
+	var existsSede bool
+	err := db.QueryRow("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sede')").Scan(&existsSede)
+	if err != nil {
+		return fmt.Errorf("error al verificar tabla sede: %v", err)
+	}
+
+	if !existsSede {
+		log.Println("📋 Ejecutando migraciones iniciales...")
+
+		migrationPath := "./migrations/crear_tablas.sql"
+		if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
+			migrationPath = "/app/migrations/crear_tablas.sql"
+		}
+
+		migrationFile, err := os.ReadFile(migrationPath)
+		if err != nil {
+			return fmt.Errorf("error al leer archivo de migración: %v", err)
+		}
+
+		_, err = db.Exec(string(migrationFile))
+		if err != nil {
+			return fmt.Errorf("error al ejecutar migraciones: %v", err)
+		}
+
+		log.Println("✅ Migraciones iniciales completadas")
+	} else {
+		log.Println("ℹ️ Base de datos ya inicializada, saltando migraciones")
+	}
+
+	return nil
+}

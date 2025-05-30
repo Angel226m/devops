@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sistema-tours-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+      - POSTGRES_DB=sistema_tours
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    ports:
+      - "127.0.0.1:5432:5432"  # Solo acceso local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sistema_tours"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sistema_tours
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres123
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - GIN_MODE=release
+      - ENV=production
+      - APP_ENV=production
+      - JWT_SECRET=angel_proyecto_tours_2025_jwt_secret_muy_largo_y_seguro
+      # ✅ CORS configurado para recibir desde nginx
+      - CORS_ORIGIN=https://admin.angelproyect.com
+    ports:
+      - "127.0.0.1:8080:8080"  # Solo acceso local para nginx
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  backend-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16

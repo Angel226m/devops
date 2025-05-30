@@ -1,0 +1,294 @@
+package repositorios
+
+import (
+	"database/sql"
+	"errors"
+	"sistema-toursseft/internal/entidades"
+)
+
+// TipoTourRepository maneja las operaciones de base de datos para tipos de tour
+type TipoTourRepository struct {
+	db *sql.DB
+}
+
+// NewTipoTourRepository crea una nueva instancia del repositorio
+func NewTipoTourRepository(db *sql.DB) *TipoTourRepository {
+	return &TipoTourRepository{
+		db: db,
+	}
+}
+
+// GetByID obtiene un tipo de tour por su ID
+func (r *TipoTourRepository) GetByID(id int) (*entidades.TipoTour, error) {
+	tipoTour := &entidades.TipoTour{}
+	query := `SELECT t.id_tipo_tour, t.id_sede, t.id_idioma, t.nombre, t.descripcion, 
+              t.duracion_minutos, t.cantidad_pasajeros, 
+              t.url_imagen, t.eliminado, s.nombre as nombre_sede,
+              COALESCE(i.nombre, '') as nombre_idioma
+              FROM tipo_tour t
+              INNER JOIN sede s ON t.id_sede = s.id_sede
+              LEFT JOIN idioma i ON t.id_idioma = i.id_idioma
+              WHERE t.id_tipo_tour = $1`
+
+	var descripcion sql.NullString
+	var urlImagen sql.NullString
+	var idIdioma sql.NullInt64
+
+	err := r.db.QueryRow(query, id).Scan(
+		&tipoTour.ID, &tipoTour.IDSede, &idIdioma, &tipoTour.Nombre, &descripcion,
+		&tipoTour.DuracionMinutos, &tipoTour.CantidadPasajeros,
+		&urlImagen, &tipoTour.Eliminado, &tipoTour.NombreSede, &tipoTour.NombreIdioma,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("tipo de tour no encontrado")
+		}
+		return nil, err
+	}
+
+	tipoTour.IDIdioma = idIdioma
+	tipoTour.Descripcion = descripcion
+	tipoTour.URLImagen = urlImagen
+
+	return tipoTour, nil
+}
+
+// GetByNombre obtiene un tipo de tour por su nombre
+func (r *TipoTourRepository) GetByNombre(nombre string, idSede int) (*entidades.TipoTour, error) {
+	tipoTour := &entidades.TipoTour{}
+	query := `SELECT id_tipo_tour, id_sede, id_idioma, nombre, descripcion, 
+              duracion_minutos, cantidad_pasajeros, 
+              url_imagen, eliminado
+              FROM tipo_tour
+              WHERE nombre = $1 AND id_sede = $2`
+
+	var descripcion sql.NullString
+	var urlImagen sql.NullString
+	var idIdioma sql.NullInt64
+
+	err := r.db.QueryRow(query, nombre, idSede).Scan(
+		&tipoTour.ID, &tipoTour.IDSede, &idIdioma, &tipoTour.Nombre, &descripcion,
+		&tipoTour.DuracionMinutos, &tipoTour.CantidadPasajeros,
+		&urlImagen, &tipoTour.Eliminado,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("tipo de tour no encontrado")
+		}
+		return nil, err
+	}
+
+	tipoTour.IDIdioma = idIdioma
+	tipoTour.Descripcion = descripcion
+	tipoTour.URLImagen = urlImagen
+
+	return tipoTour, nil
+}
+
+// Create guarda un nuevo tipo de tour en la base de datos
+func (r *TipoTourRepository) Create(tipoTour *entidades.NuevoTipoTourRequest) (int, error) {
+	var id int
+	query := `INSERT INTO tipo_tour (id_sede, id_idioma, nombre, descripcion, duracion_minutos, 
+              cantidad_pasajeros, url_imagen, eliminado)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, false)
+              RETURNING id_tipo_tour`
+
+	err := r.db.QueryRow(
+		query,
+		tipoTour.IDSede,
+		tipoTour.IDIdioma,
+		tipoTour.Nombre,
+		tipoTour.Descripcion,
+		tipoTour.DuracionMinutos,
+		tipoTour.CantidadPasajeros,
+		tipoTour.URLImagen,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+// Update actualiza la información de un tipo de tour
+func (r *TipoTourRepository) Update(id int, tipoTour *entidades.ActualizarTipoTourRequest) error {
+	query := `UPDATE tipo_tour SET
+              id_sede = $1,
+              id_idioma = $2,
+              nombre = $3,
+              descripcion = $4,
+              duracion_minutos = $5,
+              cantidad_pasajeros = $6,
+              url_imagen = $7,
+              eliminado = $8
+              WHERE id_tipo_tour = $9`
+
+	_, err := r.db.Exec(
+		query,
+		tipoTour.IDSede,
+		tipoTour.IDIdioma,
+		tipoTour.Nombre,
+		tipoTour.Descripcion,
+		tipoTour.DuracionMinutos,
+		tipoTour.CantidadPasajeros,
+		tipoTour.URLImagen,
+		tipoTour.Eliminado,
+		id,
+	)
+
+	return err
+}
+
+// Delete marca un tipo de tour como eliminado (borrado lógico)
+func (r *TipoTourRepository) Delete(id int) error {
+	query := `UPDATE tipo_tour SET eliminado = true WHERE id_tipo_tour = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}
+
+// List lista todos los tipos de tour no eliminados
+func (r *TipoTourRepository) List() ([]*entidades.TipoTour, error) {
+	query := `SELECT t.id_tipo_tour, t.id_sede, t.id_idioma, t.nombre, t.descripcion, 
+              t.duracion_minutos, t.cantidad_pasajeros, 
+              t.url_imagen, t.eliminado, s.nombre as nombre_sede,
+              COALESCE(i.nombre, '') as nombre_idioma
+              FROM tipo_tour t
+              INNER JOIN sede s ON t.id_sede = s.id_sede
+              LEFT JOIN idioma i ON t.id_idioma = i.id_idioma
+              WHERE t.eliminado = false
+              ORDER BY t.nombre`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tiposTour := []*entidades.TipoTour{}
+
+	for rows.Next() {
+		tipoTour := &entidades.TipoTour{}
+		var descripcion sql.NullString
+		var urlImagen sql.NullString
+		var idIdioma sql.NullInt64
+
+		err := rows.Scan(
+			&tipoTour.ID, &tipoTour.IDSede, &idIdioma, &tipoTour.Nombre, &descripcion,
+			&tipoTour.DuracionMinutos, &tipoTour.CantidadPasajeros,
+			&urlImagen, &tipoTour.Eliminado, &tipoTour.NombreSede, &tipoTour.NombreIdioma,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tipoTour.IDIdioma = idIdioma
+		tipoTour.Descripcion = descripcion
+		tipoTour.URLImagen = urlImagen
+		tiposTour = append(tiposTour, tipoTour)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tiposTour, nil
+}
+
+// ListBySede lista todos los tipos de tour de una sede específica
+func (r *TipoTourRepository) ListBySede(idSede int) ([]*entidades.TipoTour, error) {
+	query := `SELECT t.id_tipo_tour, t.id_sede, t.id_idioma, t.nombre, t.descripcion, 
+              t.duracion_minutos, t.cantidad_pasajeros, 
+              t.url_imagen, t.eliminado, s.nombre as nombre_sede,
+              COALESCE(i.nombre, '') as nombre_idioma
+              FROM tipo_tour t
+              INNER JOIN sede s ON t.id_sede = s.id_sede
+              LEFT JOIN idioma i ON t.id_idioma = i.id_idioma
+              WHERE t.id_sede = $1 AND t.eliminado = false
+              ORDER BY t.nombre`
+
+	rows, err := r.db.Query(query, idSede)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tiposTour := []*entidades.TipoTour{}
+
+	for rows.Next() {
+		tipoTour := &entidades.TipoTour{}
+		var descripcion sql.NullString
+		var urlImagen sql.NullString
+		var idIdioma sql.NullInt64
+
+		err := rows.Scan(
+			&tipoTour.ID, &tipoTour.IDSede, &idIdioma, &tipoTour.Nombre, &descripcion,
+			&tipoTour.DuracionMinutos, &tipoTour.CantidadPasajeros,
+			&urlImagen, &tipoTour.Eliminado, &tipoTour.NombreSede, &tipoTour.NombreIdioma,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tipoTour.IDIdioma = idIdioma
+		tipoTour.Descripcion = descripcion
+		tipoTour.URLImagen = urlImagen
+		tiposTour = append(tiposTour, tipoTour)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tiposTour, nil
+}
+
+// ListByIdioma lista todos los tipos de tour de un idioma específico
+func (r *TipoTourRepository) ListByIdioma(idIdioma int) ([]*entidades.TipoTour, error) {
+	query := `SELECT t.id_tipo_tour, t.id_sede, t.id_idioma, t.nombre, t.descripcion, 
+              t.duracion_minutos, t.cantidad_pasajeros, 
+              t.url_imagen, t.eliminado, s.nombre as nombre_sede,
+              i.nombre as nombre_idioma
+              FROM tipo_tour t
+              INNER JOIN sede s ON t.id_sede = s.id_sede
+              INNER JOIN idioma i ON t.id_idioma = i.id_idioma
+              WHERE t.id_idioma = $1 AND t.eliminado = false
+              ORDER BY t.nombre`
+
+	rows, err := r.db.Query(query, idIdioma)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tiposTour := []*entidades.TipoTour{}
+
+	for rows.Next() {
+		tipoTour := &entidades.TipoTour{}
+		var descripcion sql.NullString
+		var urlImagen sql.NullString
+		var idIdioma sql.NullInt64
+
+		err := rows.Scan(
+			&tipoTour.ID, &tipoTour.IDSede, &idIdioma, &tipoTour.Nombre, &descripcion,
+			&tipoTour.DuracionMinutos, &tipoTour.CantidadPasajeros,
+			&urlImagen, &tipoTour.Eliminado, &tipoTour.NombreSede, &tipoTour.NombreIdioma,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tipoTour.IDIdioma = idIdioma
+		tipoTour.Descripcion = descripcion
+		tipoTour.URLImagen = urlImagen
+		tiposTour = append(tiposTour, tipoTour)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tiposTour, nil
+}
