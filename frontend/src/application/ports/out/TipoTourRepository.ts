@@ -1,12 +1,15 @@
- 
-import { TipoTour, TipoTourCreacion, TipoTourActualizacion } from '../../../domain/entities/TipoTour';
+import {
+  TipoTour,
+  NuevoTipoTourRequest,
+  ActualizarTipoTourRequest
+} from '../../../domain/entities/TipoTour';
 
+// TipoTour Repository
 export interface TipoTourRepository {
-  listar(): Promise<TipoTour[]>;
-  listarPorSede(idSede: number): Promise<TipoTour[]>;
-  listarPorIdioma(idIdioma: number): Promise<TipoTour[]>;
-  obtenerPorId(id: number): Promise<TipoTour | null>;
-  crear(tipoTour: TipoTourCreacion): Promise<TipoTour>;
-  actualizar(id: number, tipoTour: TipoTourActualizacion): Promise<TipoTour>;
-  eliminar(id: number): Promise<boolean>;
+  create(tipoTour: NuevoTipoTourRequest): Promise<number>;
+  findById(id: number): Promise<TipoTour>;
+  update(id: number, tipoTour: ActualizarTipoTourRequest): Promise<void>;
+  delete(id: number): Promise<void>;
+  findAll(): Promise<TipoTour[]>;
+  findBySede(idSede: number): Promise<TipoTour[]>;
 }

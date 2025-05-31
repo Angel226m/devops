@@ -1,11 +1,14 @@
- 
-import { TipoTour, TipoTourCreacion } from '../../../domain/entities/TipoTour';
 import { TipoTourRepository } from '../../ports/out/TipoTourRepository';
+import { NuevoTipoTourRequest } from '../../../domain/entities/TipoTour';
 
 export class CrearTipoTour {
-  constructor(private tipoTourRepository: TipoTourRepository) {}
+  private repository: TipoTourRepository;
 
-  async execute(tipoTour: TipoTourCreacion): Promise<TipoTour> {
-    return this.tipoTourRepository.crear(tipoTour);
+  constructor(repository: TipoTourRepository) {
+    this.repository = repository;
+  }
+
+  async execute(request: NuevoTipoTourRequest): Promise<number> {
+    return this.repository.create(request);
   }
 }

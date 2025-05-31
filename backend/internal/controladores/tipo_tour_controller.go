@@ -155,23 +155,3 @@ func (c *TipoTourController) ListBySede(ctx *gin.Context) {
 	// Respuesta exitosa
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Tipos de tour de la sede listados exitosamente", tiposTour))
 }
-
-// ListByIdioma lista todos los tipos de tour de un idioma específico
-func (c *TipoTourController) ListByIdioma(ctx *gin.Context) {
-	// Parsear ID del idioma de la URL
-	idIdioma, err := strconv.Atoi(ctx.Param("idIdioma"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de idioma inválido", err))
-		return
-	}
-
-	// Listar tipos de tour del idioma
-	tiposTour, err := c.tipoTourService.ListByIdioma(idIdioma)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar tipos de tour del idioma", err))
-		return
-	}
-
-	// Respuesta exitosa
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Tipos de tour del idioma listados exitosamente", tiposTour))
-}

@@ -110,15 +110,18 @@ func main() {
 	usuarioRepo := repositorios.NewUsuarioRepository(db)
 	idiomaRepo := repositorios.NewIdiomaRepository(db)
 	embarcacionRepo := repositorios.NewEmbarcacionRepository(db)
-	usuarioIdiomaRepo := repositorios.NewUsuarioIdiomaRepository(db)
+	usuarioIdiomaRepo := repositorios.NewUsuarioIdiomaRepository(db) // Nuevo repositorio
+
 	sedeRepo := repositorios.NewSedeRepository(db)
 	tipoTourRepo := repositorios.NewTipoTourRepository(db)
-	tipoTourGaleriaRepo := repositorios.NewTipoTourGaleriaRepository(db)
+
 	horarioTourRepo := repositorios.NewHorarioTourRepository(db)
 	horarioChoferRepo := repositorios.NewHorarioChoferRepository(db)
 	tourProgramadoRepo := repositorios.NewTourProgramadoRepository(db)
 	metodoPagoRepo := repositorios.NewMetodoPagoRepository(db)
 	tipoPasajeRepo := repositorios.NewTipoPasajeRepository(db)
+	paquetePasajesRepo := repositorios.NewPaquetePasajesRepository(db)
+
 	canalVentaRepo := repositorios.NewCanalVentaRepository(db)
 	clienteRepo := repositorios.NewClienteRepository(db)
 	reservaRepo := repositorios.NewReservaRepository(db)
@@ -127,39 +130,62 @@ func main() {
 
 	// Inicializar servicios
 	authService := servicios.NewAuthService(usuarioRepo, sedeRepo, cfg)
-	usuarioService := servicios.NewUsuarioService(usuarioRepo, usuarioIdiomaRepo)
-	usuarioIdiomaService := servicios.NewUsuarioIdiomaService(usuarioIdiomaRepo, idiomaRepo, usuarioRepo)
+	//usuarioService := servicios.NewUsuarioService(usuarioRepo)
+	usuarioService := servicios.NewUsuarioService(usuarioRepo, usuarioIdiomaRepo)                         // Modificado para incluir usuarioIdiomaRepo
+	usuarioIdiomaService := servicios.NewUsuarioIdiomaService(usuarioIdiomaRepo, idiomaRepo, usuarioRepo) // Nuevo servicio
+
 	idiomaService := servicios.NewIdiomaService(idiomaRepo)
 	sedeService := servicios.NewSedeService(sedeRepo)
 	embarcacionService := servicios.NewEmbarcacionService(embarcacionRepo, sedeRepo)
-	tipoTourService := servicios.NewTipoTourService(tipoTourRepo, sedeRepo, idiomaRepo)
-	tipoTourGaleriaService := servicios.NewTipoTourGaleriaService(tipoTourGaleriaRepo, tipoTourRepo)
+	tipoTourService := servicios.NewTipoTourService(tipoTourRepo, sedeRepo)
+	paquetePasajesService := servicios.NewPaquetePasajesService(paquetePasajesRepo, sedeRepo, tipoTourRepo)
+
 	horarioTourService := servicios.NewHorarioTourService(horarioTourRepo, tipoTourRepo, sedeRepo)
 	horarioChoferService := servicios.NewHorarioChoferService(horarioChoferRepo, usuarioRepo, sedeRepo)
 
+	// 🔧 LÍNEA CORREGIDA - Verifica el orden de parámetros en tu constructor TourProgramadoService
 	tourProgramadoService := servicios.NewTourProgramadoService(
-		tourProgramadoRepo, tipoTourRepo, embarcacionRepo,
-		horarioTourRepo, sedeRepo, usuarioRepo,
+		tourProgramadoRepo,
+		tipoTourRepo,
+		embarcacionRepo,
+		horarioTourRepo,
+		sedeRepo,
+		usuarioRepo, // *repositorios.UsuarioRepository <- FALTA ESTE
 	)
 
 	metodoPagoService := servicios.NewMetodoPagoService(metodoPagoRepo, sedeRepo)
-	tipoPasajeService := servicios.NewTipoPasajeService(tipoPasajeRepo, sedeRepo)
+	tipoPasajeService := servicios.NewTipoPasajeService(tipoPasajeRepo, sedeRepo, tipoTourRepo)
 	canalVentaService := servicios.NewCanalVentaService(canalVentaRepo, sedeRepo)
 	clienteService := servicios.NewClienteService(clienteRepo, cfg)
 
+	// Servicios de reserva
 	reservaService := servicios.NewReservaService(
-		db, reservaRepo, clienteRepo, tourProgramadoRepo,
-		canalVentaRepo, tipoPasajeRepo, usuarioRepo, sedeRepo,
+		db,
+		reservaRepo,
+		clienteRepo,
+		tourProgramadoRepo,
+		canalVentaRepo,
+		tipoPasajeRepo,
+		usuarioRepo,
+		sedeRepo,
 	)
 
+	// Servicios de pago
 	pagoService := servicios.NewPagoService(
-		pagoRepo, reservaRepo, metodoPagoRepo, canalVentaRepo, sedeRepo,
+		pagoRepo,
+		reservaRepo,
+		metodoPagoRepo,
+		canalVentaRepo,
+		sedeRepo,
 	)
 
+	// Servicios de comprobante de pago
 	comprobantePagoService := servicios.NewComprobantePagoService(
-		comprobantePagoRepo, reservaRepo, pagoRepo, sedeRepo,
+		comprobantePagoRepo,
+		reservaRepo,
+		pagoRepo,
+		sedeRepo,
 	)
-
 	// Middleware global para configuración
 	router.Use(func(c *gin.Context) {
 		c.Set("config", cfg)
@@ -170,15 +196,16 @@ func main() {
 	authController := controladores.NewAuthController(authService)
 	usuarioController := controladores.NewUsuarioController(usuarioService)
 	idiomaController := controladores.NewIdiomaController(idiomaService)
-	usuarioIdiomaController := controladores.NewUsuarioIdiomaController(usuarioIdiomaService)
+	usuarioIdiomaController := controladores.NewUsuarioIdiomaController(usuarioIdiomaService) // Nuevo controlador
 	embarcacionController := controladores.NewEmbarcacionController(embarcacionService)
 	tipoTourController := controladores.NewTipoTourController(tipoTourService)
-	tipoTourGaleriaController := controladores.NewTipoTourGaleriaController(tipoTourGaleriaService)
 	horarioTourController := controladores.NewHorarioTourController(horarioTourService)
 	horarioChoferController := controladores.NewHorarioChoferController(horarioChoferService)
 	tourProgramadoController := controladores.NewTourProgramadoController(tourProgramadoService)
 	metodoPagoController := controladores.NewMetodoPagoController(metodoPagoService)
 	tipoPasajeController := controladores.NewTipoPasajeController(tipoPasajeService)
+	paquetePasajesController := controladores.NewPaquetePasajesController(paquetePasajesService)
+
 	canalVentaController := controladores.NewCanalVentaController(canalVentaService)
 	sedeController := controladores.NewSedeController(sedeService)
 	clienteController := controladores.NewClienteController(clienteService, cfg)
@@ -188,12 +215,26 @@ func main() {
 
 	// Configurar rutas
 	rutas.SetupRoutes(
-		router, cfg, authController, usuarioController, idiomaController,
-		usuarioIdiomaController, embarcacionController, tipoTourController,
-		horarioTourController, horarioChoferController, tourProgramadoController,
-		tipoPasajeController, metodoPagoController, canalVentaController,
-		clienteController, reservaController, pagoController,
-		comprobantePagoController, sedeController, tipoTourGaleriaController,
+		router,
+		cfg,
+		authController,
+		usuarioController,
+		idiomaController,
+		usuarioIdiomaController,
+		embarcacionController,
+		tipoTourController,
+		horarioTourController,
+		horarioChoferController,
+		tourProgramadoController,
+		tipoPasajeController,
+		paquetePasajesController, // Nuevo controlador
+		metodoPagoController,
+		canalVentaController,
+		clienteController,
+		reservaController,
+		pagoController,
+		comprobantePagoController,
+		sedeController,
 	)
 
 	// Iniciar servidor

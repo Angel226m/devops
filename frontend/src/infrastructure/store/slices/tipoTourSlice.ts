@@ -1,263 +1,246 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { TipoTour, TipoTourCreacion, TipoTourActualizacion } from '../../../domain/entities/TipoTour';
 import { TipoTourRepoHttp } from '../../repositories/TipoTourRepoHttp';
-import axios, { AxiosError } from 'axios';
+import { 
+  TipoTour, 
+  NuevoTipoTourRequest, 
+  ActualizarTipoTourRequest 
+} from '../../../domain/entities/TipoTour';
 
-const tipoTourRepo = new TipoTourRepoHttp();
+// Exportar la definición del estado
+export interface TipoTourState {
+  tiposTour: TipoTour[];
+  tipoTourActual: TipoTour | null;
+  loading: boolean;
+  error: string | null;
+  success: boolean;
+}
 
-// Función auxiliar para extraer el mensaje de error
-const getErrorMessage = (error: unknown): string => {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string }>;
-    return axiosError.response?.data?.message || axiosError.message || 'Error desconocido';
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+const initialState: TipoTourState = {
+  tiposTour: [],
+  tipoTourActual: null,
+  loading: false,
+  error: null,
+  success: false,
 };
+
+const repository = new TipoTourRepoHttp();
 
 // Thunks
 export const fetchTiposTour = createAsyncThunk(
-  'tiposTour/fetchAll',
+  'tipoTour/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      return await tipoTourRepo.listar();
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
-    }
-  }
-);
-
-export const fetchTiposTourPorSede = createAsyncThunk(
-  'tiposTour/fetchBySede',
-  async (idSede: number, { rejectWithValue }) => {
-    try {
-      return await tipoTourRepo.listarPorSede(idSede);
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
-    }
-  }
-);
-
-export const fetchTiposTourPorIdioma = createAsyncThunk(
-  'tiposTour/fetchByIdioma',
-  async (idIdioma: number, { rejectWithValue }) => {
-    try {
-      return await tipoTourRepo.listarPorIdioma(idIdioma);
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      return await repository.findAll();
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al obtener los tipos de tour');
     }
   }
 );
 
 export const fetchTipoTourPorId = createAsyncThunk(
-  'tiposTour/fetchById',
+  'tipoTour/fetchById',
   async (id: number, { rejectWithValue }) => {
     try {
-      const tipoTour = await tipoTourRepo.obtenerPorId(id);
-      if (!tipoTour) {
-        return rejectWithValue('Tipo de tour no encontrado');
-      }
-      return tipoTour;
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      return await repository.findById(id);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al obtener el tipo de tour');
     }
   }
 );
 
-export const createTipoTour = createAsyncThunk(
-  'tiposTour/create',
-  async (tipoTour: TipoTourCreacion, { rejectWithValue }) => {
+export const fetchTiposTourPorSede = createAsyncThunk(
+  'tipoTour/fetchBySede',
+  async (idSede: number, { rejectWithValue }) => {
     try {
-      return await tipoTourRepo.crear(tipoTour);
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      return await repository.findBySede(idSede);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al obtener los tipos de tour por sede');
     }
   }
 );
 
-export const updateTipoTour = createAsyncThunk(
-  'tiposTour/update',
-  async ({ id, tipoTour }: { id: number; tipoTour: TipoTourActualizacion }, { rejectWithValue }) => {
+export const fetchTiposTourPorIdioma = createAsyncThunk(
+  'tipoTour/fetchByIdioma',
+  async (idIdioma: number, { rejectWithValue }) => {
     try {
-      return await tipoTourRepo.actualizar(id, tipoTour);
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+      return await repository.findByIdioma(idIdioma);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al obtener los tipos de tour por idioma');
     }
   }
 );
 
-export const deleteTipoTour = createAsyncThunk(
-  'tiposTour/delete',
+export const crearTipoTour = createAsyncThunk(
+  'tipoTour/create',
+  async (tipoTour: NuevoTipoTourRequest, { rejectWithValue }) => {
+    try {
+      const id = await repository.create(tipoTour);
+      const nuevoTipoTour = await repository.findById(id);
+      return nuevoTipoTour;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al crear el tipo de tour');
+    }
+  }
+);
+
+export const actualizarTipoTour = createAsyncThunk(
+  'tipoTour/update',
+  async ({ id, tipoTour }: { id: number, tipoTour: ActualizarTipoTourRequest }, { rejectWithValue }) => {
+    try {
+      await repository.update(id, tipoTour);
+      const tipoTourActualizado = await repository.findById(id);
+      return tipoTourActualizado;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al actualizar el tipo de tour');
+    }
+  }
+);
+
+export const eliminarTipoTour = createAsyncThunk(
+  'tipoTour/delete',
   async (id: number, { rejectWithValue }) => {
     try {
-      await tipoTourRepo.eliminar(id);
+      await repository.delete(id);
       return id;
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al eliminar el tipo de tour');
     }
   }
 );
-
-// Definición del estado
-export interface TipoTourState {
-  tiposTour: TipoTour[];
-  tipoTourSeleccionado: TipoTour | null;
-  loading: boolean;
-  error: string | null;
-}
-
-const initialState: TipoTourState = {
-  tiposTour: [],
-  tipoTourSeleccionado: null,
-  loading: false,
-  error: null,
-};
 
 const tipoTourSlice = createSlice({
   name: 'tipoTour',
   initialState,
   reducers: {
-    resetTipoTourSeleccionado: (state) => {
-      state.tipoTourSeleccionado = null;
+    clearTipoTourActual: (state) => {
+      state.tipoTourActual = null;
     },
-    clearError: (state) => {
+    clearErrors: (state) => {
       state.error = null;
+      state.success = false;
+    },
+    setTipoTourActual: (state, action: PayloadAction<TipoTour>) => {
+      state.tipoTourActual = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch all
+      // fetchTiposTour
       .addCase(fetchTiposTour.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchTiposTour.fulfilled, (state, action: PayloadAction<TipoTour[]>) => {
-        state.tiposTour = action.payload || [];
+      .addCase(fetchTiposTour.fulfilled, (state, action) => {
         state.loading = false;
+        state.tiposTour = action.payload;
       })
       .addCase(fetchTiposTour.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
+        state.error = action.payload as string;
       })
       
-      // Fetch by Sede
-      .addCase(fetchTiposTourPorSede.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchTiposTourPorSede.fulfilled, (state, action: PayloadAction<TipoTour[]>) => {
-        state.tiposTour = action.payload || [];
-        state.loading = false;
-      })
-      .addCase(fetchTiposTourPorSede.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
-      })
-      
-      // Fetch by Idioma
-      .addCase(fetchTiposTourPorIdioma.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchTiposTourPorIdioma.fulfilled, (state, action: PayloadAction<TipoTour[]>) => {
-        state.tiposTour = action.payload || [];
-        state.loading = false;
-      })
-      .addCase(fetchTiposTourPorIdioma.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
-      })
-      
-      // Fetch by ID
+      // fetchTipoTourPorId
       .addCase(fetchTipoTourPorId.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchTipoTourPorId.fulfilled, (state, action: PayloadAction<TipoTour>) => {
-        state.tipoTourSeleccionado = action.payload;
+      .addCase(fetchTipoTourPorId.fulfilled, (state, action) => {
         state.loading = false;
+        state.tipoTourActual = action.payload;
       })
       .addCase(fetchTipoTourPorId.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
+        state.error = action.payload as string;
       })
       
-      // Create
-      .addCase(createTipoTour.pending, (state) => {
+      // fetchTiposTourPorSede
+      .addCase(fetchTiposTourPorSede.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(createTipoTour.fulfilled, (state, action: PayloadAction<TipoTour>) => {
-        if (action.payload) {
-          // Asegurarse de que tiposTour sea un array antes de usar push
-          if (!Array.isArray(state.tiposTour)) {
-            state.tiposTour = [];
-          }
-          state.tiposTour = [...state.tiposTour, action.payload];
-        }
+      .addCase(fetchTiposTourPorSede.fulfilled, (state, action) => {
         state.loading = false;
+        state.tiposTour = action.payload;
       })
-      .addCase(createTipoTour.rejected, (state, action) => {
+      .addCase(fetchTiposTourPorSede.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
+        state.error = action.payload as string;
       })
       
-      // Update
-      .addCase(updateTipoTour.pending, (state) => {
+      // fetchTiposTourPorIdioma
+      .addCase(fetchTiposTourPorIdioma.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateTipoTour.fulfilled, (state, action: PayloadAction<TipoTour>) => {
-        if (action.payload && action.payload.id_tipo_tour !== undefined) {
-          // Asegurarse de que tiposTour sea un array antes de buscar y modificar
-          if (Array.isArray(state.tiposTour)) {
-            const index = state.tiposTour.findIndex(t => 
-              t && t.id_tipo_tour !== undefined && t.id_tipo_tour === action.payload.id_tipo_tour
-            );
-            
-            if (index !== -1) {
-              state.tiposTour[index] = action.payload;
-            }
-          }
-          state.tipoTourSeleccionado = action.payload;
-        }
+      .addCase(fetchTiposTourPorIdioma.fulfilled, (state, action) => {
         state.loading = false;
+        state.tiposTour = action.payload;
       })
-      .addCase(updateTipoTour.rejected, (state, action) => {
+      .addCase(fetchTiposTourPorIdioma.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
+        state.error = action.payload as string;
       })
       
-      // Delete
-      .addCase(deleteTipoTour.pending, (state) => {
+      // crearTipoTour
+      .addCase(crearTipoTour.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
-      .addCase(deleteTipoTour.fulfilled, (state, action: PayloadAction<number>) => {
-        if (action.payload !== undefined) {
-          // Asegurarse de que tiposTour sea un array antes de filtrar
-          if (Array.isArray(state.tiposTour)) {
-            state.tiposTour = state.tiposTour.filter(t => 
-              t && t.id_tipo_tour !== undefined && t.id_tipo_tour !== action.payload
-            );
-          }
-          
-          if (state.tipoTourSeleccionado && 
-              state.tipoTourSeleccionado.id_tipo_tour !== undefined && 
-              state.tipoTourSeleccionado.id_tipo_tour === action.payload) {
-            state.tipoTourSeleccionado = null;
-          }
+      .addCase(crearTipoTour.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tiposTour.push(action.payload);
+        state.tipoTourActual = action.payload;
+        state.success = true;
+      })
+      .addCase(crearTipoTour.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.success = false;
+      })
+      
+      // actualizarTipoTour
+      .addCase(actualizarTipoTour.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = false;
+      })
+      .addCase(actualizarTipoTour.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tiposTour = state.tiposTour.map(tour => 
+          tour.id_tipo_tour === action.payload.id_tipo_tour ? action.payload : tour
+        );
+        state.tipoTourActual = action.payload;
+        state.success = true;
+      })
+      .addCase(actualizarTipoTour.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.success = false;
+      })
+      
+      // eliminarTipoTour
+      .addCase(eliminarTipoTour.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = false;
+      })
+      .addCase(eliminarTipoTour.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tiposTour = state.tiposTour.filter(tour => tour.id_tipo_tour !== action.payload);
+        if (state.tipoTourActual && state.tipoTourActual.id_tipo_tour === action.payload) {
+          state.tipoTourActual = null;
         }
-        state.loading = false;
+        state.success = true;
       })
-      .addCase(deleteTipoTour.rejected, (state, action) => {
+      .addCase(eliminarTipoTour.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string || 'Error desconocido';
+        state.error = action.payload as string;
+        state.success = false;
       });
-  },
+  }
 });
 
-export const { resetTipoTourSeleccionado, clearError } = tipoTourSlice.actions;
+export const { clearTipoTourActual, clearErrors, setTipoTourActual } = tipoTourSlice.actions;
+
 export default tipoTourSlice.reducer;

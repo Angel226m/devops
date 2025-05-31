@@ -1,10 +1,22 @@
-/*import React, { useState, useEffect } from 'react'; // Importar useState directamente
+ /*
+
+
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
 import { fetchUsuarioPorId, deleteUsuario, clearUsuarioSeleccionado } from '../../../store/slices/usuarioSlice';
-import { FiEdit, FiTrash2, FiArrowLeft } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiArrowLeft, FiGlobe, FiPlus } from 'react-icons/fi';
 import { fetchUserSedes } from '../../../store/slices/authSlice';
+
+// Interfaz para los idiomas del usuario
+interface IdiomaUsuario {
+  id_idioma: number;
+  nombre: string;
+  codigo: string;
+  nivel?: string;
+  fecha_asignacion?: string;
+}
 
 const UsuarioDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,20 +26,41 @@ const UsuarioDetail: React.FC = () => {
   const { usuarioSeleccionado, loading, error } = useSelector((state: RootState) => state.usuario);
   const { availableSedes } = useSelector((state: RootState) => state.auth);
   
-  // Usar useState directamente en lugar de React.useState
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
+  const [idiomasUsuario, setIdiomasUsuario] = useState<IdiomaUsuario[]>([]);
+  const [loadingIdiomas, setLoadingIdiomas] = useState(false);
 
   useEffect(() => {
     if (id) {
       dispatch(fetchUsuarioPorId(parseInt(id)));
       dispatch(fetchUserSedes());
+      fetchIdiomasUsuario(parseInt(id));
     }
     
     return () => {
       dispatch(clearUsuarioSeleccionado());
     };
   }, [dispatch, id]);
+
+  // Función para obtener los idiomas del usuario
+  const fetchIdiomasUsuario = async (userId: number) => {
+    setLoadingIdiomas(true);
+    try {
+      // Aquí deberías hacer la llamada a tu API
+      // const response = await api.get(`/admin/usuarios/${userId}/idiomas`);
+      // setIdiomasUsuario(response.data);
+      
+      // Por ahora, datos de ejemplo mientras implementas la llamada real:
+      setIdiomasUsuario([
+        { id_idioma: 1, nombre: 'Español', codigo: 'es', nivel: 'Nativo' },
+        { id_idioma: 2, nombre: 'Inglés', codigo: 'en', nivel: 'Intermedio' },
+      ]);
+    } catch (error) {
+      console.error('Error al cargar idiomas del usuario:', error);
+    } finally {
+      setLoadingIdiomas(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (id) {
@@ -48,20 +81,35 @@ const UsuarioDetail: React.FC = () => {
   };
 
   // Formatear fecha
-  // En la función formatDate, necesitamos cambiar el tipo de parámetro para aceptar null
-const formatDate = (dateString: string | undefined | null) => {
-  if (!dateString) return 'No disponible';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch (error) {
-    return String(dateString);
-  }
-};
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return 'No disponible';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return String(dateString);
+    }
+  };
+
+  // Obtener color de badge para el nivel de idioma
+  const getNivelColor = (nivel: string | undefined) => {
+    switch (nivel?.toLowerCase()) {
+      case 'nativo':
+        return 'bg-green-100 text-green-800';
+      case 'avanzado':
+        return 'bg-blue-100 text-blue-800';
+      case 'intermedio':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'básico':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (loading) {
     return <div className="p-4">Cargando...</div>;
@@ -217,6 +265,64 @@ const formatDate = (dateString: string | undefined | null) => {
             </div>
           </div>
         </div>
+
+        {/* Sección de Idiomas *//*}
+        <div className="bg-white rounded-lg shadow p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold border-b pb-2 flex items-center">
+              <FiGlobe className="mr-2" />
+              Idiomas
+            </h3>
+            <Link
+              to={`/admin/usuarios/${id}/idiomas`}
+              className="flex items-center px-3 py-1 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600"
+            >
+              <FiPlus className="mr-1" size={14} />
+              Gestionar
+            </Link>
+          </div>
+          
+          {loadingIdiomas ? (
+            <div className="flex justify-center py-4">
+              <div className="text-gray-500">Cargando idiomas...</div>
+            </div>
+          ) : idiomasUsuario.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {idiomasUsuario.map((idioma) => (
+                <div key={idioma.id_idioma} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-medium text-gray-900">{idioma.nombre}</div>
+                      <div className="text-sm text-gray-500">Código: {idioma.codigo}</div>
+                    </div>
+                    {idioma.nivel && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getNivelColor(idioma.nivel)}`}>
+                        {idioma.nivel}
+                      </span>
+                    )}
+                  </div>
+                  {idioma.fecha_asignacion && (
+                    <div className="text-xs text-gray-400 mt-2">
+                      Asignado: {formatDate(idioma.fecha_asignacion)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FiGlobe size={48} className="mx-auto mb-4 text-gray-300" />
+              <p>No hay idiomas asignados a este usuario</p>
+              <Link
+                to={`/admin/usuarios/${id}/idiomas`}
+                className="inline-flex items-center mt-3 px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600"
+              >
+                <FiPlus className="mr-2" size={16} />
+                Asignar primer idioma
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal de confirmación de eliminación *//*}
@@ -251,8 +357,7 @@ const formatDate = (dateString: string | undefined | null) => {
 
 export default UsuarioDetail;*/
 
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
@@ -280,21 +385,51 @@ const UsuarioDetail: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [idiomasUsuario, setIdiomasUsuario] = useState<IdiomaUsuario[]>([]);
   const [loadingIdiomas, setLoadingIdiomas] = useState(false);
+  
+  // Referencias para prevenir efectos múltiples
+  const dataFetchedRef = useRef<{
+    usuario: boolean;
+    sedes: boolean;
+    idiomas: boolean;
+  }>({
+    usuario: false,
+    sedes: false,
+    idiomas: false
+  });
 
+  // Cargar datos una sola vez usando un único efecto y referencias
   useEffect(() => {
-    if (id) {
+    // Cargar datos del usuario si es necesario
+    if (id && !dataFetchedRef.current.usuario) {
+      dataFetchedRef.current.usuario = true;
+      console.log(`⚡ Cargando datos del usuario ID: ${id}`);
       dispatch(fetchUsuarioPorId(parseInt(id)));
+    }
+    
+    // Cargar sedes si es necesario
+    if (!dataFetchedRef.current.sedes && availableSedes.length === 0) {
+      dataFetchedRef.current.sedes = true;
+      console.log("⚡ Cargando sedes disponibles");
       dispatch(fetchUserSedes());
+    }
+    
+    // Cargar idiomas del usuario si es necesario
+    if (id && !dataFetchedRef.current.idiomas) {
+      dataFetchedRef.current.idiomas = true;
+      console.log(`⚡ Cargando idiomas del usuario ID: ${id}`);
       fetchIdiomasUsuario(parseInt(id));
     }
     
+    // Limpiar al desmontar
     return () => {
       dispatch(clearUsuarioSeleccionado());
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, availableSedes.length]);
 
   // Función para obtener los idiomas del usuario
   const fetchIdiomasUsuario = async (userId: number) => {
+    if (loadingIdiomas) return; // Evitar múltiples solicitudes
+    
     setLoadingIdiomas(true);
     try {
       // Aquí deberías hacer la llamada a tu API
@@ -302,13 +437,15 @@ const UsuarioDetail: React.FC = () => {
       // setIdiomasUsuario(response.data);
       
       // Por ahora, datos de ejemplo mientras implementas la llamada real:
-      setIdiomasUsuario([
-        { id_idioma: 1, nombre: 'Español', codigo: 'es', nivel: 'Nativo' },
-        { id_idioma: 2, nombre: 'Inglés', codigo: 'en', nivel: 'Intermedio' },
-      ]);
+      setTimeout(() => {
+        setIdiomasUsuario([
+          { id_idioma: 1, nombre: 'Español', codigo: 'es', nivel: 'Nativo' },
+          { id_idioma: 2, nombre: 'Inglés', codigo: 'en', nivel: 'Intermedio' },
+        ]);
+        setLoadingIdiomas(false);
+      }, 500);
     } catch (error) {
       console.error('Error al cargar idiomas del usuario:', error);
-    } finally {
       setLoadingIdiomas(false);
     }
   };
@@ -362,7 +499,7 @@ const UsuarioDetail: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !usuarioSeleccionado) {
     return <div className="p-4">Cargando...</div>;
   }
 

@@ -1,7 +1,4 @@
- -- ===============================================
--- MIGRACIONES CORREGIDAS - SISTEMA TOURS
--- ===============================================
-
+ 
 -- Tabla sede
 CREATE TABLE sede (
     id_sede SERIAL PRIMARY KEY,

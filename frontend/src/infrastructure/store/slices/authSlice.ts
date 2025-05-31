@@ -733,7 +733,25 @@ export const logout = createAsyncThunk(
   }
 );
 
- 
+// Thunk para cambiar contraseña
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async ({ currentPassword, newPassword }: { 
+    currentPassword: string; 
+    newPassword: string 
+  }, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.post(endpoints.auth.changePassword, {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Error al cambiar contraseña');
+    }
+  }
+);
+
 // Slice
 const authSlice = createSlice({
   name: 'auth',
@@ -869,6 +887,19 @@ const authSlice = createSlice({
         return { ...initialState, sessionChecked: true };
       })
       
+      // Cambio de contraseña
+      .addCase(changePassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changePassword.fulfilled, (state) => {
+        state.isLoading = false;
+        // No es necesario modificar otros estados
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 

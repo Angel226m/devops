@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
-import { fetchTiposTour, deleteTipoTour, fetchTiposTourPorSede } from '../../../store/slices/tipoTourSlice';
+import { fetchTiposTour, eliminarTipoTour, fetchTiposTourPorSede } from '../../../store/slices/tipoTourSlice';
 import { fetchSedes } from '../../../store/slices/sedeSlice';
-import { fetchIdiomas } from '../../../store/slices/idiomaSlice';
 import Card from '../../components/Card';
 import Table from '../../components/Table';
 import Button from '../../components/Button';
@@ -20,11 +19,6 @@ const Icons = {
   Clock: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Users: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   ),
   Building: () => (
@@ -62,11 +56,6 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
-  ),
-  Language: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-    </svg>
   )
 };
 
@@ -77,14 +66,12 @@ const TipoTourList: React.FC = () => {
   const { tiposTour, loading, error } = useSelector((state: RootState) => state.tipoTour);
   const { selectedSede } = useSelector((state: RootState) => state.auth);
   const { sedes } = useSelector((state: RootState) => state.sede);
-  const { idiomas } = useSelector((state: RootState) => state.idioma);
   
   const [filtroSede, setFiltroSede] = useState<string>('');
   
   // Cargar datos necesarios
   useEffect(() => {
     dispatch(fetchSedes());
-    dispatch(fetchIdiomas());
     
     if (selectedSede?.id_sede) {
       // Intentar cargar por sede, pero manejar posibles errores
@@ -111,7 +98,7 @@ const TipoTourList: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm('¿Está seguro de que desea eliminar este tipo de tour?')) {
       try {
-        await dispatch(deleteTipoTour(id)).unwrap();
+        await dispatch(eliminarTipoTour(id)).unwrap();
         alert('Tipo de tour eliminado con éxito');
       } catch (error) {
         console.error('Error al eliminar:', error);
@@ -156,22 +143,6 @@ const TipoTourList: React.FC = () => {
     }
   };
   
-  // Obtener nombre de idioma
-  const getNombreIdioma = (idIdioma: number): string => {
-    try {
-      if (!Array.isArray(idiomas) || idiomas.length === 0) {
-        return `Idioma ${idIdioma}`;
-      }
-      
-      const idioma = idiomas.find(i => i && i.id_idioma === idIdioma);
-      return idioma?.nombre || `Idioma ${idIdioma}`;
-      
-    } catch (error) {
-      console.error('Error en getNombreIdioma:', error);
-      return `Idioma ${idIdioma}`;
-    }
-  };
-  
   // Formatear duración en minutos a horas y minutos
   const formatDuracion = (minutos: number): string => {
     const horas = Math.floor(minutos / 60);
@@ -203,29 +174,11 @@ const TipoTourList: React.FC = () => {
       )
     },
     { 
-      header: "Idioma",
-      accessor: (row: any) => (
-        <div className="flex items-center gap-1">
-          <Icons.Language />
-          {getNombreIdioma(row.id_idioma)}
-        </div>
-      )
-    },
-    { 
       header: "Duración",
       accessor: (row: any) => (
         <div className="flex items-center gap-1">
           <Icons.Clock />
           {formatDuracion(row.duracion_minutos)}
-        </div>
-      )
-    },
-    { 
-      header: "Capacidad",
-      accessor: (row: any) => (
-        <div className="flex items-center gap-1">
-          <Icons.Users />
-          {row.cantidad_pasajeros} pasajeros
         </div>
       )
     },

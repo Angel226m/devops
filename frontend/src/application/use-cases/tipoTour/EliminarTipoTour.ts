@@ -1,10 +1,13 @@
- 
 import { TipoTourRepository } from '../../ports/out/TipoTourRepository';
 
 export class EliminarTipoTour {
-  constructor(private tipoTourRepository: TipoTourRepository) {}
+  private repository: TipoTourRepository;
 
-  async execute(id: number): Promise<boolean> {
-    return this.tipoTourRepository.eliminar(id);
+  constructor(repository: TipoTourRepository) {
+    this.repository = repository;
+  }
+
+  async execute(id: number): Promise<void> {
+    return this.repository.delete(id);
   }
 }

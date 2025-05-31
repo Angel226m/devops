@@ -1,4 +1,5 @@
-/*import React, { useState, useEffect } from 'react';
+ /*
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
@@ -6,9 +7,11 @@ import {
   createUsuario, 
   updateUsuario, 
   fetchUsuarioPorId, 
-  clearUsuarioError 
+  clearUsuarioError,
+  fetchUsuarioIdiomas
 } from '../../../store/slices/usuarioSlice';
 import { fetchUserSedes } from '../../../store/slices/authSlice';
+import { fetchIdiomas } from '../../../store/slices/idiomaSlice';
 import { NuevoUsuarioRequest, ActualizarUsuarioRequest } from '../../../../domain/entities/Usuario';
 
 const UsuarioForm: React.FC = () => {
@@ -17,8 +20,9 @@ const UsuarioForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
 
-  const { usuarioSeleccionado, loading, error } = useSelector((state: RootState) => state.usuario);
+  const { usuarioSeleccionado, usuarioIdiomas, loading, error } = useSelector((state: RootState) => state.usuario);
   const { availableSedes, selectedSede } = useSelector((state: RootState) => state.auth);
+  const { idiomas } = useSelector((state: RootState) => state.idioma);
 
   const [formData, setFormData] = useState<NuevoUsuarioRequest>({
     id_sede: selectedSede?.id_sede || null,
@@ -33,6 +37,7 @@ const UsuarioForm: React.FC = () => {
     tipo_documento: 'DNI',
     numero_documento: '',
     contrasena: '',
+    idiomas_ids: [], // NUEVO CAMPO
   });
 
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,9 +46,11 @@ const UsuarioForm: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchUserSedes());
+    dispatch(fetchIdiomas()); // CARGAR IDIOMAS DISPONIBLES
 
     if (isEditing) {
       dispatch(fetchUsuarioPorId(parseInt(id)));
+      dispatch(fetchUsuarioIdiomas(parseInt(id))); // CARGAR IDIOMAS DEL USUARIO
     }
 
     return () => {
@@ -53,11 +60,9 @@ const UsuarioForm: React.FC = () => {
 
   useEffect(() => {
     if (isEditing && usuarioSeleccionado) {
-      // Si la fecha viene en formato ISO, extraer solo la parte de la fecha
       const formatearFechaParaFormulario = (fechaISO: string | undefined): string => {
         if (!fechaISO) return '';
         try {
-          // Extraer solo la parte de la fecha (YYYY-MM-DD)
           return fechaISO.split('T')[0];
         } catch (error) {
           return '';
@@ -76,18 +81,17 @@ const UsuarioForm: React.FC = () => {
         nacionalidad: usuarioSeleccionado.nacionalidad || '',
         tipo_documento: usuarioSeleccionado.tipo_documento,
         numero_documento: usuarioSeleccionado.numero_documento,
-        contrasena: '',  // No mostrar contraseña en edición
+        contrasena: '',
+        idiomas_ids: usuarioIdiomas.map(ui => ui.id_idioma), // CARGAR IDIOMAS DEL USUARIO
       });
     }
-  }, [isEditing, usuarioSeleccionado]);
+  }, [isEditing, usuarioSeleccionado, usuarioIdiomas]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    // Manejo específico para el id_sede cuando cambia el rol
     if (name === 'rol') {
       if (value === 'ADMIN') {
-        // Para administradores, quitar la sede
         setFormData(prevState => ({
           ...prevState,
           rol: value as 'ADMIN' | 'VENDEDOR' | 'CHOFER',
@@ -95,7 +99,6 @@ const UsuarioForm: React.FC = () => {
         }));
         return;
       } else if (formData.id_sede === null) {
-        // Para otros roles, asignar una sede por defecto si no tiene
         const defaultSede = selectedSede?.id_sede || 
                           (availableSedes && availableSedes.length > 0 ? availableSedes[0].id_sede : null);
         
@@ -108,7 +111,6 @@ const UsuarioForm: React.FC = () => {
       }
     }
     
-    // Manejo específico para id_sede
     if (name === 'id_sede') {
       setFormData(prevState => ({
         ...prevState,
@@ -117,13 +119,11 @@ const UsuarioForm: React.FC = () => {
       return;
     }
     
-    // Para el resto de campos, actualizamos normalmente
     setFormData(prevState => ({
       ...prevState,
       [name]: value
     }));
 
-    // Limpiar errores
     if (name === 'contrasena' || name === 'confirmPassword') {
       setPasswordError('');
     }
@@ -135,14 +135,25 @@ const UsuarioForm: React.FC = () => {
     setPasswordError('');
   };
 
+  // NUEVA FUNCIÓN PARA MANEJAR SELECCIÓN DE IDIOMAS
+  const handleIdiomaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const idiomaId = parseInt(e.target.value);
+    const isChecked = e.target.checked;
+
+    setFormData(prevState => ({
+      ...prevState,
+      idiomas_ids: isChecked 
+        ? [...(prevState.idiomas_ids || []), idiomaId]
+        : (prevState.idiomas_ids || []).filter(id => id !== idiomaId)
+    }));
+  };
+
   const validateForm = () => {
-    // Validación básica
     if (!formData.nombres || !formData.apellidos || !formData.correo) {
       setFormError('Todos los campos obligatorios deben ser completados.');
       return false;
     }
 
-    // Validar restricción: admin sin sede o no admin con sede
     if (formData.rol === 'ADMIN' && formData.id_sede !== null) {
       setFormError('Los administradores no deben tener una sede asignada.');
       return false;
@@ -153,7 +164,6 @@ const UsuarioForm: React.FC = () => {
       return false;
     }
 
-    // Validación de contraseña solo para creación
     if (!isEditing) {
       if (!formData.contrasena) {
         setPasswordError('La contraseña es obligatoria.');
@@ -174,10 +184,8 @@ const UsuarioForm: React.FC = () => {
     return true;
   };
 
-  // Función para formatear la fecha al formato que espera el backend
   const formatearFechaParaAPI = (fecha: string): string => {
     if (!fecha) return '';
-    // Convertir de YYYY-MM-DD a YYYY-MM-DDT00:00:00Z
     return `${fecha}T00:00:00Z`;
   };
 
@@ -190,24 +198,19 @@ const UsuarioForm: React.FC = () => {
 
     try {
       if (isEditing) {
-        // Para edición, preparamos objeto de actualización
         const updateData: ActualizarUsuarioRequest = {
           ...formData,
-          // Formatear la fecha para el API
           fecha_nacimiento: formData.fecha_nacimiento ? formatearFechaParaAPI(formData.fecha_nacimiento) : ''
         };
         
-        // Omitir contraseña si está vacía
         if (!updateData.contrasena) {
           delete updateData.contrasena;
         }
 
         await dispatch(updateUsuario({ id: parseInt(id), usuario: updateData })).unwrap();
       } else {
-        // Para creación, enviamos el formulario completo
         await dispatch(createUsuario({
           ...formData,
-          // Formatear la fecha para el API
           fecha_nacimiento: formatearFechaParaAPI(formData.fecha_nacimiento)
         })).unwrap();
       }
@@ -472,6 +475,28 @@ const UsuarioForm: React.FC = () => {
           </div>
         </div>
 
+        {/* NUEVA SECCIÓN: IDIOMAS *//*}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 border-b pb-2">Idiomas que maneja</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {idiomas.map(idioma => (
+              <label key={idioma.id_idioma} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  value={idioma.id_idioma}
+                  checked={(formData.idiomas_ids || []).includes(idioma.id_idioma)}
+                  onChange={handleIdiomaChange}
+                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                />
+                <span className="text-sm text-gray-700">{idioma.nombre}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Selecciona los idiomas que puede manejar este usuario
+          </p>
+        </div>
+
         <div className="flex justify-end space-x-3 pt-4 border-t">
           <button
             type="button"
@@ -494,7 +519,8 @@ const UsuarioForm: React.FC = () => {
 };
 
 export default UsuarioForm;*/
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
@@ -532,27 +558,60 @@ const UsuarioForm: React.FC = () => {
     tipo_documento: 'DNI',
     numero_documento: '',
     contrasena: '',
-    idiomas_ids: [], // NUEVO CAMPO
+    idiomas_ids: [],
   });
 
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  
+  // Control de carga para evitar múltiples peticiones
+  const [usuarioLoaded, setUsuarioLoaded] = useState(false);
+  const [idiomasUsuarioLoaded, setIdiomasUsuarioLoaded] = useState(false);
+  const [sedesLoaded, setSedesLoaded] = useState(false);
+  const [idiomasDisponiblesLoaded, setIdiomasDisponiblesLoaded] = useState(false);
 
+  // Cargar sedes cuando sea necesario
   useEffect(() => {
-    dispatch(fetchUserSedes());
-    dispatch(fetchIdiomas()); // CARGAR IDIOMAS DISPONIBLES
-
-    if (isEditing) {
-      dispatch(fetchUsuarioPorId(parseInt(id)));
-      dispatch(fetchUsuarioIdiomas(parseInt(id))); // CARGAR IDIOMAS DEL USUARIO
+    if (!sedesLoaded && availableSedes.length === 0) {
+      console.log("⚡ Cargando sedes disponibles");
+      dispatch(fetchUserSedes());
+      setSedesLoaded(true);
     }
+  }, [dispatch, sedesLoaded, availableSedes.length]);
+  
+  // Cargar idiomas disponibles cuando sea necesario
+  useEffect(() => {
+    if (!idiomasDisponiblesLoaded && idiomas.length === 0) {
+      console.log("⚡ Cargando idiomas disponibles");
+      dispatch(fetchIdiomas());
+      setIdiomasDisponiblesLoaded(true);
+    }
+  }, [dispatch, idiomasDisponiblesLoaded, idiomas.length]);
 
+  // Cargar usuario si estamos editando
+  useEffect(() => {
+    if (isEditing && id && !usuarioLoaded && !usuarioSeleccionado) {
+      console.log(`⚡ Cargando datos del usuario ID: ${id}`);
+      dispatch(fetchUsuarioPorId(parseInt(id)));
+      setUsuarioLoaded(true);
+    }
+    
     return () => {
       dispatch(clearUsuarioError());
     };
-  }, [dispatch, id, isEditing]);
+  }, [dispatch, id, isEditing, usuarioLoaded, usuarioSeleccionado]);
 
+  // Cargar idiomas del usuario si estamos editando
+  useEffect(() => {
+    if (isEditing && id && !idiomasUsuarioLoaded) {
+      console.log(`⚡ Cargando idiomas del usuario ID: ${id}`);
+      dispatch(fetchUsuarioIdiomas(parseInt(id)));
+      setIdiomasUsuarioLoaded(true);
+    }
+  }, [dispatch, id, isEditing, idiomasUsuarioLoaded]);
+
+  // Actualizar el formulario cuando tengamos los datos del usuario
   useEffect(() => {
     if (isEditing && usuarioSeleccionado) {
       const formatearFechaParaFormulario = (fechaISO: string | undefined): string => {
@@ -577,7 +636,7 @@ const UsuarioForm: React.FC = () => {
         tipo_documento: usuarioSeleccionado.tipo_documento,
         numero_documento: usuarioSeleccionado.numero_documento,
         contrasena: '',
-        idiomas_ids: usuarioIdiomas.map(ui => ui.id_idioma), // CARGAR IDIOMAS DEL USUARIO
+        idiomas_ids: usuarioIdiomas.map(ui => ui.id_idioma),
       });
     }
   }, [isEditing, usuarioSeleccionado, usuarioIdiomas]);
@@ -630,7 +689,7 @@ const UsuarioForm: React.FC = () => {
     setPasswordError('');
   };
 
-  // NUEVA FUNCIÓN PARA MANEJAR SELECCIÓN DE IDIOMAS
+  // Manejar selección de idiomas
   const handleIdiomaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const idiomaId = parseInt(e.target.value);
     const isChecked = e.target.checked;
@@ -702,7 +761,7 @@ const UsuarioForm: React.FC = () => {
           delete updateData.contrasena;
         }
 
-        await dispatch(updateUsuario({ id: parseInt(id), usuario: updateData })).unwrap();
+        await dispatch(updateUsuario({ id: parseInt(id!), usuario: updateData })).unwrap();
       } else {
         await dispatch(createUsuario({
           ...formData,
@@ -717,7 +776,7 @@ const UsuarioForm: React.FC = () => {
     }
   };
 
-  if (loading && isEditing) {
+  if (loading && isEditing && !usuarioSeleccionado) {
     return <div className="p-4">Cargando...</div>;
   }
 
@@ -970,7 +1029,7 @@ const UsuarioForm: React.FC = () => {
           </div>
         </div>
 
-        {/* NUEVA SECCIÓN: IDIOMAS */}
+        {/* IDIOMAS */}
         <div>
           <h3 className="text-lg font-semibold mb-4 border-b pb-2">Idiomas que maneja</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

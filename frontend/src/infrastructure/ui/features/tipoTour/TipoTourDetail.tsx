@@ -2,11 +2,24 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
-import { fetchTipoTourPorId, deleteTipoTour } from '../../../store/slices/tipoTourSlice';
+import { fetchTipoTourPorId, eliminarTipoTour } from '../../../store/slices/tipoTourSlice';
 import { fetchSedes } from '../../../store/slices/sedeSlice';
-import { fetchIdiomas } from '../../../store/slices/idiomaSlice';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+
+// Interfaces para tipos nulos de SQL
+interface NullString {
+  String: string;
+  Valid: boolean;
+}
+
+// Funciones auxiliares para manejar valores nulos
+const getNullString = (value: any): string => {
+  if (typeof value === 'object' && value !== null && 'Valid' in value && 'String' in value) {
+    return value.Valid ? value.String : '';
+  }
+  return value || '';
+};
 
 // Iconos SVG
 const Icons = {
@@ -18,11 +31,6 @@ const Icons = {
   Clock: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Users: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   ),
   Building: () => (
@@ -54,11 +62,6 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
-  ),
-  Language: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-    </svg>
   )
 };
 
@@ -67,9 +70,8 @@ const TipoTourDetail: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   
-  const { tipoTourSeleccionado, loading, error } = useSelector((state: RootState) => state.tipoTour);
+  const { tipoTourActual, loading, error } = useSelector((state: RootState) => state.tipoTour);
   const { sedes } = useSelector((state: RootState) => state.sede);
-  const { idiomas } = useSelector((state: RootState) => state.idioma);
   
   useEffect(() => {
     if (id) {
@@ -82,7 +84,6 @@ const TipoTourDetail: React.FC = () => {
           console.error("Error al cargar el tipo de tour:", error);
         });
       dispatch(fetchSedes());
-      dispatch(fetchIdiomas());
     }
   }, [dispatch, id]);
   
@@ -93,7 +94,7 @@ const TipoTourDetail: React.FC = () => {
   const handleDelete = async () => {
     if (window.confirm('¿Está seguro de que desea eliminar este tipo de tour?')) {
       try {
-        await dispatch(deleteTipoTour(parseInt(id!))).unwrap();
+        await dispatch(eliminarTipoTour(parseInt(id!))).unwrap();
         alert('Tipo de tour eliminado con éxito');
         navigate('/admin/tipos-tour');
       } catch (error) {
@@ -120,22 +121,6 @@ const TipoTourDetail: React.FC = () => {
     } catch (error) {
       console.error('Error en getNombreSede:', error);
       return `Sede ${idSede}`;
-    }
-  };
-  
-  // Obtener nombre de idioma
-  const getNombreIdioma = (idIdioma: number): string => {
-    try {
-      if (!Array.isArray(idiomas) || idiomas.length === 0) {
-        return `Idioma ${idIdioma}`;
-      }
-      
-      const idioma = idiomas.find(i => i && i.id_idioma === idIdioma);
-      return idioma?.nombre || `Idioma ${idIdioma}`;
-      
-    } catch (error) {
-      console.error('Error en getNombreIdioma:', error);
-      return `Idioma ${idIdioma}`;
     }
   };
   
@@ -184,7 +169,7 @@ const TipoTourDetail: React.FC = () => {
     );
   }
   
-  if (!tipoTourSeleccionado) {
+  if (!tipoTourActual) {
     return (
       <Card className="max-w-3xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -206,15 +191,13 @@ const TipoTourDetail: React.FC = () => {
     );
   }
   
-  // Asegurarse de que las propiedades existan antes de renderizar
+  // Asegurarse de que las propiedades existan antes de renderizar y manejar valores nulos
   const tourData = {
-    nombre: tipoTourSeleccionado.nombre || '',
-    id_sede: tipoTourSeleccionado.id_sede || 0,
-    id_idioma: tipoTourSeleccionado.id_idioma || 0,
-    descripcion: tipoTourSeleccionado.descripcion || '',
-    duracion_minutos: tipoTourSeleccionado.duracion_minutos || 0,
-    cantidad_pasajeros: tipoTourSeleccionado.cantidad_pasajeros || 0,
-    url_imagen: tipoTourSeleccionado.url_imagen || ''
+    nombre: tipoTourActual.nombre || '',
+    id_sede: tipoTourActual.id_sede || 0,
+    descripcion: getNullString(tipoTourActual.descripcion),
+    duracion_minutos: tipoTourActual.duracion_minutos || 0,
+    url_imagen: getNullString(tipoTourActual.url_imagen)
   };
   
   return (
@@ -260,26 +243,10 @@ const TipoTourDetail: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2 text-gray-700">
-                <Icons.Language />
-                <div>
-                  <span className="font-medium block">Idioma</span>
-                  <span>{getNombreIdioma(tourData.id_idioma)}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-gray-700">
                 <Icons.Clock />
                 <div>
                   <span className="font-medium block">Duración</span>
                   <span>{formatDuracion(tourData.duracion_minutos)}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-gray-700">
-                <Icons.Users />
-                <div>
-                  <span className="font-medium block">Capacidad</span>
-                  <span>{tourData.cantidad_pasajeros} pasajeros</span>
                 </div>
               </div>
               

@@ -1,11 +1,14 @@
- 
-import { TipoTour, TipoTourActualizacion } from '../../../domain/entities/TipoTour';
 import { TipoTourRepository } from '../../ports/out/TipoTourRepository';
+import { ActualizarTipoTourRequest } from '../../../domain/entities/TipoTour';
 
 export class ActualizarTipoTour {
-  constructor(private tipoTourRepository: TipoTourRepository) {}
+  private repository: TipoTourRepository;
 
-  async execute(id: number, tipoTour: TipoTourActualizacion): Promise<TipoTour> {
-    return this.tipoTourRepository.actualizar(id, tipoTour);
+  constructor(repository: TipoTourRepository) {
+    this.repository = repository;
+  }
+
+  async execute(id: number, request: ActualizarTipoTourRequest): Promise<void> {
+    return this.repository.update(id, request);
   }
 }

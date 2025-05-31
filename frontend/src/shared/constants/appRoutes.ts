@@ -47,6 +47,44 @@ export const ROUTES = {
       NEW: '/admin/tipos-tour/nuevo',
       EDIT: (id: string | number) => `/admin/tipos-tour/editar/${id}`,
       DETAIL: (id: string | number) => `/admin/tipos-tour/${id}`,
+      
+      // Nuevas rutas para traducciones (idiomas)
+   HORARIOS: {
+  SELECCION: '/admin/horarios',
+  TOUR: {
+    LIST: '/admin/horarios-tour',
+    NEW: '/admin/horarios-tour/nuevo',
+    EDIT: (id: string | number) => `/admin/horarios-tour/editar/${id}`,
+    DETAIL: (id: string | number) => `/admin/horarios-tour/${id}`,
+  
+  
+     PASAJES: {
+      SELECCION: '/admin/pasajes',
+      TIPOS: {
+        LIST: '/admin/tipos-pasaje',
+        NEW: '/admin/tipos-pasaje/nuevo',
+        EDIT: (id: string | number) => `/admin/tipos-pasaje/editar/${id}`,
+        DETAIL: (id: string | number) => `/admin/tipos-pasaje/${id}`,
+      },
+      PAQUETES: {
+        LIST: '/admin/paquetes-pasajes',
+        NEW: '/admin/paquetes-pasajes/nuevo',
+        EDIT: (id: string | number) => `/admin/paquetes-pasajes/editar/${id}`,
+        DETAIL: (id: string | number) => `/admin/paquetes-pasajes/${id}`,
+      }
+    },
+    
+  
+  
+  },
+  CHOFER: {
+    LIST: '/admin/horarios-chofer',
+    NEW: '/admin/horarios-chofer/nuevo',
+    EDIT: (id: string | number) => `/admin/horarios-chofer/editar/${id}`,
+    DETAIL: (id: string | number) => `/admin/horarios-chofer/${id}`,
+  }
+},
+
     },
     TOURS_PROGRAMADOS: {
       LIST: '/admin/tours',
