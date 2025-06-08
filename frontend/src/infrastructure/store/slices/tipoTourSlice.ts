@@ -58,7 +58,7 @@ export const fetchTiposTourPorSede = createAsyncThunk(
     }
   }
 );
-
+/*
 export const fetchTiposTourPorIdioma = createAsyncThunk(
   'tipoTour/fetchByIdioma',
   async (idIdioma: number, { rejectWithValue }) => {
@@ -68,7 +68,7 @@ export const fetchTiposTourPorIdioma = createAsyncThunk(
       return rejectWithValue(error.response?.data?.message || 'Error al obtener los tipos de tour por idioma');
     }
   }
-);
+);*/
 
 export const crearTipoTour = createAsyncThunk(
   'tipoTour/create',
@@ -168,7 +168,7 @@ const tipoTourSlice = createSlice({
       })
       
       // fetchTiposTourPorIdioma
-      .addCase(fetchTiposTourPorIdioma.pending, (state) => {
+     /* .addCase(fetchTiposTourPorIdioma.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
@@ -179,7 +179,7 @@ const tipoTourSlice = createSlice({
       .addCase(fetchTiposTourPorIdioma.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
+      })*/
       
       // crearTipoTour
       .addCase(crearTipoTour.pending, (state) => {

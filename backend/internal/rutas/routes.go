@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sistema-toursseft/internal/config"
 	"sistema-toursseft/internal/controladores"
+	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/middleware"
 	"strconv"
 
@@ -13,7 +14,6 @@ import (
 
 // SetupRoutes configura todas las rutas de la API
 func SetupRoutes(
-
 	router *gin.Engine,
 	config *config.Config,
 	authController *controladores.AuthController,
@@ -23,6 +23,8 @@ func SetupRoutes(
 
 	embarcacionController *controladores.EmbarcacionController,
 	tipoTourController *controladores.TipoTourController,
+	galeriaTourController *controladores.GaleriaTourController,
+
 	horarioTourController *controladores.HorarioTourController,
 	horarioChoferController *controladores.HorarioChoferController,
 	tourProgramadoController *controladores.TourProgramadoController,
@@ -32,10 +34,11 @@ func SetupRoutes(
 	metodoPagoController *controladores.MetodoPagoController,
 	canalVentaController *controladores.CanalVentaController,
 	clienteController *controladores.ClienteController,
-	reservaController *controladores.ReservaController,
+	/*reservaController *controladores.ReservaController,*/
 	pagoController *controladores.PagoController,
 	comprobantePagoController *controladores.ComprobantePagoController,
 	sedeController *controladores.SedeController,
+	instanciaTourController *controladores.InstanciaTourController, // Nuevo controlador
 
 ) {
 	// Middleware global
@@ -59,15 +62,57 @@ func SetupRoutes(
 		public.POST("/clientes/refresh", clienteController.RefreshToken)
 		public.POST("/clientes/logout", clienteController.Logout)
 
+		// En la sección de rutas públicas:
+		// Tipos de tour (acceso público)
+		public.GET("/tipos-tour", tipoTourController.List)
+		public.GET("/tipos-tour/:id", tipoTourController.GetByID)
+		public.GET("/tipos-tour/sede/:idSede", tipoTourController.ListBySede)
+
 		// Tours programados disponibles (acceso público)
 		public.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
 		public.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
 		public.GET("/tours/:id", tourProgramadoController.GetByID)
-		public.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
+		public.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+		public.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+		public.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
+		// Añadir esta línea a la configuración de rutas
+		public.GET("/tours/disponibles-sin-duplicados", tourProgramadoController.GetToursDisponibles)
+
+		// En tu configuración de rutas
+		public.GET("/instancias-tour/disponibles", func(ctx *gin.Context) {
+			// Crear filtro para buscar solo instancias con estado PROGRAMADO
+			var filtros entidades.FiltrosInstanciaTour
+			estado := "PROGRAMADO"
+			filtros.Estado = &estado
+
+			// Establecer el filtro en el contexto
+			ctx.Set("filtros", filtros)
+
+			instanciaTourController.ListByFiltros(ctx)
+		})
+
+		// Consultar instancias de tour por fecha
+		public.GET("/instancias-tour/fecha/:fecha", func(ctx *gin.Context) {
+			fecha := ctx.Param("fecha")
+			var filtros entidades.FiltrosInstanciaTour
+
+			filtros.FechaInicio = &fecha
+			filtros.FechaFin = &fecha
+
+			// Establecer el filtro en el contexto
+			ctx.Set("filtros", filtros)
+
+			instanciaTourController.ListByFiltros(ctx)
+		})
 
 		// Tipos de pasaje (acceso público para ver precios)
 		public.GET("/tipos-pasaje", tipoPasajeController.List)
 		public.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
+		public.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
+
+		// Galería de tours
+		public.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+		public.GET("/galerias/:id", galeriaTourController.GetByID)
 
 		// Paquetes de pasajes (acceso público para ver precios y opciones)
 		public.GET("/paquetes-pasajes", paquetePasajesController.List)
@@ -78,14 +123,14 @@ func SetupRoutes(
 		// Métodos de pago (acceso público para ver opciones)
 		public.GET("/metodos-pago", metodoPagoController.List)
 
-		// Canales de venta (acceso público)
+		// Sedes (acceso público)
 		public.GET("/sedes", sedeController.List)
 		public.GET("/sedes/:id", sedeController.GetByID)
-		public.GET("/sedes/distrito/:distrito", sedeController.GetByDistrito) // CORREGIDO
+		public.GET("/sedes/distrito/:distrito", sedeController.GetByDistrito)
 		public.GET("/sedes/pais/:pais", sedeController.GetByPais)
-		// Idiomas (acceso público para ver opciones disponibles)
-		public.GET("/idiomas", idiomaController.List) // NUEVA RUTA PÚBLICA
 
+		// Idiomas (acceso público para ver opciones disponibles)
+		public.GET("/idiomas", idiomaController.List)
 	}
 
 	// Rutas protegidas (requieren autenticación)
@@ -141,7 +186,8 @@ func SetupRoutes(
 			admin.DELETE("/usuarios/:id/idiomas/:idioma_id", usuarioIdiomaController.DesasignarIdioma)
 			admin.PUT("/usuarios/:id/idiomas", usuarioIdiomaController.ActualizarIdiomasUsuario)
 			admin.GET("/idiomas/:id/usuarios", usuarioIdiomaController.GetUsuariosByIdiomaID)
-			// Gestión de idiomas - NUEVAS RUTAS
+
+			// Gestión de idiomas
 			admin.POST("/idiomas", idiomaController.Create)
 			admin.GET("/idiomas", idiomaController.List)
 			admin.GET("/idiomas/:id", idiomaController.GetByID)
@@ -163,6 +209,13 @@ func SetupRoutes(
 			admin.GET("/tipos-tour/:id", tipoTourController.GetByID)
 			admin.PUT("/tipos-tour/:id", tipoTourController.Update)
 			admin.DELETE("/tipos-tour/:id", tipoTourController.Delete)
+
+			// Gestión de galería de imágenes
+			admin.POST("/galerias", galeriaTourController.Create)
+			admin.GET("/galerias/:id", galeriaTourController.GetByID)
+			admin.PUT("/galerias/:id", galeriaTourController.Update)
+			admin.DELETE("/galerias/:id", galeriaTourController.Delete)
+			admin.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
 
 			// Gestión de horarios de tour
 			admin.POST("/horarios-tour", horarioTourController.Create)
@@ -189,14 +242,20 @@ func SetupRoutes(
 			admin.GET("/tours/:id", tourProgramadoController.GetByID)
 			admin.PUT("/tours/:id", tourProgramadoController.Update)
 			admin.DELETE("/tours/:id", tourProgramadoController.Delete)
+			admin.POST("/tours/:id/chofer", tourProgramadoController.AsignarChofer)
 			admin.POST("/tours/:id/estado", tourProgramadoController.CambiarEstado)
+			admin.GET("/tours/programacion-semanal", tourProgramadoController.GetProgramacionSemanal)
 			admin.GET("/tours/fecha/:fecha", tourProgramadoController.ListByFecha)
-			admin.GET("/tours/rango", tourProgramadoController.ListByRangoFechas)
+			admin.GET("/tours/rango-fechas", tourProgramadoController.ListByRangoFechas)
 			admin.GET("/tours/estado/:estado", tourProgramadoController.ListByEstado)
 			admin.GET("/tours/embarcacion/:idEmbarcacion", tourProgramadoController.ListByEmbarcacion)
 			admin.GET("/tours/chofer/:idChofer", tourProgramadoController.ListByChofer)
-			admin.GET("/tours/tipo/:idTipoTour", tourProgramadoController.ListByTipoTour)
+			admin.GET("/tours/tipo-tour/:idTipoTour", tourProgramadoController.ListByTipoTour)
 			admin.GET("/tours/sede/:idSede", tourProgramadoController.ListBySede)
+			admin.GET("/tours/vigentes", tourProgramadoController.GetToursVigentes)
+			admin.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+			admin.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+			admin.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
 
 			// Gestión de tipos de pasaje
 			admin.POST("/tipos-pasaje", tipoPasajeController.Create)
@@ -238,19 +297,6 @@ func SetupRoutes(
 			admin.PUT("/clientes/:id", clienteController.Update)
 			admin.DELETE("/clientes/:id", clienteController.Delete)
 
-			// Gestión de reservas
-			admin.POST("/reservas", reservaController.Create)
-			admin.GET("/reservas", reservaController.List)
-			admin.GET("/reservas/:id", reservaController.GetByID)
-			admin.PUT("/reservas/:id", reservaController.Update)
-			admin.DELETE("/reservas/:id", reservaController.Delete)
-			admin.POST("/reservas/:id/estado", reservaController.CambiarEstado)
-			admin.GET("/reservas/cliente/:idCliente", reservaController.ListByCliente)
-			admin.GET("/reservas/tour/:idTourProgramado", reservaController.ListByTourProgramado)
-			admin.GET("/reservas/fecha/:fecha", reservaController.ListByFecha)
-			admin.GET("/reservas/estado/:estado", reservaController.ListByEstado)
-			admin.GET("/reservas/sede/:idSede", reservaController.ListBySede)
-
 			// Gestión de pagos
 			admin.POST("/pagos", pagoController.Create)
 			admin.GET("/pagos", pagoController.List)
@@ -286,8 +332,19 @@ func SetupRoutes(
 			admin.POST("/sedes/:id/restore", sedeController.Restore)
 			admin.GET("/sedes", sedeController.List)
 			admin.GET("/sedes/:id", sedeController.GetByID)
-			admin.GET("/sedes/distrito/:distrito", sedeController.GetByDistrito) // CORREGIDO
+			admin.GET("/sedes/distrito/:distrito", sedeController.GetByDistrito)
 			admin.GET("/sedes/pais/:pais", sedeController.GetByPais)
+
+			admin.POST("/instancias-tour", instanciaTourController.Create)
+			admin.GET("/instancias-tour", instanciaTourController.List)
+			admin.GET("/instancias-tour/:id", instanciaTourController.GetByID)
+			admin.PUT("/instancias-tour/:id", instanciaTourController.Update)
+			admin.DELETE("/instancias-tour/:id", instanciaTourController.Delete)
+			admin.POST("/instancias-tour/:id/asignar-chofer", instanciaTourController.AsignarChofer)
+			admin.GET("/instancias-tour/tour-programado/:id_tour_programado", instanciaTourController.ListByTourProgramado)
+			admin.POST("/instancias-tour/filtrar", instanciaTourController.ListByFiltros)
+			admin.POST("/instancias-tour/generar/:id_tour_programado", instanciaTourController.GenerarInstanciasDeTourProgramado)
+
 		}
 
 		// Vendedores
@@ -295,7 +352,7 @@ func SetupRoutes(
 		vendedor.Use(middleware.RoleMiddleware("ADMIN", "VENDEDOR"))
 		{
 			// Ver idiomas (solo lectura)
-			vendedor.GET("/idiomas", idiomaController.List) // NUEVA RUTA
+			vendedor.GET("/idiomas", idiomaController.List)
 
 			// Ver embarcaciones (solo lectura)
 			vendedor.GET("/embarcaciones", embarcacionController.List)
@@ -304,6 +361,10 @@ func SetupRoutes(
 			// Ver tipos de tour (solo lectura)
 			vendedor.GET("/tipos-tour", tipoTourController.List)
 			vendedor.GET("/tipos-tour/:id", tipoTourController.GetByID)
+
+			// Ver galería de imágenes (solo lectura)
+			vendedor.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+			vendedor.GET("/galerias/:id", galeriaTourController.GetByID)
 
 			// Ver horarios de tour (solo lectura)
 			vendedor.GET("/horarios-tour", horarioTourController.List)
@@ -318,10 +379,12 @@ func SetupRoutes(
 			vendedor.GET("/tours", tourProgramadoController.List)
 			vendedor.GET("/tours/:id", tourProgramadoController.GetByID)
 			vendedor.GET("/tours/fecha/:fecha", tourProgramadoController.ListByFecha)
-			vendedor.GET("/tours/rango", tourProgramadoController.ListByRangoFechas)
+			vendedor.GET("/tours/rango-fechas", tourProgramadoController.ListByRangoFechas)
 			vendedor.GET("/tours/estado/:estado", tourProgramadoController.ListByEstado)
-			vendedor.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
 			vendedor.GET("/tours/sede/:idSede", tourProgramadoController.ListBySede)
+			vendedor.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
+			vendedor.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+			vendedor.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
 
 			// Ver tipos de pasaje (solo lectura)
 			vendedor.GET("/tipos-pasaje", tipoPasajeController.List)
@@ -351,17 +414,11 @@ func SetupRoutes(
 			vendedor.GET("/clientes/:id", clienteController.GetByID)
 			vendedor.PUT("/clientes/:id", clienteController.Update)
 
-			// Gestión de reservas
-			vendedor.POST("/reservas", reservaController.Create)
-			vendedor.GET("/reservas", reservaController.List)
-			vendedor.GET("/reservas/:id", reservaController.GetByID)
-			vendedor.PUT("/reservas/:id", reservaController.Update)
-			vendedor.POST("/reservas/:id/estado", reservaController.CambiarEstado)
-			vendedor.GET("/reservas/cliente/:idCliente", reservaController.ListByCliente)
-			vendedor.GET("/reservas/tour/:idTourProgramado", reservaController.ListByTourProgramado)
-			vendedor.GET("/reservas/fecha/:fecha", reservaController.ListByFecha)
-			vendedor.GET("/reservas/estado/:estado", reservaController.ListByEstado)
-			vendedor.GET("/reservas/sede/:idSede", reservaController.ListBySede)
+			// Ver instancias de tour (solo lectura)
+			vendedor.GET("/instancias-tour", instanciaTourController.List)
+			vendedor.GET("/instancias-tour/:id", instanciaTourController.GetByID)
+			vendedor.GET("/instancias-tour/tour-programado/:id_tour_programado", instanciaTourController.ListByTourProgramado)
+			vendedor.POST("/instancias-tour/filtrar", instanciaTourController.ListByFiltros)
 
 			// Gestión de pagos (vendedor puede registrar y ver pagos)
 			vendedor.POST("/pagos", pagoController.Create)
@@ -412,8 +469,22 @@ func SetupRoutes(
 				router.HandleContext(ctx)
 			})
 
-			// Ver reservas para mis tours
-			chofer.GET("/mis-tours/:idTourProgramado/reservas", reservaController.ListByTourProgramado)
+			chofer.GET("/tours/:id", tourProgramadoController.GetByID)
+			chofer.GET("/tours/programacion-semanal", tourProgramadoController.GetProgramacionSemanal)
+			chofer.GET("/tours/fecha/:fecha", tourProgramadoController.ListByFecha)
+
+			chofer.GET("/mis-instancias-tour", func(ctx *gin.Context) {
+				userID := ctx.GetInt("userID")
+				// Crear filtro para buscar instancias asignadas a este chofer
+				var filtros entidades.FiltrosInstanciaTour
+				idChofer := userID
+				filtros.IDChofer = &idChofer
+
+				// Establecer el filtro en el contexto
+				ctx.Set("filtros", filtros)
+
+				instanciaTourController.ListByFiltros(ctx)
+			})
 		}
 
 		// Clientes
@@ -434,6 +505,9 @@ func SetupRoutes(
 			cliente.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
 			cliente.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
 			cliente.GET("/tours/:id", tourProgramadoController.GetByID)
+			cliente.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+			cliente.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+			cliente.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
 
 			// Ver tipos de pasaje (solo lectura)
 			cliente.GET("/tipos-pasaje", tipoPasajeController.List)
@@ -465,11 +539,9 @@ func SetupRoutes(
 				clienteController.Update(ctx)
 			})
 
-			// Gestión de mis reservas
-			cliente.POST("/reservas", reservaController.Create)
-			cliente.GET("/mis-reservas", reservaController.ListMyReservas)
-			cliente.GET("/reservas/:id", reservaController.GetByID)
-			cliente.POST("/reservas/:id/estado", reservaController.CambiarEstado)
+			// Ver galería de imágenes (solo lectura)
+			cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+			cliente.GET("/galerias/:id", galeriaTourController.GetByID)
 
 			// Ver mis pagos
 			cliente.GET("/mis-pagos", func(ctx *gin.Context) {

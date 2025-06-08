@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -65,6 +67,10 @@ import PaquetePasajesList from './infrastructure/ui/features/paquetePasajes/Paqu
 import PaquetePasajesForm from './infrastructure/ui/features/paquetePasajes/PaquetePasajesForm';
 import PaquetePasajesDetail from './infrastructure/ui/features/paquetePasajes/PaquetePasajesDetail';
 
+import ToursProgramadosPage from './infrastructure/ui/pages/ToursProgramadosPage';
+import TourProgramadoList from './infrastructure/ui/features/tourProgramado/TourProgramadoList';
+import TourProgramadoForm from './infrastructure/ui/features/tourProgramado/TourProgramadoForm';
+import TourProgramadoDetail from './infrastructure/ui/features/tourProgramado/TourProgramadoDetail';
 
 // Resto del código se mantiene igual...
 
@@ -204,7 +210,8 @@ const App: React.FC = () => {
           
           {/* Gestión de sedes (dentro de la sede seleccionada) */}
           <Route path="sedes/*" element={<SedesPage />} />
-          
+          <Route path="tours" element={<ToursProgramadosPage />} />
+<Route path="tours/lista/:tipoId" element={<TourProgramadoList />} />
           {/* Gestión de usuarios */}
           <Route path="usuarios/*" element={<UsuariosPage />} />
           
@@ -248,11 +255,34 @@ const App: React.FC = () => {
 <Route path="paquetes-pasajes/:id" element={<PaquetePasajesDetail />} />
 
 
+
+<Route path="tours/*" element={<ToursProgramadosPage />} />
+<Route path="tours/lista/:tipoId" element={<TourProgramadoList />} />
+<Route path="tours/nuevo" element={<TourProgramadoForm />} />
+<Route path="tours/editar/:id" element={<TourProgramadoForm isEditing={true} />} />
+<Route path="tours/:id" element={<TourProgramadoDetail />} />
           {/* Redirección a dashboard si no se especifica subruta */}
           <Route path="" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
         {/* RUTAS DE VENDEDOR */}
         <Route path="/vendedor" element={
           <ProtectedRoute allowedRoles={['VENDEDOR']}>
@@ -273,6 +303,20 @@ const App: React.FC = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
         {/* RUTAS DE CHOFER */}
         <Route path="/chofer" element={
           <ProtectedRoute allowedRoles={['CHOFER']}>

@@ -34,7 +34,7 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
 
-	// ✅ CORS configurado para recibir desde admin.angelproyect.com
+	// ✅ CORS configurado para recibir desde múltiples dominios
 	corsConfig := cors.Config{
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
@@ -56,17 +56,26 @@ func main() {
 	// 🔄 Configurar orígenes según el entorno
 	if cfg.Env == "production" {
 		corsConfig.AllowOrigins = []string{
+			// Panel administrativo
 			"https://admin.angelproyect.com",
 			"https://www.admin.angelproyect.com",
+			// Sistema de reservas
+			"https://reservas.angelproyect.com",
+			"https://www.reservas.angelproyect.com",
 		}
-		log.Println("✅ CORS configurado para producción: admin.angelproyect.com")
+		log.Println("✅ CORS configurado para producción: admin.angelproyect.com y reservas.angelproyect.com")
 	} else {
 		corsConfig.AllowOrigins = []string{
+			// Frontend admin en desarrollo
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
 			"https://localhost:5173",
+			// Página web de reservas en desarrollo
+			"http://localhost:5174",
+			"http://127.0.0.1:5174",
+			"https://localhost:5174",
 		}
-		log.Println("ℹ️ CORS configurado para desarrollo")
+		log.Println("ℹ️ CORS configurado para desarrollo - ambos frontends")
 	}
 
 	router.Use(cors.New(corsConfig))
@@ -114,10 +123,12 @@ func main() {
 
 	sedeRepo := repositorios.NewSedeRepository(db)
 	tipoTourRepo := repositorios.NewTipoTourRepository(db)
+	galeriaTourRepo := repositorios.NewGaleriaTourRepo(db)
 
 	horarioTourRepo := repositorios.NewHorarioTourRepository(db)
 	horarioChoferRepo := repositorios.NewHorarioChoferRepository(db)
 	tourProgramadoRepo := repositorios.NewTourProgramadoRepository(db)
+
 	metodoPagoRepo := repositorios.NewMetodoPagoRepository(db)
 	tipoPasajeRepo := repositorios.NewTipoPasajeRepository(db)
 	paquetePasajesRepo := repositorios.NewPaquetePasajesRepository(db)
@@ -127,6 +138,7 @@ func main() {
 	reservaRepo := repositorios.NewReservaRepository(db)
 	pagoRepo := repositorios.NewPagoRepository(db)
 	comprobantePagoRepo := repositorios.NewComprobantePagoRepository(db)
+	instanciaTourRepo := repositorios.NewInstanciaTourRepository(db)
 
 	// Inicializar servicios
 	authService := servicios.NewAuthService(usuarioRepo, sedeRepo, cfg)
@@ -138,6 +150,8 @@ func main() {
 	sedeService := servicios.NewSedeService(sedeRepo)
 	embarcacionService := servicios.NewEmbarcacionService(embarcacionRepo, sedeRepo)
 	tipoTourService := servicios.NewTipoTourService(tipoTourRepo, sedeRepo)
+	galeriaTourService := servicios.NewGaleriaTourService(galeriaTourRepo, tipoTourRepo)
+
 	paquetePasajesService := servicios.NewPaquetePasajesService(paquetePasajesRepo, sedeRepo, tipoTourRepo)
 
 	horarioTourService := servicios.NewHorarioTourService(horarioTourRepo, tipoTourRepo, sedeRepo)
@@ -159,7 +173,7 @@ func main() {
 	clienteService := servicios.NewClienteService(clienteRepo, cfg)
 
 	// Servicios de reserva
-	reservaService := servicios.NewReservaService(
+	/*reservaService := servicios.NewReservaService(
 		db,
 		reservaRepo,
 		clienteRepo,
@@ -169,7 +183,7 @@ func main() {
 		usuarioRepo,
 		sedeRepo,
 	)
-
+	*/
 	// Servicios de pago
 	pagoService := servicios.NewPagoService(
 		pagoRepo,
@@ -186,7 +200,9 @@ func main() {
 		pagoRepo,
 		sedeRepo,
 	)
-	// Middleware global para configuración
+	instanciaTourService := servicios.NewInstanciaTourService(instanciaTourRepo)
+
+	// Middleware global para agregar la configuración al contexto
 	router.Use(func(c *gin.Context) {
 		c.Set("config", cfg)
 		c.Next()
@@ -199,6 +215,8 @@ func main() {
 	usuarioIdiomaController := controladores.NewUsuarioIdiomaController(usuarioIdiomaService) // Nuevo controlador
 	embarcacionController := controladores.NewEmbarcacionController(embarcacionService)
 	tipoTourController := controladores.NewTipoTourController(tipoTourService)
+	galeriaTourController := controladores.NewGaleriaTourController(galeriaTourService)
+
 	horarioTourController := controladores.NewHorarioTourController(horarioTourService)
 	horarioChoferController := controladores.NewHorarioChoferController(horarioChoferService)
 	tourProgramadoController := controladores.NewTourProgramadoController(tourProgramadoService)
@@ -209,9 +227,10 @@ func main() {
 	canalVentaController := controladores.NewCanalVentaController(canalVentaService)
 	sedeController := controladores.NewSedeController(sedeService)
 	clienteController := controladores.NewClienteController(clienteService, cfg)
-	reservaController := controladores.NewReservaController(reservaService)
+	/*reservaController := controladores.NewReservaController(reservaService)*/
 	pagoController := controladores.NewPagoController(pagoService)
 	comprobantePagoController := controladores.NewComprobantePagoController(comprobantePagoService)
+	instanciaTourController := controladores.NewInstanciaTourController(instanciaTourService)
 
 	// Configurar rutas
 	rutas.SetupRoutes(
@@ -223,6 +242,8 @@ func main() {
 		usuarioIdiomaController,
 		embarcacionController,
 		tipoTourController,
+		galeriaTourController, // Añadir el nuevo controlador aquí
+
 		horarioTourController,
 		horarioChoferController,
 		tourProgramadoController,
@@ -231,12 +252,13 @@ func main() {
 		metodoPagoController,
 		canalVentaController,
 		clienteController,
-		reservaController,
+		/*	reservaController,*/
 		pagoController,
 		comprobantePagoController,
 		sedeController,
-	)
+		instanciaTourController, // Agregar el nuevo controlador aquí
 
+	)
 	// Iniciar servidor
 	serverAddr := fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort)
 	log.Printf("🚀 Servidor iniciado en %s (entorno: %s)", serverAddr, cfg.Env)

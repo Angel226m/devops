@@ -1,3 +1,5 @@
+ 
+
 export const endpoints = {
   auth: {
     login: '/auth/login',
@@ -34,23 +36,7 @@ export const endpoints = {
     porId: (id: number) => `/admin/embarcaciones/${id}`,
     porSede: (idSede: number) => `/admin/embarcaciones/sede/${idSede}`,
   },
-  toursProgramados: {
-    base: '/admin/tours',
-    porId: (id: number) => `/admin/tours/${id}`,
-    porFecha: (fecha: string) => `/admin/tours/fecha/${fecha}`,
-    porRangoFechas: '/admin/tours/rango',
-    porEstado: (estado: string) => `/admin/tours/estado/${estado}`,
-    disponibles: '/admin/tours/disponibles',
-    porSede: (idSede: number) => `/admin/tours/sede/${idSede}`,
-    // Rutas para vendedor
-    vendedorBase: '/vendedor/tours',
-    vendedorPorId: (id: number) => `/vendedor/tours/${id}`,
-    vendedorPorFecha: (fecha: string) => `/vendedor/tours/fecha/${fecha}`,
-    vendedorPorRangoFechas: '/vendedor/tours/rango',
-    vendedorPorEstado: (estado: string) => `/vendedor/tours/estado/${estado}`,
-    vendedorDisponibles: '/vendedor/tours/disponibles',
-    vendedorPorSede: (idSede: number) => `/vendedor/tours/sede/${idSede}`,
-  },
+ 
    tiposTour: {
     // Rutas para admin
     list: '/admin/tipos-tour',
@@ -164,7 +150,121 @@ export const endpoints = {
     publicList: '/paquetes-pasajes',
     publicListBySede: (idSede: number) => `/paquetes-pasajes/sede/${idSede}`,
     publicListByTipoTour: (idTipoTour: number) => `/paquetes-pasajes/tipo-tour/${idTipoTour}`,
-  }
+  },
 
+
+   galeriaTour: {
+    // Rutas para admin
+    create: '/admin/galerias',
+    getById: (id: number) => `/admin/galerias/${id}`,
+    update: (id: number) => `/admin/galerias/${id}`,
+    delete: (id: number) => `/admin/galerias/${id}`,
+    listByTipoTour: (idTipoTour: number) => `/admin/tipo-tours/${idTipoTour}/galerias`,
+    
+    // Rutas para vendedor (solo lectura)
+    vendedorGetById: (id: number) => `/vendedor/galerias/${id}`,
+    vendedorListByTipoTour: (idTipoTour: number) => `/vendedor/tipo-tours/${idTipoTour}/galerias`,
+    
+    // Rutas para cliente (solo lectura)
+    clienteGetById: (id: number) => `/cliente/galerias/${id}`,
+    clienteListByTipoTour: (idTipoTour: number) => `/cliente/tipo-tours/${idTipoTour}/galerias`,
+    
+    // Rutas públicas
+    publicGetById: (id: number) => `/galerias/${id}`,
+    publicListByTipoTour: (idTipoTour: number) => `/tipo-tours/${idTipoTour}/galerias`,
+  },
+
+
+
+  
+// Endpoints de Tour Programado
+ tourProgramado: {
+    // Rutas para admin
+    list: '/admin/tours',
+    getById: (id: number) => `/admin/tours/${id}`,
+    create: '/admin/tours',
+    update: (id: number) => `/admin/tours/${id}`,
+    delete: (id: number) => `/admin/tours/${id}`,
+    forceDelete: (id: number) => `/admin/tours/${id}/force`,
+    cambiarEstado: (id: number) => `/admin/tours/${id}/estado`,
+    asignarChofer: (id: number) => `/admin/tours/${id}/chofer`,
+    porFecha: (fecha: string) => `/admin/tours/fecha/${fecha}`,
+    porRango: '/admin/tours/rango-fechas',
+    porEstado: (estado: string) => `/admin/tours/estado/${estado}`,
+    porEmbarcacion: (idEmbarcacion: number) => `/admin/tours/embarcacion/${idEmbarcacion}`,
+    porChofer: (idChofer: number) => `/admin/tours/chofer/${idChofer}`,
+    porTipoTour: (idTipoTour: number) => `/admin/tours/tipo-tour/${idTipoTour}`,
+    porSede: (idSede: number) => `/admin/tours/sede/${idSede}`,
+    programacionSemanal: '/admin/tours/programacion-semanal',
+    programarSemanal: '/admin/tours/programacion-semanal',
+    // Nuevos endpoints para vigencia
+    porVigencia: '/admin/tours/vigencia',
+    vigentes: '/admin/tours/vigentes',
+    verificarDisponibilidad: '/admin/tours/verificar-disponibilidad',
+    disponiblesEnFecha: (fecha: string) => `/admin/tours/disponibles-en-fecha/${fecha}`,
+    disponiblesEnRango: '/admin/tours/disponibles-en-rango',
+
+    // Rutas para vendedor (solo lectura)
+    vendedorList: '/vendedor/tours',
+    vendedorGetById: (id: number) => `/vendedor/tours/${id}`,
+    vendedorPorFecha: (fecha: string) => `/vendedor/tours/fecha/${fecha}`,
+    vendedorPorRango: '/vendedor/tours/rango-fechas',
+    vendedorPorEstado: (estado: string) => `/vendedor/tours/estado/${estado}`,
+    vendedorPorSede: (idSede: number) => `/vendedor/tours/sede/${idSede}`,
+    vendedorDisponibles: '/vendedor/tours/disponibles',
+    vendedorDisponiblesEnFecha: (fecha: string) => `/vendedor/tours/disponibles-en-fecha/${fecha}`,
+    vendedorDisponiblesEnRango: '/vendedor/tours/disponibles-en-rango',
+
+    // Rutas para chofer
+    choferMisTours: '/chofer/mis-tours',
+    choferGetById: (id: number) => `/chofer/tours/${id}`,
+    choferProgramacionSemanal: '/chofer/tours/programacion-semanal',
+    choferPorFecha: (fecha: string) => `/chofer/tours/fecha/${fecha}`,
+
+    // Rutas para cliente
+    clienteDisponibles: '/cliente/tours/disponibles',
+    clienteDisponibilidadDia: (fecha: string) => `/cliente/tours/disponibilidad/${fecha}`,
+    clienteGetById: (id: number) => `/cliente/tours/${id}`,
+    clienteDisponiblesEnFecha: (fecha: string) => `/cliente/tours/disponibles-en-fecha/${fecha}`,
+    clienteDisponiblesEnRango: '/cliente/tours/disponibles-en-rango',
+    clienteVerificarDisponibilidad: '/cliente/tours/verificar-disponibilidad',
+
+    // Rutas públicas
+    disponibles: '/tours/disponibles',
+    disponibilidadDia: (fecha: string) => `/tours/disponibilidad/${fecha}`,
+    publicGetById: (id: number) => `/tours/${id}`,
+    publicDisponiblesEnFecha: (fecha: string) => `/tours/disponibles-en-fecha/${fecha}`,
+    publicDisponiblesEnRango: '/tours/disponibles-en-rango',
+    publicVerificarDisponibilidad: '/tours/verificar-disponibilidad',
+  },
+
+
+instanciaTour: {
+    // Rutas para admin
+    list: '/admin/instancias-tour',
+    getById: (id: number) => `/admin/instancias-tour/${id}`,
+    create: '/admin/instancias-tour',
+    update: (id: number) => `/admin/instancias-tour/${id}`,
+    delete: (id: number) => `/admin/instancias-tour/${id}`,
+    asignarChofer: (id: number) => `/admin/instancias-tour/${id}/asignar-chofer`,
+    listByTourProgramado: (idTourProgramado: number) => `/admin/instancias-tour/tour-programado/${idTourProgramado}`,
+    filtrar: '/admin/instancias-tour/filtrar',
+    generar: (idTourProgramado: number) => `/admin/instancias-tour/generar/${idTourProgramado}`,
+    
+    // Rutas para vendedor
+    vendedorList: '/vendedor/instancias-tour',
+    vendedorGetById: (id: number) => `/vendedor/instancias-tour/${id}`,
+    vendedorListByTourProgramado: (idTourProgramado: number) => `/vendedor/instancias-tour/tour-programado/${idTourProgramado}`,
+    vendedorFiltrar: '/vendedor/instancias-tour/filtrar',
+    
+    // Rutas para chofer
+    choferMisInstancias: '/chofer/mis-instancias-tour',
+    
+    // Rutas públicas
+    publicDisponibles: '/instancias-tour/disponibles',
+    publicByFecha: (fecha: string) => `/instancias-tour/fecha/${fecha}`,
+  },
   // ... otros endpoints
 };
+
+

@@ -1,11 +1,15 @@
-import React, { useEffect } from 'react';
+ 
+
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
 import { fetchTipoTourPorId, eliminarTipoTour } from '../../../store/slices/tipoTourSlice';
 import { fetchSedes } from '../../../store/slices/sedeSlice';
+import { listGaleriaTourByTipoTour, deleteGaleriaTour } from '../../../store/slices/galeriaTourSlice';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import GaleriaTourForm from './GaleriaTourForm';
 
 // Interfaces para tipos nulos de SQL
 interface NullString {
@@ -62,6 +66,21 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
+  ),
+  Plus: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+    </svg>
+  ),
+  Gallery: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
+  AlertCircle: () => (
+    <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
   )
 };
 
@@ -72,6 +91,10 @@ const TipoTourDetail: React.FC = () => {
   
   const { tipoTourActual, loading, error } = useSelector((state: RootState) => state.tipoTour);
   const { sedes } = useSelector((state: RootState) => state.sede);
+  const { list: galeriaImages, loading: galeriaLoading } = useSelector((state: RootState) => state.galeriaTour);
+  
+  const [showGaleriaForm, setShowGaleriaForm] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
   
   useEffect(() => {
     if (id) {
@@ -84,6 +107,7 @@ const TipoTourDetail: React.FC = () => {
           console.error("Error al cargar el tipo de tour:", error);
         });
       dispatch(fetchSedes());
+      dispatch(listGaleriaTourByTipoTour(parseInt(id)));
     }
   }, [dispatch, id]);
   
@@ -106,6 +130,32 @@ const TipoTourDetail: React.FC = () => {
   
   const handleBack = () => {
     navigate('/admin/tipos-tour');
+  };
+  
+  const handleAddImage = () => {
+    setSelectedImage(null);
+    setShowGaleriaForm(true);
+  };
+  
+  const handleEditImage = (imageId: number) => {
+    setSelectedImage(imageId);
+    setShowGaleriaForm(true);
+  };
+  
+  const handleDeleteImage = async (imageId: number) => {
+    if (window.confirm('¿Está seguro de que desea eliminar esta imagen?')) {
+      try {
+        await dispatch(deleteGaleriaTour(imageId)).unwrap();
+        alert('Imagen eliminada con éxito');
+        // Actualizar la lista de imágenes
+        if (id) {
+          dispatch(listGaleriaTourByTipoTour(parseInt(id)));
+        }
+      } catch (error) {
+        console.error('Error al eliminar imagen:', error);
+        alert('Error al eliminar la imagen. Por favor intente nuevamente.');
+      }
+    }
   };
   
   // Obtener nombre de sede
@@ -201,7 +251,7 @@ const TipoTourDetail: React.FC = () => {
   };
   
   return (
-    <Card className="max-w-3xl mx-auto">
+    <Card className="max-w-4xl mx-auto">
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
         <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
           <Icons.Tour />
@@ -303,7 +353,113 @@ const TipoTourDetail: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* Sección de Galería de imágenes */}
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-800 flex items-center gap-2">
+              <Icons.Gallery />
+              Galería de Imágenes
+            </h3>
+            <Button
+              onClick={handleAddImage}
+              className="p-2 rounded-full"
+              title="Agregar Imagen"
+              variant="primary"
+            >
+              <Icons.Plus />
+            </Button>
+          </div>
+          
+          {galeriaLoading ? (
+            <div className="text-center py-10">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <p className="mt-2 text-gray-500">Cargando imágenes...</p>
+            </div>
+          ) : galeriaImages.length === 0 ? (
+            <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
+              <Icons.Image />
+              <p className="mt-2 text-gray-500">No hay imágenes en la galería</p>
+              <p className="text-sm text-gray-400">Haga clic en el botón "+" para agregar una imagen</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {galeriaImages.map((image, index) => (
+                <div key={image.id_galeria} className="relative group">
+                  <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden border border-gray-200">
+                    <img 
+                      src={image.url_imagen} 
+                      alt={`Imagen ${index + 1}`}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=Error+de+carga';
+                      }}
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => handleEditImage(image.id_galeria)}
+                        variant="primary"
+                        className="p-2 rounded-full bg-white text-blue-600 hover:bg-blue-100"
+                        title="Editar imagen"
+                      >
+                        <Icons.Edit />
+                      </Button>
+                      <Button 
+                        onClick={() => handleDeleteImage(image.id_galeria)}
+                        variant="danger"
+                        className="p-2 rounded-full bg-white text-red-600 hover:bg-red-100"
+                        title="Eliminar imagen"
+                      >
+                        <Icons.Trash />
+                      </Button>
+                    </div>
+                  </div>
+                  {image.descripcion && (
+                    <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+                      {image.descripcion}
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs text-gray-400">
+                    Orden: {image.orden}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      
+      {/* Modal para formulario de galería */}
+      {showGaleriaForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">
+                {selectedImage ? 'Editar Imagen' : 'Agregar Nueva Imagen'}
+              </h3>
+              <button 
+                onClick={() => setShowGaleriaForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+            <GaleriaTourForm 
+              tipoTourId={parseInt(id!)} 
+              galeriaId={selectedImage}
+              onSuccess={() => {
+                setShowGaleriaForm(false);
+                if (id) {
+                  dispatch(listGaleriaTourByTipoTour(parseInt(id)));
+                }
+              }}
+              onCancel={() => setShowGaleriaForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
