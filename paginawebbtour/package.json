@@ -4,15 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:safe": "vite build --mode production",
-    "build:ignore-ts": "tsc || true && vite build",
-
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "tw:init": "tailwindcss init -p"
-  },
+  "dev": "vite",
+  "build": "tsc -b && vite build",
+  "build:safe": "vite build --mode production",
+  "build:ignore-ts": "tsc || true && vite build",
+  "lint": "eslint .",
+  "preview": "vite preview"
+},
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.0.1",
