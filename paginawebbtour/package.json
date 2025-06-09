@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:safe": "vite build --mode production",
+    "build:ignore-ts": "tsc || true && vite build",
 
     "lint": "eslint .",
     "preview": "vite preview",
