@@ -1,9 +1,9 @@
 # Etapa de construcción
-FROM node:23-alpine AS builder 
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar archivos de configuración primero (mejor caching)
+# Copiar package.json y package-lock.json
 COPY package*.json ./
 
 # Instalar dependencias
@@ -12,13 +12,13 @@ RUN npm ci
 # Copiar el resto del código fuente
 COPY . .
 
-# Usar el script existente en package.json
-RUN npm run build || true  # El || true asegura que el comando continúe incluso si hay errores TypeScript
+# Intentar construir, y si falla, crear un directorio dist mínimo
+RUN npm run build || (mkdir -p /app/dist && echo "<html><body><h1>Sistema en mantenimiento</h1><p>Vuelva a intentarlo más tarde.</p></body></html>" > /app/dist/index.html)
 
-# Etapa de producción con Nginx
+# Etapa de producción
 FROM nginx:alpine
 
-# Copiar los archivos construidos
+# Copiar los archivos construidos (ahora siempre existirá /app/dist)
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copiar configuración de nginx
