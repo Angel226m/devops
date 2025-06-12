@@ -130,7 +130,7 @@ export class RepoClienteHttp implements RepositorioCliente {
     }
   }
 
-  /*async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
+  async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
     try {
       const response = await clientePublico.post(
         `${endpoints.cliente.login}?remember_me=${credenciales.recordarme || false}`, 
@@ -148,55 +148,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       console.error("Error de autenticación:", error);
       throw error;
     }
-  }*/async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
-  try {
-    console.log("Intentando autenticar cliente con credenciales:", {
-      correo: credenciales.correo,
-      recordarme: credenciales.recordarme || false
-    });
-    
-    // SOLUCIÓN: Separar los datos del cuerpo de los parámetros de consulta
-    const datosAutenticacion = {
-      correo: credenciales.correo,
-      contrasena: credenciales.contrasena
-    };
-    
-    console.log("Datos de autenticación a enviar:", JSON.stringify(datosAutenticacion));
-    
-    // SOLUCIÓN CLAVE: Usar el tercer parámetro para los parámetros de consulta
-    // en lugar de concatenarlos en la URL
-    const response = await clientePublico.post(
-      endpoints.cliente.login,  // URL base sin query params
-      datosAutenticacion,       // Datos en el cuerpo
-      {
-        params: {               // Parámetros de consulta
-          remember_me: credenciales.recordarme || false
-        }
-      }
-    );
-    
-    if (response.data && response.data.success) {
-      return response.data.data;
-    }
-    throw new Error(response.data.message || "Error de autenticación");
-  } catch (error: any) {
-    console.error("Error de autenticación:", error);
-    
-    // Mejorar el manejo de errores
-    if (axios.isAxiosError(error) && error.response) {
-      console.error("Detalles del error de autenticación:", {
-        status: error.response.status,
-        data: error.response.data
-      });
-      
-      if (error.response.status === 401) {
-        throw new Error("Credenciales incorrectas. Verifique su correo y contraseña.");
-      }
-    }
-    
-    throw error;
-  }
-}
+  } 
 
 // En tu función refrescarToken:
 
