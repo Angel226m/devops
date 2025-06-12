@@ -148,7 +148,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       console.error("Error de autenticación:", error);
       throw error;
     }
-  } 
+  }
 
 // En tu función refrescarToken:
 
