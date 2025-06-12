@@ -1,43 +1,23 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import fs from 'fs';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './test/setup.ts',
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+    },
+    include: ['./test/**/*.{test,spec}.{ts,tsx}'],
+  },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  },
-  server: {
-    host: '0.0.0.0',
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, 'certs/private.key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'certs/domain.cert.pem')),
+      '@': resolve(__dirname, './src'),
     },
-    port: 5174, // Cambiado a otro puerto para evitar conflictos
-    proxy: {
-      '/api/v1': {
-        target: 'http://localhost:8080', // Para desarrollo directo al backend HTTP
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api\/v1/, '/api/v1'),
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('Proxy error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Proxy request:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Proxy response:', proxyRes.statusCode, req.url);
-          });
-        }
-      }
-    }
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'framer-motion']
-  }
 });

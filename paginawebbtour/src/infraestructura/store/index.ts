@@ -7,6 +7,8 @@ import tipoPasajeReducer, { TipoPasajeState } from "./slices/sliceTipoPasaje";
 import paquetePasajesReducer, { PaquetePasajesState } from "./slices/slicePaquetePasajes";
 import instanciaTourReducer, { InstanciaTourState } from "./slices/sliceInstanciaTour";
 import tourProgramadoReducer, { TourProgramadoState } from "./slices/sliceTourProgramado";
+import autenticacionReducer, { EstadoAutenticacion } from "./slices/sliceAutenticacion";
+
 // Define la estructura del estado completo de la aplicación
 export interface AppState {
   // Otros estados que ya tengas en tu aplicación
@@ -16,6 +18,8 @@ export interface AppState {
   paquetePasajes: PaquetePasajesState;
   instanciaTour: InstanciaTourState;
   tourProgramado: TourProgramadoState;
+    autenticacion: EstadoAutenticacion;
+
 }
 
 export const store = configureStore({
@@ -27,6 +31,8 @@ export const store = configureStore({
     paquetePasajes: paquetePasajesReducer,
     instanciaTour: instanciaTourReducer,
     tourProgramado: tourProgramadoReducer,
+        autenticacion: autenticacionReducer,
+
   },
 });
 

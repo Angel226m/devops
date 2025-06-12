@@ -20,6 +20,7 @@ export const axiosClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
+  withCredentials: true, // Añadido para permitir cookies en peticiones cross-origin
 });
 
 // Interceptor para peticiones
@@ -68,7 +69,8 @@ export const clientePublico = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000
+  timeout: 10000,
+  withCredentials: true, // Añadido para permitir cookies en peticiones cross-origin
 });
 
 // Interceptores básicos para el cliente público

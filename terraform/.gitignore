@@ -1,0 +1,13 @@
+# Archivos de estado de Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Archivos de plan
+tfplan
+*.tfplan
+
+# Archivos de variables locales
+terraform.tfvars
+*.auto.tfvars

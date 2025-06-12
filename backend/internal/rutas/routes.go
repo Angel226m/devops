@@ -7,6 +7,7 @@ import (
 	"sistema-toursseft/internal/controladores"
 	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/middleware"
+	"sistema-toursseft/internal/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -296,7 +297,17 @@ func SetupRoutes(
 			admin.GET("/clientes/:id", clienteController.GetByID)
 			admin.PUT("/clientes/:id", clienteController.Update)
 			admin.DELETE("/clientes/:id", clienteController.Delete)
-
+			// Puedes usar:
+			admin.GET("/clientes/buscar-documento", func(ctx *gin.Context) {
+				query := ctx.Query("query")
+				if query == "" {
+					ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Término de búsqueda requerido", nil))
+					return
+				}
+				// Usar el método List existente con parámetro search y type=doc
+				ctx.Request.URL.RawQuery = "search=" + query + "&type=doc"
+				clienteController.List(ctx)
+			})
 			// Gestión de pagos
 			admin.POST("/pagos", pagoController.Create)
 			admin.GET("/pagos", pagoController.List)
@@ -413,7 +424,20 @@ func SetupRoutes(
 			vendedor.GET("/clientes", clienteController.List)
 			vendedor.GET("/clientes/:id", clienteController.GetByID)
 			vendedor.PUT("/clientes/:id", clienteController.Update)
-
+			vendedor.PUT("/clientes/:id/datos-empresa", clienteController.UpdateDatosEmpresa)
+			// Búsqueda rápida de clientes por documento o RUC
+			vendedor.GET("/clientes/documento", clienteController.GetByDocumento)
+			// Por esta implementación:
+			vendedor.GET("/clientes/buscar-documento", func(ctx *gin.Context) {
+				query := ctx.Query("query")
+				if query == "" {
+					ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Término de búsqueda requerido", nil))
+					return
+				}
+				// Redirigir a la función List con parámetros adecuados
+				ctx.Request.URL.RawQuery = "search=" + query + "&type=doc"
+				clienteController.List(ctx)
+			})
 			// Ver instancias de tour (solo lectura)
 			vendedor.GET("/instancias-tour", instanciaTourController.List)
 			vendedor.GET("/instancias-tour/:id", instanciaTourController.GetByID)
@@ -539,6 +563,12 @@ func SetupRoutes(
 				clienteController.Update(ctx)
 			})
 
+			// Actualizar datos de empresa propios (cambiar de "datos-facturacion" a "datos-empresa")
+			cliente.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
+				clienteID := ctx.GetInt("userID")
+				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
+				clienteController.UpdateDatosEmpresa(ctx)
+			})
 			// Ver galería de imágenes (solo lectura)
 			cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
 			cliente.GET("/galerias/:id", galeriaTourController.GetByID)

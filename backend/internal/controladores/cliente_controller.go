@@ -76,6 +76,25 @@ func (c *ClienteController) GetByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente obtenido", cliente))
 }
 
+// GetByDocumento obtiene un cliente por su tipo y número de documento
+func (c *ClienteController) GetByDocumento(ctx *gin.Context) {
+	tipoDocumento := ctx.Query("tipo")
+	numeroDocumento := ctx.Query("numero")
+
+	if tipoDocumento == "" || numeroDocumento == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Tipo y número de documento son requeridos", nil))
+		return
+	}
+
+	cliente, err := c.clienteService.GetByDocumento(tipoDocumento, numeroDocumento)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Cliente no encontrado", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente obtenido", cliente))
+}
+
 // Update actualiza un cliente
 func (c *ClienteController) Update(ctx *gin.Context) {
 	// Parsear ID de la URL
@@ -110,6 +129,40 @@ func (c *ClienteController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente actualizado exitosamente", nil))
 }
 
+// UpdateDatosEmpresa actualiza solo los datos de empresa de un cliente
+func (c *ClienteController) UpdateDatosEmpresa(ctx *gin.Context) {
+	// Parsear ID de la URL
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	var datosReq entidades.ActualizarDatosEmpresaRequest
+
+	// Parsear request
+	if err := ctx.ShouldBindJSON(&datosReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	// Validar datos
+	if err := utils.ValidateStruct(datosReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Actualizar datos de empresa
+	err = c.clienteService.UpdateDatosEmpresa(id, &datosReq)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar datos de empresa", err))
+		return
+	}
+
+	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Datos de empresa actualizados exitosamente", nil))
+}
+
 // Delete elimina un cliente
 func (c *ClienteController) Delete(ctx *gin.Context) {
 	// Parsear ID de la URL
@@ -134,14 +187,22 @@ func (c *ClienteController) Delete(ctx *gin.Context) {
 func (c *ClienteController) List(ctx *gin.Context) {
 	// Obtener parámetro de búsqueda
 	query := ctx.Query("search")
+	searchType := ctx.Query("type") // Nuevo: tipo de búsqueda (name, doc)
 
 	var clientes []*entidades.Cliente
 	var err error
 
-	// Buscar por nombre o listar todos
+	// Determinar tipo de búsqueda
 	if query != "" {
-		clientes, err = c.clienteService.SearchByName(query)
+		if searchType == "doc" {
+			// Buscar por documento
+			clientes, err = c.clienteService.SearchByDocumento(query)
+		} else {
+			// Por defecto buscar por nombre
+			clientes, err = c.clienteService.SearchByName(query)
+		}
 	} else {
+		// Listar todos
 		clientes, err = c.clienteService.List()
 	}
 
@@ -214,18 +275,29 @@ func (c *ClienteController) Login(ctx *gin.Context) {
 		false,           // HttpOnly (false para permitir acceso desde JS)
 	)
 
-	// Para depuración: incluir el token en respuesta durante desarrollo
+	// Preparar respuesta según tipo de cliente (persona natural o empresa)
 	responseData := gin.H{
 		"usuario": gin.H{
 			"id_cliente":       cliente.ID,
-			"nombres":          cliente.Nombres,
-			"apellidos":        cliente.Apellidos,
-			"nombre_completo":  cliente.Nombres + " " + cliente.Apellidos,
 			"tipo_documento":   cliente.TipoDocumento,
 			"numero_documento": cliente.NumeroDocumento,
 			"correo":           cliente.Correo,
+			"numero_celular":   cliente.NumeroCelular,
 			"rol":              "CLIENTE",
 		},
+	}
+
+	// Añadir campos específicos según tipo de cliente
+	if cliente.TipoDocumento == "RUC" {
+		// Para empresas
+		responseData["usuario"].(gin.H)["razon_social"] = cliente.RazonSocial
+		responseData["usuario"].(gin.H)["direccion_fiscal"] = cliente.DireccionFiscal
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.RazonSocial
+	} else {
+		// Para personas naturales
+		responseData["usuario"].(gin.H)["nombres"] = cliente.Nombres
+		responseData["usuario"].(gin.H)["apellidos"] = cliente.Apellidos
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.Nombres + " " + cliente.Apellidos
 	}
 
 	// Solo incluir token en desarrollo para facilitar depuración
@@ -335,18 +407,29 @@ func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 
 	fmt.Println("RefreshToken Cliente: Cookies establecidas exitosamente")
 
-	// Crear respuesta para el cliente
+	// Preparar respuesta según tipo de cliente (persona natural o empresa)
 	responseData := gin.H{
 		"usuario": gin.H{
 			"id_cliente":       cliente.ID,
-			"nombres":          cliente.Nombres,
-			"apellidos":        cliente.Apellidos,
-			"nombre_completo":  cliente.Nombres + " " + cliente.Apellidos,
 			"tipo_documento":   cliente.TipoDocumento,
 			"numero_documento": cliente.NumeroDocumento,
 			"correo":           cliente.Correo,
+			"numero_celular":   cliente.NumeroCelular,
 			"rol":              "CLIENTE",
 		},
+	}
+
+	// Añadir campos específicos según tipo de cliente
+	if cliente.TipoDocumento == "RUC" {
+		// Para empresas
+		responseData["usuario"].(gin.H)["razon_social"] = cliente.RazonSocial
+		responseData["usuario"].(gin.H)["direccion_fiscal"] = cliente.DireccionFiscal
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.RazonSocial
+	} else {
+		// Para personas naturales
+		responseData["usuario"].(gin.H)["nombres"] = cliente.Nombres
+		responseData["usuario"].(gin.H)["apellidos"] = cliente.Apellidos
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.Nombres + " " + cliente.Apellidos
 	}
 
 	// Solo incluir token en desarrollo para facilitar depuración
@@ -414,4 +497,30 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
 	// Respuesta exitosa
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
+}
+
+// GetPerfilCliente obtiene el perfil del cliente autenticado
+func (c *ClienteController) GetPerfilCliente(ctx *gin.Context) {
+	// Parsear ID del cliente del contexto (establecido por el middleware de autenticación)
+	clienteIDValue, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no autenticado", nil))
+		return
+	}
+
+	clienteID, ok := clienteIDValue.(int)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error en identificación de usuario", nil))
+		return
+	}
+
+	// Obtener cliente
+	cliente, err := c.clienteService.GetByID(clienteID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Cliente no encontrado", err))
+		return
+	}
+
+	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Perfil obtenido", cliente))
 }

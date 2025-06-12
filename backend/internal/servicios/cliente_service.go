@@ -37,8 +37,73 @@ func (s *ClienteService) GetByDocumento(tipoDocumento, numeroDocumento string) (
 	return s.clienteRepo.GetByDocumento(tipoDocumento, numeroDocumento)
 }
 
+// ValidarDocumento valida el formato del documento según su tipo
+func (s *ClienteService) ValidarDocumento(tipoDocumento, numeroDocumento string) error {
+	switch tipoDocumento {
+	case "DNI":
+		// DNI peruano debe tener 8 dígitos
+		if len(numeroDocumento) != 8 || !utils.IsNumeric(numeroDocumento) {
+			return errors.New("el DNI debe tener 8 dígitos numéricos")
+		}
+	case "CE":
+		// Carné de extranjería normalmente tiene entre 9 y 12 caracteres
+		if len(numeroDocumento) < 9 || len(numeroDocumento) > 12 {
+			return errors.New("el carné de extranjería debe tener entre 9 y 12 caracteres")
+		}
+	case "Pasaporte":
+		// Pasaporte suele tener entre 8 y 15 caracteres
+		if len(numeroDocumento) < 8 || len(numeroDocumento) > 15 {
+			return errors.New("el pasaporte debe tener entre 8 y 15 caracteres")
+		}
+	case "RUC":
+		// RUC peruano debe tener 11 dígitos
+		if len(numeroDocumento) != 11 || !utils.IsNumeric(numeroDocumento) {
+			return errors.New("el RUC debe tener 11 dígitos numéricos")
+		}
+
+		// RUC debe comenzar con 10, 15, 17 o 20
+		validPrefixes := []string{"10", "15", "17", "20"}
+		prefix := numeroDocumento[:2]
+		isValid := false
+		for _, p := range validPrefixes {
+			if prefix == p {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return errors.New("el RUC debe comenzar con 10, 15, 17 o 20")
+		}
+	default:
+		return errors.New("tipo de documento no válido")
+	}
+	return nil
+}
+
 // Create crea un nuevo cliente
 func (s *ClienteService) Create(cliente *entidades.NuevoClienteRequest) (int, error) {
+	// Validar documento según su tipo
+	if err := s.ValidarDocumento(cliente.TipoDocumento, cliente.NumeroDocumento); err != nil {
+		return 0, err
+	}
+
+	// Verificar datos según tipo de documento
+	if cliente.TipoDocumento == "RUC" {
+		if cliente.RazonSocial == "" {
+			return 0, errors.New("la razón social es obligatoria para clientes con RUC")
+		}
+		if cliente.DireccionFiscal == "" {
+			return 0, errors.New("la dirección fiscal es obligatoria para clientes con RUC")
+		}
+	} else {
+		if cliente.Nombres == "" {
+			return 0, errors.New("los nombres son obligatorios para personas naturales")
+		}
+		if cliente.Apellidos == "" {
+			return 0, errors.New("los apellidos son obligatorios para personas naturales")
+		}
+	}
+
 	// Verificar si ya existe cliente con el mismo correo
 	if cliente.Correo != "" {
 		existingEmail, err := s.clienteRepo.GetByCorreo(cliente.Correo)
@@ -68,6 +133,28 @@ func (s *ClienteService) Create(cliente *entidades.NuevoClienteRequest) (int, er
 
 // Update actualiza un cliente existente
 func (s *ClienteService) Update(id int, cliente *entidades.ActualizarClienteRequest) error {
+	// Validar documento según su tipo
+	if err := s.ValidarDocumento(cliente.TipoDocumento, cliente.NumeroDocumento); err != nil {
+		return err
+	}
+
+	// Verificar datos según tipo de documento
+	if cliente.TipoDocumento == "RUC" {
+		if cliente.RazonSocial == "" {
+			return errors.New("la razón social es obligatoria para clientes con RUC")
+		}
+		if cliente.DireccionFiscal == "" {
+			return errors.New("la dirección fiscal es obligatoria para clientes con RUC")
+		}
+	} else {
+		if cliente.Nombres == "" {
+			return errors.New("los nombres son obligatorios para personas naturales")
+		}
+		if cliente.Apellidos == "" {
+			return errors.New("los apellidos son obligatorios para personas naturales")
+		}
+	}
+
 	// Verificar que el cliente existe
 	existing, err := s.clienteRepo.GetByID(id)
 	if err != nil {
@@ -94,6 +181,31 @@ func (s *ClienteService) Update(id int, cliente *entidades.ActualizarClienteRequ
 	return s.clienteRepo.Update(id, cliente)
 }
 
+// UpdateDatosEmpresa actualiza solo los datos de empresa de un cliente
+func (s *ClienteService) UpdateDatosEmpresa(id int, datos *entidades.ActualizarDatosEmpresaRequest) error {
+	// Verificar que el cliente existe
+	existing, err := s.clienteRepo.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	// Verificar que el cliente es una empresa (tipo documento RUC)
+	if existing.TipoDocumento != "RUC" {
+		return errors.New("esta operación solo es válida para clientes tipo empresa (RUC)")
+	}
+
+	// Verificar datos obligatorios
+	if datos.RazonSocial == "" {
+		return errors.New("la razón social es obligatoria")
+	}
+	if datos.DireccionFiscal == "" {
+		return errors.New("la dirección fiscal es obligatoria")
+	}
+
+	// Actualizar datos de empresa
+	return s.clienteRepo.UpdateDatosEmpresa(id, datos)
+}
+
 // Delete elimina lógicamente un cliente
 func (s *ClienteService) Delete(id int) error {
 	return s.clienteRepo.Delete(id)
@@ -104,9 +216,14 @@ func (s *ClienteService) List() ([]*entidades.Cliente, error) {
 	return s.clienteRepo.List()
 }
 
-// SearchByName busca clientes por nombre o apellido
+// SearchByName busca clientes por nombre, apellido o razón social
 func (s *ClienteService) SearchByName(query string) ([]*entidades.Cliente, error) {
 	return s.clienteRepo.SearchByName(query)
+}
+
+// SearchByDocumento busca clientes por número de documento
+func (s *ClienteService) SearchByDocumento(query string) ([]*entidades.Cliente, error) {
+	return s.clienteRepo.SearchByDocumento(query)
 }
 
 // Login autentica a un cliente y lo retorna si las credenciales son válidas

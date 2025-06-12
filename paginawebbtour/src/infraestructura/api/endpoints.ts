@@ -49,5 +49,16 @@ export const endpoints = {
     listarPorFiltros: "/tours-programados/filtrar",
     listarDisponiblesSinDuplicados: "/tours/disponibles-sin-duplicados"
   },
+   cliente: {
+    registro: "/clientes/registro",
+    login: "/clientes/login",
+    refrescarToken: "/clientes/refresh",
+    cerrarSesion: "/clientes/logout",
+    obtenerPorId: (id: number) => `/clientes/${id}`,
+    actualizar: (id: number) => `/clientes/${id}`,
+    cambiarContrasena: (id: number) => `/clientes/${id}/cambiar-contrasena`,       
+    obtenerPerfil: "/cliente/mi-perfil"
+
+  },
   
 };
