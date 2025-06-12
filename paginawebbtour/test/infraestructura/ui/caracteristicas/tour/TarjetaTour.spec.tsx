@@ -66,9 +66,10 @@ describe('TarjetaTour', () => {
     // Verificar que se muestra la descripción
     expect(container.textContent).toContain('Un fascinante recorrido por las Islas Ballestas');
     
-    // Verificar que se muestra el precio
+    // Verificar que se muestra el precio (corregido para aceptar espacios)
     expect(container.textContent).toContain('Desde');
-    expect(container.textContent).toContain('S/100');
+    // Buscar "S/" seguido de cualquier cosa (incluyendo espacios) y luego "100"
+    expect(container.textContent).toMatch(/S\/\s*100/);
     
     // Verificar que se muestra la duración
     expect(container.textContent).toContain('2h');
@@ -90,7 +91,7 @@ describe('TarjetaTour', () => {
     expect(container.textContent).toContain('Consultar precio');
     
     // Verificar que no se muestra el precio
-    expect(container.textContent).not.toContain('S/0');
+    expect(container.textContent).not.toMatch(/S\/\s*0/);
   });
 
   test('muestra un fallback cuando la imagen no carga', () => {
@@ -98,7 +99,7 @@ describe('TarjetaTour', () => {
     
     // Encontrar la imagen
     const imagen = container.querySelector('img');
-    expect(imagen).toBeDefined();
+    expect(imagen).not.toBeNull();
     
     if (imagen) {
       // Simular error en la carga de la imagen
@@ -106,7 +107,7 @@ describe('TarjetaTour', () => {
       
       // Verificar que el div de fallback aparece
       const fallbackDiv = container.querySelector('.bg-gradient-to-br.from-blue-200');
-      expect(fallbackDiv).toBeDefined();
+      expect(fallbackDiv).not.toBeNull();
       
       // Verificar que el texto del tour aparece en el fallback
       expect(fallbackDiv?.textContent).toContain('Tour a las Islas Ballestas');
@@ -138,7 +139,7 @@ describe('TarjetaTour', () => {
     
     // Encontrar el enlace de Ver Detalles
     const enlaceDetalle = container.querySelector('a[href="/tours/1"]');
-    expect(enlaceDetalle).toBeDefined();
+    expect(enlaceDetalle).not.toBeNull();
     
     // Verificar que hay múltiples enlaces al mismo tour (imagen, título y botón)
     const enlaces = container.querySelectorAll('a[href="/tours/1"]');

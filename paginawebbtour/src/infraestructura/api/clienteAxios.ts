@@ -1,5 +1,4 @@
 import axios from 'axios';
-
 import { store } from '../store';
 import { refrescarToken } from '../store/slices/sliceAutenticacion';
 
@@ -99,4 +98,4 @@ clienteAxios.interceptors.response.use(
 
 export { clienteAxios };
 
-  
+ 

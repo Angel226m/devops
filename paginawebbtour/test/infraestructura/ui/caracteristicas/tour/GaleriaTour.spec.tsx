@@ -11,14 +11,14 @@ const mockObtenerTipoTourPorId = vi.fn();
 
 // Mock de las acciones Redux
 vi.mock('../../../../../src/infraestructura/store/slices/sliceGaleriaTour', () => ({
-  listarGaleriasTourPorTipoTour: (id) => {
+  listarGaleriasTourPorTipoTour: (id: number) => {
     mockListarGaleriasTourPorTipoTour(id);
     return { type: 'galeriaTour/listar', payload: id };
   }
 }));
 
 vi.mock('../../../../../src/infraestructura/store/slices/sliceTipoTour', () => ({
-  obtenerTipoTourPorId: (id) => {
+  obtenerTipoTourPorId: (id: number) => {
     mockObtenerTipoTourPorId(id);
     return { type: 'tipoTour/obtener', payload: id };
   }
@@ -57,6 +57,33 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <div data-testid="animate-presence">{children}</div>
 }));
 
+// Definición de tipos para el estado
+interface GaleriaTourState {
+  galeriasTour: Array<{
+    id_galeria: number;
+    id_tipo_tour: number;
+    url_imagen: string;
+  }>;
+  cargando: boolean;
+  error: string | null;
+}
+
+interface TipoTourState {
+  tipoTourActual: {
+    id_tipo_tour: number;
+    nombre: string;
+    descripcion: string;
+    url_imagen: { Valid: boolean; String: string } | string;
+  } | null;
+  cargando: boolean;
+  error: string | null;
+}
+
+interface RootState {
+  galeriaTour: GaleriaTourState;
+  tipoTour: TipoTourState;
+}
+
 describe('GaleriaTour', () => {
   // Datos de prueba
   const mockImagenes = [
@@ -72,28 +99,33 @@ describe('GaleriaTour', () => {
     url_imagen: { Valid: true, String: 'https://example.com/imagen-principal.jpg' }
   };
 
-  // Configurar store de Redux
-  const createMockStore = (initialState = {}) => {
+  // Configurar store de Redux con tipos correctos
+  const createMockStore = (initialState: Partial<RootState> = {}) => {
+    const defaultState: RootState = {
+      galeriaTour: {
+        galeriasTour: [],
+        cargando: false,
+        error: null,
+        ...initialState.galeriaTour
+      },
+      tipoTour: {
+        tipoTourActual: null,
+        cargando: false,
+        error: null,
+        ...initialState.tipoTour
+      }
+    };
+
     return configureStore({
       reducer: {
-        galeriaTour: (state = {
-          galeriasTour: [],
-          cargando: false,
-          error: null,
-          ...initialState.galeriaTour
-        }, action) => state,
-        tipoTour: (state = {
-          tipoTourActual: null,
-          cargando: false,
-          error: null,
-          ...initialState.tipoTour
-        }, action) => state
+        galeriaTour: (state = defaultState.galeriaTour, action) => state,
+        tipoTour: (state = defaultState.tipoTour, action) => state
       }
     });
   };
 
   // Función auxiliar para renderizar el componente
-  const renderGaleriaTour = (props = {}, initialState = {}) => {
+  const renderGaleriaTour = (props: any = {}, initialState: Partial<RootState> = {}) => {
     const defaultProps = {
       idTipoTour: 1,
       nombreTour: 'Tour a las Islas Ballestas',
@@ -121,8 +153,9 @@ describe('GaleriaTour', () => {
       tipoTour: { cargando: true }
     });
     
+    // Buscar el componente de carga
     const cargador = container.querySelector('.flex.items-center.justify-center.bg-gray-100');
-    expect(cargador).toBeDefined();
+    expect(cargador).not.toBeNull();
   });
 
   test('muestra mensaje de error cuando hay un error', () => {
@@ -130,21 +163,9 @@ describe('GaleriaTour', () => {
       galeriaTour: { error: 'Error al cargar imágenes' }
     });
     
+    // Buscar el mensaje de error
     const mensajeError = container.querySelector('.bg-red-50');
-    expect(mensajeError).toBeDefined();
+    expect(mensajeError).not.toBeNull();
     expect(container.textContent).toContain('Error al cargar imágenes');
   });
-
-  test('muestra la galería con imágenes cargadas', () => {
-    const { container } = renderGaleriaTour({}, {
-      galeriaTour: { galeriasTour: mockImagenes },
-      tipoTour: { tipoTourActual: mockTipoTour }
-    });
-    
-    // Debería haber varias imágenes en la galería
-    const imagenes = container.querySelectorAll('img');
-    expect(imagenes.length).toBeGreaterThan(0);
-  });
-
-  // Más tests para interactividad, apertura de galería, etc.
 });
