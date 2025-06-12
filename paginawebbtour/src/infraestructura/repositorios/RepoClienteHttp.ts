@@ -1,132 +1,3 @@
-/*import { 
-  ActualizarClienteRequest, 
-  CambiarContrasenaRequest, 
-  Cliente, 
-  LoginClienteRequest, 
-  NuevoClienteRequest, 
-  RespuestaAutenticacion 
-} from "../../dominio/entidades/Cliente";
-import { RepositorioCliente } from "../../aplicacion/puertos/salida/RepositorioCliente";
-import { clienteAxios } from "../api/clienteAxios";
-import { clientePublico } from "../api/clientePublico";
-import { endpoints } from "../api/endpoints";
- 
-export class RepoClienteHttp implements RepositorioCliente {
-  async registrar(cliente: NuevoClienteRequest): Promise<number> {
-    try {
-      const response = await clientePublico.post(endpoints.cliente.registro, cliente);
-      if (response.data && response.data.success) {
-        return response.data.data.id;
-      }
-      throw new Error(response.data.message || "Error al registrar cliente");
-    } catch (error: any) {
-      console.error("Error al registrar cliente:", error);
-      throw error;
-    }
-  }
-
-  async obtenerPorId(id: number): Promise<Cliente | null> {
-    try {
-      const response = await clienteAxios.get(endpoints.cliente.obtenerPorId(id));
-      if (response.data && response.data.success) {
-        return response.data.data;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error al obtener cliente por ID:", error);
-      return null;
-    }
-  }
-
-  async actualizar(id: number, datos: ActualizarClienteRequest): Promise<void> {
-    try {
-      const response = await clienteAxios.put(endpoints.cliente.actualizar(id), datos);
-      if (response.data && response.data.success) {
-        return;
-      }
-      throw new Error(response.data.message || "Error al actualizar cliente");
-    } catch (error: any) {
-      console.error("Error al actualizar cliente:", error);
-      throw error;
-    }
-  }
-
-  async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
-    try {
-      const response = await clientePublico.post(
-        `${endpoints.cliente.login}?remember_me=${credenciales.recordarme || false}`, 
-        {
-          correo: credenciales.correo,
-          contrasena: credenciales.contrasena
-        }
-      );
-      
-      if (response.data && response.data.success) {
-        return response.data.data;
-      }
-      throw new Error(response.data.message || "Error de autenticación");
-    } catch (error: any) {
-      console.error("Error de autenticación:", error);
-      throw error;
-    }
-  }
-
-  async refrescarToken(refreshToken?: string): Promise<RespuestaAutenticacion> {
-    try {
-      let config = {};
-      
-      // Si se proporciona un refresh token explícitamente, lo incluimos en el cuerpo de la solicitud
-      if (refreshToken) {
-        config = {
-          data: { refresh_token: refreshToken }
-        };
-      }
-      
-      const response = await clientePublico.post(endpoints.cliente.refrescarToken, config);
-      
-      if (response.data && response.data.success) {
-        return response.data.data;
-      }
-      throw new Error(response.data.message || "Error al refrescar token");
-    } catch (error: any) {
-      console.error("Error al refrescar token:", error);
-      throw error;
-    }
-  }
-
-  async cerrarSesion(): Promise<void> {
-    try {
-      const response = await clienteAxios.post(endpoints.cliente.cerrarSesion);
-      if (response.data && response.data.success) {
-        return;
-      }
-      throw new Error(response.data.message || "Error al cerrar sesión");
-    } catch (error: any) {
-      console.error("Error al cerrar sesión:", error);
-      // Incluso si hay error, consideramos que la sesión está cerrada en el frontend
-    }
-  }
-
-  async cambiarContrasena(id: number, datos: CambiarContrasenaRequest): Promise<void> {
-    try {
-      const response = await clienteAxios.post(
-        endpoints.cliente.cambiarContrasena(id), 
-        {
-          current_password: datos.contrasena_actual,
-          new_password: datos.nueva_contrasena
-        }
-      );
-      
-      if (response.data && response.data.success) {
-        return;
-      }
-      throw new Error(response.data.message || "Error al cambiar contraseña");
-    } catch (error: any) {
-      console.error("Error al cambiar contraseña:", error);
-      throw error;
-    }
-  }
-}*/
 
 import { 
   ActualizarClienteRequest, 
@@ -259,7 +130,7 @@ export class RepoClienteHttp implements RepositorioCliente {
     }
   }
 
-  async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
+  /*async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
     try {
       const response = await clientePublico.post(
         `${endpoints.cliente.login}?remember_me=${credenciales.recordarme || false}`, 
@@ -277,7 +148,55 @@ export class RepoClienteHttp implements RepositorioCliente {
       console.error("Error de autenticación:", error);
       throw error;
     }
+  }*/async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
+  try {
+    console.log("Intentando autenticar cliente con credenciales:", {
+      correo: credenciales.correo,
+      recordarme: credenciales.recordarme || false
+    });
+    
+    // SOLUCIÓN: Separar los datos del cuerpo de los parámetros de consulta
+    const datosAutenticacion = {
+      correo: credenciales.correo,
+      contrasena: credenciales.contrasena
+    };
+    
+    console.log("Datos de autenticación a enviar:", JSON.stringify(datosAutenticacion));
+    
+    // SOLUCIÓN CLAVE: Usar el tercer parámetro para los parámetros de consulta
+    // en lugar de concatenarlos en la URL
+    const response = await clientePublico.post(
+      endpoints.cliente.login,  // URL base sin query params
+      datosAutenticacion,       // Datos en el cuerpo
+      {
+        params: {               // Parámetros de consulta
+          remember_me: credenciales.recordarme || false
+        }
+      }
+    );
+    
+    if (response.data && response.data.success) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || "Error de autenticación");
+  } catch (error: any) {
+    console.error("Error de autenticación:", error);
+    
+    // Mejorar el manejo de errores
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("Detalles del error de autenticación:", {
+        status: error.response.status,
+        data: error.response.data
+      });
+      
+      if (error.response.status === 401) {
+        throw new Error("Credenciales incorrectas. Verifique su correo y contraseña.");
+      }
+    }
+    
+    throw error;
   }
+}
 
 // En tu función refrescarToken:
 

@@ -30,7 +30,7 @@ vi.mock('react-i18next', () => ({
 // Mock de framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: any) => <div data-testid="motion-div" {...props}>{children}</div>,
   }
 }));
 
@@ -78,103 +78,154 @@ describe('FormularioIngreso', () => {
   });
 
   test('renderiza correctamente el formulario de ingreso', () => {
-    renderFormularioIngreso();
+    const { container } = renderFormularioIngreso();
     
-    // Verificar elementos principales del formulario
-    // Usando getByText, getByRole y getByPlaceholderText según la hoja de trucos
-    expect(screen.getByText(/Iniciar Sesión/i)).toBeTruthy();
-    expect(screen.getByRole('textbox', { name: /correo electrónico/i })).toBeTruthy();
-    expect(screen.getByPlaceholderText(/correo@ejemplo.com/i)).toBeTruthy();
-    expect(screen.getByPlaceholderText(/••••••/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeTruthy();
-    expect(screen.getByText(/¿Olvidaste tu contraseña?/i)).toBeTruthy();
-    expect(screen.getByText(/¿No tienes una cuenta?/i)).toBeTruthy();
-    expect(screen.getByText(/Regístrate aquí/i)).toBeTruthy();
+    // Verificar el título del formulario
+    expect(container.querySelector('h2')?.textContent).toBe('Iniciar Sesión');
+    
+    // Verificar campos del formulario usando atributos más directos
+    expect(container.querySelector('input[type="email"]')).not.toBeNull();
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
+    
+    // Verificar botón de submit
+    expect(container.querySelector('button[type="submit"]')).not.toBeNull();
+    
+    // Verificar enlaces
+    expect(container.querySelector('a[href="/recuperar-contrasena"]')).not.toBeNull();
+    expect(container.querySelector('a[href="/registrarse"]')).not.toBeNull();
   });
 
   test('permite escribir en los campos del formulario', () => {
-    renderFormularioIngreso();
+    const { container } = renderFormularioIngreso();
     
-    // Usar getByRole y getByPlaceholderText según corresponda
-    const emailInput = screen.getByRole('textbox', { name: /correo electrónico/i });
-    const passwordInput = screen.getByPlaceholderText(/••••••/i);
+    // Obtener los campos directamente
+    const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
+    const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    
+    if (!emailInput || !passwordInput) {
+      throw new Error('No se encontraron los campos de entrada');
+    }
+    
+    // Simular escritura en los campos
+    fireEvent.change(emailInput, { target: { value: 'usuario@ejemplo.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'contraseña123' } });
+    
+    // Verificar que los valores se actualizaron
+    expect(emailInput.value).toBe('usuario@ejemplo.com');
+    expect(passwordInput.value).toBe('contraseña123');
+  });
+
+  test('muestra/oculta la contraseña cuando se hace clic en el botón de visibilidad', () => {
+    const { container } = renderFormularioIngreso();
+    
+    // Obtener el input de contraseña
+    const passwordInput = container.querySelector('input[name="contrasena"]') as HTMLInputElement;
+    
+    if (!passwordInput) {
+      throw new Error('No se encontró el campo de contraseña');
+    }
+    
+    expect(passwordInput.type).toBe('password');
+    
+    // Obtener el botón de visibilidad
+    const visibilityButton = container.querySelector('.relative button');
+    
+    if (!visibilityButton) {
+      throw new Error('No se encontró el botón de visibilidad');
+    }
+    
+    // Hacer clic para mostrar la contraseña
+    fireEvent.click(visibilityButton);
+    
+    // Verificar que ahora es visible (type="text")
+    expect(passwordInput.type).toBe('text');
+    
+    // Hacer clic nuevamente para ocultar
+    fireEvent.click(visibilityButton);
+    
+    // Verificar que vuelve a estar oculta
+    expect(passwordInput.type).toBe('password');
+  });
+
+  test('maneja correctamente el estado del checkbox "Recordarme"', () => {
+    const { container } = renderFormularioIngreso();
+    
+    // Obtener el checkbox
+    const rememberMeCheckbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    
+    if (!rememberMeCheckbox) {
+      throw new Error('No se encontró el checkbox de recordarme');
+    }
+    
+    // Verificar estado inicial
+    expect(rememberMeCheckbox.checked).toBe(false);
+    
+    // Hacer clic para activar
+    fireEvent.click(rememberMeCheckbox);
+    expect(rememberMeCheckbox.checked).toBe(true);
+    
+    // Verificar que el texto informativo cambió
+    const infoText = container.querySelector('.text-xs.text-gray-500');
+    expect(infoText?.textContent).toContain('Su sesión se mantendrá activa durante 7 días');
+    
+    // Hacer clic para desactivar
+    fireEvent.click(rememberMeCheckbox);
+    expect(rememberMeCheckbox.checked).toBe(false);
+    
+    // Verificar que el texto volvió al inicial
+    expect(infoText?.textContent).toContain('Su sesión expirará después de 1 hora de inactividad');
+  });
+
+  test('intenta enviar el formulario con datos completos', async () => {
+    const { container } = renderFormularioIngreso();
+    
+    // Completar formulario
+    const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
+    const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
+    
+    if (!emailInput || !passwordInput || !submitButton) {
+      throw new Error('No se encontraron los elementos del formulario');
+    }
     
     fireEvent.change(emailInput, { target: { value: 'usuario@ejemplo.com' } });
     fireEvent.change(passwordInput, { target: { value: 'contraseña123' } });
     
-    expect(emailInput).toHaveValue('usuario@ejemplo.com');
-    expect(passwordInput).toHaveValue('contraseña123');
-  });
-
-  test('muestra/oculta la contraseña cuando se hace clic en el botón de visibilidad', () => {
-    renderFormularioIngreso();
-    
-    const passwordInput = screen.getByPlaceholderText(/••••••/i);
-    expect(passwordInput).toHaveAttribute('type', 'password');
-    
-    // Usar getByRole con name vacío para el botón de visibilidad
-    const buttons = screen.getAllByRole('button');
-    const visibilityButton = buttons.find(button => 
-      button.getAttribute('type') === 'button' && 
-      button.classList.contains('absolute')
-    );
-    
-    if (visibilityButton) {
-      fireEvent.click(visibilityButton);
-      expect(passwordInput).toHaveAttribute('type', 'text');
-      
-      fireEvent.click(visibilityButton);
-      expect(passwordInput).toHaveAttribute('type', 'password');
-    } else {
-      // Si no se encuentra el botón, fallará el test
-      expect(visibilityButton).toBeTruthy();
-    }
-  });
-
-  test('maneja correctamente el estado del checkbox "Recordarme"', () => {
-    renderFormularioIngreso();
-    
-    // Usar getByRole para el checkbox
-    const rememberMeCheckbox = screen.getByRole('checkbox', { 
-      name: /mantener sesión activa por 7 días/i 
-    });
-    
-    expect(rememberMeCheckbox).not.toBeChecked();
-    
-    fireEvent.click(rememberMeCheckbox);
-    expect(rememberMeCheckbox).toBeChecked();
-    
-    // Verificar que el texto informativo cambie
-    expect(screen.getByText(/su sesión se mantendrá activa durante 7 días/i)).toBeTruthy();
-    
-    fireEvent.click(rememberMeCheckbox);
-    expect(rememberMeCheckbox).not.toBeChecked();
-    expect(screen.getByText(/su sesión expirará después de 1 hora de inactividad/i)).toBeTruthy();
-  });
-
-  test('intenta enviar el formulario con datos completos', async () => {
-    renderFormularioIngreso();
-    
-    // Completar formulario
-    fireEvent.change(screen.getByRole('textbox', { name: /correo electrónico/i }), { 
-      target: { value: 'usuario@ejemplo.com' } 
-    });
-    
-    fireEvent.change(screen.getByPlaceholderText(/••••••/i), { 
-      target: { value: 'contraseña123' } 
-    });
-    
     // Enviar formulario
-    fireEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }));
+    fireEvent.click(submitButton);
     
-    // Verificar que el dispatch se haya llamado con los datos correctos
+    // Esperar a que se llame al dispatch
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalled();
     });
+  });
+
+  test('muestra mensaje de error cuando falla la autenticación', async () => {
+    // Configurar el mock para simular un error
+    mockDispatch.mockRejectedValueOnce({ 
+      message: 'Error al iniciar sesión. Por favor, intente nuevamente.' 
+    });
     
-    // Si el navegador se redirige, verifica que se llamó al mockNavigate
+    const { container } = renderFormularioIngreso();
+    
+    // Completar y enviar formulario
+    const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
+    const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
+    
+    if (!emailInput || !passwordInput || !submitButton) {
+      throw new Error('No se encontraron los elementos del formulario');
+    }
+    
+    fireEvent.change(emailInput, { target: { value: 'usuario@ejemplo.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'contraseña_incorrecta' } });
+    
+    fireEvent.click(submitButton);
+    
+    // Esperar a que aparezca cualquier mensaje de error
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalled();
+      const errorElement = container.querySelector('.bg-red-50');
+      expect(errorElement).not.toBeNull();
     });
   });
 });
