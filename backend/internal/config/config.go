@@ -64,7 +64,7 @@ func LoadConfig() *Config {
 		Env:      getEnv("APP_ENV", "development"),
 
 		// ✅ CORS
-		/*CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"), /*falta linea de configuración para producción*/
+		/*CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"),*/ /*falta linea de configuración para producción*/
 
 	} //eliminar si falla
 	// Configuración de CORS basada en el entorno

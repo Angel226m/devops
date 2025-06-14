@@ -311,7 +311,7 @@ func (c *ClienteController) Login(ctx *gin.Context) {
 }
 
 // RefreshToken renueva los tokens de un cliente
-func (c *ClienteController) RefreshToken(ctx *gin.Context) {
+/*func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 	fmt.Println("RefreshToken Cliente: Iniciando regeneración de token")
 	fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
 
@@ -373,6 +373,174 @@ func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 		// Si el token expira en más de 24 horas desde su emisión, consideramos que tiene remember_me activo
 		isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
 	}
+
+	// Configurar cookie para el nuevo token JWT
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie(
+		"access_token", // Nombre
+		newToken,       // Valor
+		60*15,          // Tiempo de vida en segundos (15 minutos)
+		"/",            // Path
+		"",             // Domain (vacío = dominio actual)
+		true,           // Secure
+		false,          // HttpOnly
+	)
+
+	// Configurar cookie para el nuevo refresh token manteniendo la misma duración
+	var refreshExpiry int
+	if isRememberMe {
+		refreshExpiry = 60 * 60 * 24 * 7 // 7 días si remember_me estaba activo
+	} else {
+		refreshExpiry = 60 * 60 // 1 hora si remember_me no estaba activo
+	}
+
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie(
+		"refresh_token", // Nombre
+		newRefreshToken, // Valor
+		refreshExpiry,   // Tiempo de vida en segundos (variable)
+		"/",             // Path
+		"",              // Domain
+		true,            // Secure
+		false,           // HttpOnly
+	)
+
+	fmt.Println("RefreshToken Cliente: Cookies establecidas exitosamente")
+
+	// Preparar respuesta según tipo de cliente (persona natural o empresa)
+	responseData := gin.H{
+		"usuario": gin.H{
+			"id_cliente":       cliente.ID,
+			"tipo_documento":   cliente.TipoDocumento,
+			"numero_documento": cliente.NumeroDocumento,
+			"correo":           cliente.Correo,
+			"numero_celular":   cliente.NumeroCelular,
+			"rol":              "CLIENTE",
+		},
+	}
+
+	// Añadir campos específicos según tipo de cliente
+	if cliente.TipoDocumento == "RUC" {
+		// Para empresas
+		responseData["usuario"].(gin.H)["razon_social"] = cliente.RazonSocial
+		responseData["usuario"].(gin.H)["direccion_fiscal"] = cliente.DireccionFiscal
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.RazonSocial
+	} else {
+		// Para personas naturales
+		responseData["usuario"].(gin.H)["nombres"] = cliente.Nombres
+		responseData["usuario"].(gin.H)["apellidos"] = cliente.Apellidos
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.Nombres + " " + cliente.Apellidos
+	}
+
+	// Solo incluir token en desarrollo para facilitar depuración
+	if gin.Mode() != gin.ReleaseMode {
+		responseData["token"] = newToken
+		responseData["refresh_token"] = newRefreshToken
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Token actualizado exitosamente", responseData))
+}*/
+
+// RefreshToken renueva los tokens de un cliente
+func (c *ClienteController) RefreshToken(ctx *gin.Context) {
+	fmt.Println("RefreshToken Cliente: Iniciando regeneración de token")
+	fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
+
+	// Obtener refresh token de la cookie
+	refreshToken, err := ctx.Cookie("refresh_token")
+	fmt.Printf("RefreshToken Cliente: Token obtenido de cookie: %v, Error: %v\n", refreshToken != "", err)
+
+	// Si no hay cookie, intentar obtenerlo del Header Authorization
+	if err != nil || refreshToken == "" {
+		authHeader := ctx.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			refreshToken = strings.TrimPrefix(authHeader, "Bearer ")
+			fmt.Printf("RefreshToken Cliente: Token obtenido del header Authorization: %v\n", refreshToken != "")
+		}
+	}
+
+	// Si aún no tenemos el token, intentar obtenerlo del cuerpo de la solicitud
+	if refreshToken == "" {
+		var refreshReq struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if ctx.ShouldBindJSON(&refreshReq) == nil && refreshReq.RefreshToken != "" {
+			refreshToken = refreshReq.RefreshToken
+			fmt.Printf("RefreshToken Cliente: Token obtenido del body JSON: %v\n", refreshToken != "")
+		} else {
+			// Si aún no se encuentra el token, probar obtenerlo del form data
+			refreshToken = ctx.PostForm("refresh_token")
+			fmt.Printf("RefreshToken Cliente: Token obtenido de form data: %v\n", refreshToken != "")
+		}
+	}
+
+	// Verificar si encontramos el token
+	if refreshToken == "" {
+		fmt.Println("RefreshToken Cliente: No se encontró el refresh token en ninguna fuente")
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Refresh token no proporcionado", nil))
+		return
+	}
+
+	// Renovar tokens
+	newToken, newRefreshToken, cliente, err := c.clienteService.RefreshClienteToken(refreshToken)
+	if err != nil {
+		fmt.Printf("RefreshToken Cliente: Error al actualizar token: %v\n", err)
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Error al actualizar token", err))
+		return
+	}
+
+	// Verificar si el refresh token original tenía remember_me activo
+	// Analizamos el token original para obtener sus claims
+	var isRememberMe bool
+
+	// Usar ParseWithClaims con manejo de errores mejorado
+	token, err := jwt.ParseWithClaims(refreshToken, &utils.ClienteTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(c.config.JWTRefreshSecret), nil
+	})
+
+	if err == nil {
+		// Si no hay error, intentamos obtener los claims
+		if claims, ok := token.Claims.(*utils.ClienteTokenClaims); ok {
+			// Verificar la duración del token para determinar si tenía remember_me
+			expiresAt := claims.ExpiresAt.Time
+			issuedAt := claims.IssuedAt.Time
+			isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+			fmt.Printf("RefreshToken Cliente: Token analizado - expiración en %v desde emisión\n", expiresAt.Sub(issuedAt))
+		} else {
+			// Si no se pueden extraer los claims como ClienteTokenClaims, intentar con StandardClaims
+			fmt.Println("RefreshToken Cliente: No se pudo extraer ClienteTokenClaims, intentando con StandardClaims")
+			if stdClaims, ok := token.Claims.(*jwt.StandardClaims); ok {
+				issuedAt := time.Unix(stdClaims.IssuedAt, 0)
+				expiresAt := time.Unix(stdClaims.ExpiresAt, 0)
+				isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+				fmt.Printf("RefreshToken Cliente: Token analizado con StandardClaims - expiración en %v desde emisión\n", expiresAt.Sub(issuedAt))
+			} else {
+				fmt.Println("RefreshToken Cliente: No se pudo determinar la duración del token, asumiendo remember_me=false")
+			}
+		}
+	} else {
+		// Si hay error al parsear, intentar con jwt.MapClaims como fallback
+		fmt.Printf("RefreshToken Cliente: Error al parsear token con claims específicos: %v\n", err)
+		tokenMap, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+			return []byte(c.config.JWTRefreshSecret), nil
+		})
+
+		if tokenMap != nil {
+			if mapClaims, ok := tokenMap.Claims.(jwt.MapClaims); ok {
+				// Extraer timestamps del map
+				if iat, ok := mapClaims["iat"].(float64); ok {
+					if exp, ok := mapClaims["exp"].(float64); ok {
+						issuedAt := time.Unix(int64(iat), 0)
+						expiresAt := time.Unix(int64(exp), 0)
+						isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+						fmt.Printf("RefreshToken Cliente: Token analizado con MapClaims - expiración en %v desde emisión\n", expiresAt.Sub(issuedAt))
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Printf("RefreshToken Cliente: Remember Me determinado: %v\n", isRememberMe)
 
 	// Configurar cookie para el nuevo token JWT
 	ctx.SetSameSite(http.SameSiteNoneMode)

@@ -8,7 +8,6 @@ import (
 	"sistema-toursseft/internal/repositorios"
 	"sistema-toursseft/internal/utils"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -228,7 +227,7 @@ func (s *ClienteService) SearchByDocumento(query string) ([]*entidades.Cliente, 
 }
 
 // Login autentica a un cliente y lo retorna si las credenciales son válidas
-func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*entidades.Cliente, string, string, error) {
+/*func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*entidades.Cliente, string, string, error) {
 	// Verificar si existe el cliente con ese correo
 	fmt.Printf("Intento de login para correo: %s\n", correo)
 
@@ -267,6 +266,53 @@ func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*ent
 
 	// Generar refresh token (duración basada en rememberMe)
 	refreshToken, err := s.generateRefreshToken(cliente.ID, correo, rememberMe)
+	if err != nil {
+		return nil, "", "", errors.New("error al generar refresh token")
+	}
+
+	return cliente, token, refreshToken, nil
+}*/
+
+// Login autentica a un cliente y lo retorna si las credenciales son válidas
+func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*entidades.Cliente, string, string, error) {
+	// Verificar si existe el cliente con ese correo
+	fmt.Printf("Intento de login para correo: %s\n", correo)
+
+	// Verificar si existe el cliente con ese correo
+	cliente, err := s.clienteRepo.GetByCorreo(correo)
+	if err != nil {
+		fmt.Printf("Error buscando cliente por correo: %v\n", err)
+		return nil, "", "", errors.New("credenciales incorrectas")
+	}
+
+	fmt.Printf("Cliente encontrado con ID: %d\n", cliente.ID)
+
+	// Obtener la contraseña hash
+	hashedPassword := cliente.Contrasena
+	if hashedPassword == "" {
+		fmt.Printf("Error: contraseña hash vacía para cliente %d\n", cliente.ID)
+		return nil, "", "", errors.New("credenciales incorrectas")
+	}
+
+	fmt.Printf("Hash almacenado en DB: %s\n", hashedPassword)
+	fmt.Printf("Contraseña recibida: %s\n", contrasena)
+
+	// Verificar contraseña
+	match := utils.CheckPasswordHash(contrasena, hashedPassword)
+	fmt.Printf("Resultado de verificación de contraseña: %v\n", match)
+
+	if !match {
+		return nil, "", "", errors.New("credenciales incorrectas")
+	}
+
+	// Generar token JWT usando la nueva función
+	token, err := utils.GenerateClienteJWT(cliente, s.config)
+	if err != nil {
+		return nil, "", "", errors.New("error al generar token")
+	}
+
+	// Generar refresh token usando la nueva función
+	refreshToken, err := utils.GenerateClienteRefreshToken(cliente, s.config, rememberMe)
 	if err != nil {
 		return nil, "", "", errors.New("error al generar refresh token")
 	}
@@ -332,59 +378,34 @@ func (s *ClienteService) generateRefreshToken(clienteID int, correo string, reme
 }
 
 // RefreshClienteToken renueva los tokens de un cliente usando su refresh token
+// RefreshClienteToken renueva los tokens de un cliente usando su refresh token
 func (s *ClienteService) RefreshClienteToken(refreshToken string) (string, string, *entidades.Cliente, error) {
-	// Validar refresh token
-	token, err := jwt.ParseWithClaims(refreshToken, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.config.JWTRefreshSecret), nil
-	})
-
+	// Validar refresh token usando la nueva función específica para clientes
+	claims, err := utils.ValidateClienteRefreshToken(refreshToken, s.config)
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	claims, ok := token.Claims.(*jwt.StandardClaims)
-	if !ok || !token.Valid {
-		return "", "", nil, errors.New("token inválido")
-	}
-
-	// Extraer ID de cliente del subject (formato "cliente:{id}")
-	subjectParts := strings.Split(claims.Subject, ":")
-	if len(subjectParts) != 2 || subjectParts[0] != "cliente" {
-		return "", "", nil, errors.New("token inválido: no es un token de cliente")
-	}
-
-	clienteID, err := strconv.Atoi(subjectParts[1])
-	if err != nil {
-		return "", "", nil, errors.New("token inválido: ID de cliente no válido")
-	}
-
-	// Obtener cliente
-	cliente, err := s.clienteRepo.GetByID(clienteID)
+	// Obtener cliente por ID
+	cliente, err := s.clienteRepo.GetByID(claims.ClienteID)
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	// Determinar si el token original fue creado con rememberMe
-	// Si el token expira en más de 24 horas desde su emisión, consideramos que tiene rememberMe activo
+	// Generar nuevo token JWT usando la nueva función
+	newToken, err := utils.GenerateClienteJWT(cliente, s.config)
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	// Determinar si el token original tenía remember_me activo
 	isRememberMe := false
-
-	// Convertir Unix timestamps a time.Time para poder compararlos
-	issuedAt := time.Unix(claims.IssuedAt, 0)
-	expiresAt := time.Unix(claims.ExpiresAt, 0)
-
-	// Comprobar si la duración es mayor a 24 horas
-	if expiresAt.Sub(issuedAt) > 24*time.Hour {
+	if claims.ExpiresAt.Sub(claims.IssuedAt.Time) > 24*time.Hour {
 		isRememberMe = true
 	}
 
-	// Generar nuevo token JWT
-	newToken, err := s.generateAccessToken(clienteID, cliente.Correo)
-	if err != nil {
-		return "", "", nil, err
-	}
-
-	// Generar nuevo refresh token manteniendo la misma configuración de rememberMe
-	newRefreshToken, err := s.generateRefreshToken(clienteID, cliente.Correo, isRememberMe)
+	// Generar nuevo refresh token usando la nueva función
+	newRefreshToken, err := utils.GenerateClienteRefreshToken(cliente, s.config, isRememberMe)
 	if err != nil {
 		return "", "", nil, err
 	}
