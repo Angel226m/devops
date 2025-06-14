@@ -66,7 +66,7 @@ func LoadConfig() *Config {
 		// ✅ CORS
 		/*CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"), /*falta linea de configuración para producción*/
 
-	}
+	} //eliminar si falla
 	// Configuración de CORS basada en el entorno
 	if config.Env == "production" {
 		config.CORSOrigin = getEnv("CORS_ORIGIN", "https://reservas.angelproyect.com,https://admin.angelproyect.com")
