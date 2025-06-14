@@ -19,9 +19,9 @@ func NewClienteRepository(db *sql.DB) *ClienteRepository {
 }
 
 // GetByID obtiene un cliente por su ID
-func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
+/*func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
 	cliente := &entidades.Cliente{}
-	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos, 
+	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos,
                    correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
               FROM cliente
               WHERE id_cliente = $1 AND eliminado = false`
@@ -37,6 +37,53 @@ func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
 			return nil, errors.New("cliente no encontrado")
 		}
 		return nil, err
+	}
+
+	// Establecer nombre completo si es persona natural
+	if cliente.TipoDocumento != "RUC" {
+		cliente.NombreCompleto = cliente.Nombres + " " + cliente.Apellidos
+	}
+
+	return cliente, nil
+}*/
+
+// GetByID obtiene un cliente por su ID
+func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
+	cliente := &entidades.Cliente{}
+
+	// Usar variables para manejar valores NULL
+	var nombres, apellidos, razonSocial, direccionFiscal sql.NullString
+
+	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos, 
+                   correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
+              FROM cliente
+              WHERE id_cliente = $1 AND eliminado = false`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&cliente.ID, &cliente.TipoDocumento, &cliente.NumeroDocumento,
+		&nombres, &apellidos, &cliente.Correo, &cliente.NumeroCelular,
+		&razonSocial, &direccionFiscal, &cliente.Contrasena, &cliente.Eliminado,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("cliente no encontrado")
+		}
+		return nil, err
+	}
+
+	// Asignar valores solo si no son NULL
+	if nombres.Valid {
+		cliente.Nombres = nombres.String
+	}
+	if apellidos.Valid {
+		cliente.Apellidos = apellidos.String
+	}
+	if razonSocial.Valid {
+		cliente.RazonSocial = razonSocial.String
+	}
+	if direccionFiscal.Valid {
+		cliente.DireccionFiscal = direccionFiscal.String
 	}
 
 	// Establecer nombre completo si es persona natural
@@ -101,9 +148,9 @@ func (r *ClienteRepository) GetByRazonSocial(razonSocial string) (*entidades.Cli
 }
 
 // GetByCorreo obtiene un cliente por su correo electrónico
-func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, error) {
+/*func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, error) {
 	cliente := &entidades.Cliente{}
-	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos, 
+	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos,
                    correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
               FROM cliente
               WHERE correo = $1 AND eliminado = false`
@@ -119,6 +166,53 @@ func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, erro
 			return nil, errors.New("cliente no encontrado")
 		}
 		return nil, err
+	}
+
+	// Establecer nombre completo si es persona natural
+	if cliente.TipoDocumento != "RUC" {
+		cliente.NombreCompleto = cliente.Nombres + " " + cliente.Apellidos
+	}
+
+	return cliente, nil
+}*/
+
+// GetByCorreo obtiene un cliente por su correo electrónico
+func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, error) {
+	cliente := &entidades.Cliente{}
+
+	// Usar variables para manejar valores NULL
+	var nombres, apellidos, razonSocial, direccionFiscal sql.NullString
+
+	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos, 
+                   correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
+              FROM cliente
+              WHERE correo = $1 AND eliminado = false`
+
+	err := r.db.QueryRow(query, correo).Scan(
+		&cliente.ID, &cliente.TipoDocumento, &cliente.NumeroDocumento,
+		&nombres, &apellidos, &cliente.Correo, &cliente.NumeroCelular,
+		&razonSocial, &direccionFiscal, &cliente.Contrasena, &cliente.Eliminado,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("cliente no encontrado")
+		}
+		return nil, err
+	}
+
+	// Asignar valores solo si no son NULL
+	if nombres.Valid {
+		cliente.Nombres = nombres.String
+	}
+	if apellidos.Valid {
+		cliente.Apellidos = apellidos.String
+	}
+	if razonSocial.Valid {
+		cliente.RazonSocial = razonSocial.String
+	}
+	if direccionFiscal.Valid {
+		cliente.DireccionFiscal = direccionFiscal.String
 	}
 
 	// Establecer nombre completo si es persona natural
