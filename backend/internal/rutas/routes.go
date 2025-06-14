@@ -56,7 +56,6 @@ func SetupRoutes(
 		public.POST("/auth/logout", authController.Logout)
 
 		// Registro de cliente
-		public.POST("/clientes/registro", clienteController.Create)
 
 		// Autenticación de clientes
 		/*public.POST("/clientes/login", clienteController.Login)
