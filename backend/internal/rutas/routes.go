@@ -59,6 +59,12 @@ func SetupRoutes(
 		public.POST("/clientes/registro", clienteController.Create)
 
 		// Autenticación de clientes
+		/*public.POST("/clientes/login", clienteController.Login)
+		public.POST("/clientes/refresh", clienteController.RefreshToken)
+		public.POST("/clientes/logout", clienteController.Logout)*/
+
+		// Autenticación de clientes
+		public.POST("/clientes/registro", clienteController.Create)
 		public.POST("/clientes/login", clienteController.Login)
 		public.POST("/clientes/refresh", clienteController.RefreshToken)
 		public.POST("/clientes/logout", clienteController.Logout)
@@ -512,76 +518,153 @@ func SetupRoutes(
 		}
 
 		// Clientes
-		cliente := protected.Group("/cliente")
-		cliente.Use(middleware.RoleMiddleware("ADMIN", "CLIENTE"))
+		/*	cliente := protected.Group("/cliente")
+			cliente.Use(middleware.RoleMiddleware("ADMIN", "CLIENTE"))
+			{
+				// Cambiar contraseña (cliente)
+				cliente.POST("/change-password", clienteController.ChangePassword)
+
+				// Ver tipos de tour disponibles (solo lectura)
+				cliente.GET("/tipos-tour", tipoTourController.List)
+				cliente.GET("/tipos-tour/:id", tipoTourController.GetByID)
+
+				// Ver horarios de tour disponibles (solo lectura)
+				cliente.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
+
+				// Ver tours disponibles
+				cliente.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
+				cliente.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
+				cliente.GET("/tours/:id", tourProgramadoController.GetByID)
+				cliente.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+				cliente.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+				cliente.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
+
+				// Ver tipos de pasaje (solo lectura)
+				cliente.GET("/tipos-pasaje", tipoPasajeController.List)
+				cliente.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
+				cliente.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
+
+				// Ver paquetes de pasajes (solo lectura)
+				cliente.GET("/paquetes-pasajes", paquetePasajesController.List)
+				cliente.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
+				cliente.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
+				cliente.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
+
+				// Ver métodos de pago (solo lectura)
+				cliente.GET("/metodos-pago", metodoPagoController.List)
+
+				// Ver canales de venta (solo lectura)
+				cliente.GET("/canales-venta", canalVentaController.List)
+
+				// Gestión del perfil propio
+				cliente.GET("/mi-perfil", func(ctx *gin.Context) {
+					clienteID := ctx.GetInt("userID")
+					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
+					clienteController.GetByID(ctx)
+				})
+
+				cliente.PUT("/mi-perfil", func(ctx *gin.Context) {
+					clienteID := ctx.GetInt("userID")
+					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
+					clienteController.Update(ctx)
+				})
+
+				// Actualizar datos de empresa propios (cambiar de "datos-facturacion" a "datos-empresa")
+				cliente.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
+					clienteID := ctx.GetInt("userID")
+					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
+					clienteController.UpdateDatosEmpresa(ctx)
+				})
+				// Ver galería de imágenes (solo lectura)
+				cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+				cliente.GET("/galerias/:id", galeriaTourController.GetByID)
+
+				// Ver mis pagos
+				cliente.GET("/mis-pagos", func(ctx *gin.Context) {
+					clienteID := ctx.GetInt("userID")
+					ctx.Request.URL.Path = "/api/v1/admin/pagos/cliente/" + strconv.Itoa(clienteID)
+					router.HandleContext(ctx)
+				})
+
+				// Ver mis comprobantes
+				cliente.GET("/mis-comprobantes", func(ctx *gin.Context) {
+					clienteID := ctx.GetInt("userID")
+					ctx.Request.URL.Path = "/api/v1/admin/comprobantes/cliente/" + strconv.Itoa(clienteID)
+					router.HandleContext(ctx)
+				})
+			}*/
+
+		clienteProtected := router.Group("/api/v1/clientes")
+		clienteProtected.Use(middleware.ClienteAuthMiddleware(config))
 		{
 			// Cambiar contraseña (cliente)
-			cliente.POST("/change-password", clienteController.ChangePassword)
+			clienteProtected.POST("/change-password", clienteController.ChangePassword)
 
 			// Ver tipos de tour disponibles (solo lectura)
-			cliente.GET("/tipos-tour", tipoTourController.List)
-			cliente.GET("/tipos-tour/:id", tipoTourController.GetByID)
+			clienteProtected.GET("/tipos-tour", tipoTourController.List)
+			clienteProtected.GET("/tipos-tour/:id", tipoTourController.GetByID)
 
 			// Ver horarios de tour disponibles (solo lectura)
-			cliente.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
+			clienteProtected.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
 
 			// Ver tours disponibles
-			cliente.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
-			cliente.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
-			cliente.GET("/tours/:id", tourProgramadoController.GetByID)
-			cliente.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
-			cliente.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
-			cliente.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
+			clienteProtected.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
+			clienteProtected.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
+			clienteProtected.GET("/tours/:id", tourProgramadoController.GetByID)
+			clienteProtected.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+			clienteProtected.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+			clienteProtected.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
 
 			// Ver tipos de pasaje (solo lectura)
-			cliente.GET("/tipos-pasaje", tipoPasajeController.List)
-			cliente.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
-			cliente.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
+			clienteProtected.GET("/tipos-pasaje", tipoPasajeController.List)
+			clienteProtected.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
+			clienteProtected.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
 
 			// Ver paquetes de pasajes (solo lectura)
-			cliente.GET("/paquetes-pasajes", paquetePasajesController.List)
-			cliente.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
-			cliente.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
-			cliente.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
+			clienteProtected.GET("/paquetes-pasajes", paquetePasajesController.List)
+			clienteProtected.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
+			clienteProtected.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
+			clienteProtected.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
 
 			// Ver métodos de pago (solo lectura)
-			cliente.GET("/metodos-pago", metodoPagoController.List)
+			clienteProtected.GET("/metodos-pago", metodoPagoController.List)
 
 			// Ver canales de venta (solo lectura)
-			cliente.GET("/canales-venta", canalVentaController.List)
+			clienteProtected.GET("/canales-venta", canalVentaController.List)
 
 			// Gestión del perfil propio
-			cliente.GET("/mi-perfil", func(ctx *gin.Context) {
+			clienteProtected.GET("/mi-perfil", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.GetByID(ctx)
 			})
 
-			cliente.PUT("/mi-perfil", func(ctx *gin.Context) {
+			clienteProtected.PUT("/mi-perfil", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.Update(ctx)
 			})
 
-			// Actualizar datos de empresa propios (cambiar de "datos-facturacion" a "datos-empresa")
-			cliente.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
+			// Actualizar datos de empresa propios
+			clienteProtected.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.UpdateDatosEmpresa(ctx)
 			})
+
 			// Ver galería de imágenes (solo lectura)
-			cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
-			cliente.GET("/galerias/:id", galeriaTourController.GetByID)
+			clienteProtected.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+			clienteProtected.GET("/galerias/:id", galeriaTourController.GetByID)
 
 			// Ver mis pagos
-			cliente.GET("/mis-pagos", func(ctx *gin.Context) {
+			clienteProtected.GET("/mis-pagos", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Request.URL.Path = "/api/v1/admin/pagos/cliente/" + strconv.Itoa(clienteID)
 				router.HandleContext(ctx)
 			})
 
 			// Ver mis comprobantes
-			cliente.GET("/mis-comprobantes", func(ctx *gin.Context) {
+			clienteProtected.GET("/mis-comprobantes", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Request.URL.Path = "/api/v1/admin/comprobantes/cliente/" + strconv.Itoa(clienteID)
 				router.HandleContext(ctx)
