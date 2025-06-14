@@ -64,7 +64,17 @@ func LoadConfig() *Config {
 		Env:      getEnv("APP_ENV", "development"),
 
 		// ✅ CORS
-		CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"),
+		/*CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"), /*falta linea de configuración para producción*/
+
+	}
+	// Configuración de CORS basada en el entorno
+	if config.Env == "production" {
+		config.CORSOrigin = getEnv("CORS_ORIGIN", "https://reservas.angelproyect.com,https://admin.angelproyect.com")
+		log.Printf("✅ CORS configurado para producción: %s", config.CORSOrigin)
+	} else {
+		// Para desarrollo, usar múltiples orígenes separados por comas
+		config.CORSOrigin = getEnv("CORS_ORIGIN", "http://localhost:5173,http://localhost:5174")
+		log.Printf("✅ CORS configurado para desarrollo: %s", config.CORSOrigin)
 	}
 
 	// Parsear duración de JWT
