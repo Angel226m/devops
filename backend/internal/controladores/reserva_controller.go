@@ -498,7 +498,7 @@ func (c *ReservaController) ReservarConMercadoPago(ctx *gin.Context) {
 	// Obtener URL base del frontend para redirecciones
 	frontendURL := ctx.GetHeader("Origin")
 	if frontendURL == "" {
-		frontendURL = "https://tours-peru.com" // URL predeterminada si no se proporciona Origin
+		frontendURL = "https://reservas.angelproyect.com" // URL predeterminada si no se proporciona Origin
 	}
 
 	response, err := c.reservaService.ReservarConMercadoPago(&request, c.mercadoPagoService, frontendURL)
