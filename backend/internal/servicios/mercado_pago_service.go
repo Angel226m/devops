@@ -20,10 +20,24 @@ type MercadoPagoService struct {
 }
 
 // NewMercadoPagoService crea una nueva instancia del servicio de Mercado Pago
+// NewMercadoPagoService crea una nueva instancia del servicio de Mercado Pago
 func NewMercadoPagoService() *MercadoPagoService {
+	// Obtener del entorno o usar valores por defecto para desarrollo
+	accessToken := os.Getenv("MERCADOPAGO_ACCESS_TOKEN")
+	publicKey := os.Getenv("MERCADOPAGO_PUBLIC_KEY")
+
+	// Si no están configuradas, usar valores de prueba
+	if accessToken == "" {
+		accessToken = "TEST-7578930656151955-061121-f88fb2ff5472a156247e4a4b9a2b22a6-639593569"
+	}
+
+	if publicKey == "" {
+		publicKey = "TEST-77110b60-f2cc-454f-ad25-5d08b927ac85"
+	}
+
 	return &MercadoPagoService{
-		AccessToken: os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
-		PublicKey:   os.Getenv("MERCADOPAGO_PUBLIC_KEY"),
+		AccessToken: accessToken,
+		PublicKey:   publicKey,
 		ApiBaseURL:  "https://api.mercadopago.com",
 	}
 }
