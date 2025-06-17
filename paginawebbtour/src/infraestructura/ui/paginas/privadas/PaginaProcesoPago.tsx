@@ -248,20 +248,22 @@ const crearPreferenciaReal = useCallback(async () => {
       console.log("Paquetes formateados:", JSON.stringify(paquetes, null, 2));
       
       // Datos para enviar al backend
-      const datosParaEnviar = {
-        id_tour_programado: Number(datosReserva.instanciaId), // Cambiado de id_instancia a id_tour_programado
-        id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
-        pasajes: pasajes,
-        paquetes: paquetes,
-        monto: parseFloat((datosReserva.total || total).toFixed(2)),
-        total_pagar: parseFloat((datosReserva.total || total).toFixed(2)), // Campo requerido
-        tour_nombre: datosReserva.tourNombre || "Tour",
-        email: usuario?.correo || datosUsuario.correo || "",
-        nombre: usuario?.nombres || datosUsuario.nombres || "",
-        apellido: usuario?.apellidos || datosUsuario.apellidos || "",
-        telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
-        documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
-      };
+    // Datos para enviar al backend
+const datosParaEnviar = {
+  id_instancia: Number(datosReserva.instanciaId),
+  id_tour_programado: Number(datosReserva.instanciaId), // Incluimos ambos por si acaso
+  id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
+  pasajes: pasajes,
+  paquetes: paquetes,
+  monto: parseFloat((datosReserva.total || total).toFixed(2)),
+  total_pagar: parseFloat((datosReserva.total || total).toFixed(2)),
+  tour_nombre: datosReserva.tourNombre || "Tour",
+  email: usuario?.correo || datosUsuario.correo || "",
+  nombre: usuario?.nombres || datosUsuario.nombres || "",
+  apellido: usuario?.apellidos || datosUsuario.apellidos || "",
+  telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
+  documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
+};
       
       // Validación de datos críticos
       if (!datosParaEnviar.email) {
