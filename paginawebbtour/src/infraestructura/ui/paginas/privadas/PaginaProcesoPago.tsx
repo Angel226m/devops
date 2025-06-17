@@ -130,229 +130,230 @@ const PaginaProcesoPago = () => {
   }, []);
 
   // Crear preferencia real usando el backend
-  const crearPreferenciaReal = useCallback(async () => {
-    try {
-      // Verificamos qué tipo de reserva tenemos
-      if (datosReserva.reservaId) {
-        // Si ya tenemos una reserva, usamos el endpoint para pagar una reserva existente
-        console.log("Obteniendo preferencia para reserva existente:", datosReserva.reservaId);
+// Crear preferencia real usando el backend
+const crearPreferenciaReal = useCallback(async () => {
+  try {
+    // Verificamos qué tipo de reserva tenemos
+    if (datosReserva.reservaId) {
+      // Si ya tenemos una reserva, usamos el endpoint para pagar una reserva existente
+      console.log("Obteniendo preferencia para reserva existente:", datosReserva.reservaId);
+      
+      const endpoint = endpoints.mercadoPago.pagarReserva(datosReserva.reservaId);
+      console.log("Endpoint utilizado:", endpoint);
+      
+      const response = await clienteAxios.post(endpoint);
+      console.log("Respuesta del servidor para reserva existente:", response.data);
+      
+      if (response.data && response.data.data) {
+        return response.data.data;
+      } else {
+        console.error("Respuesta sin datos de preferencia:", response.data);
+        throw new Error("La respuesta del servidor no contiene datos de preferencia");
+      }
+    } else if (datosReserva.instanciaId) {
+      // Si es una nueva reserva, creamos una reserva con Mercado Pago
+      console.log("Creando nueva reserva con Mercado Pago para instancia:", datosReserva.instanciaId);
+      console.log("Datos de reserva completos:", JSON.stringify(datosReserva, null, 2));
+      
+      // Verificación de datos esenciales
+      if (!datosReserva.instanciaId) {
+        console.error("Error: No hay ID de instancia");
+        throw new Error("No se encontró ID de instancia");
+      }
+      
+      // Preparar los datos de pasajes en el formato correcto
+      let pasajes: Pasaje[] = [];
+      
+      // Si tenemos cantidadesPasajes (formato array), usar ese
+      if (datosReserva.cantidadesPasajes && Array.isArray(datosReserva.cantidadesPasajes)) {
+        pasajes = datosReserva.cantidadesPasajes
+          .filter((p: PasajeDatosReserva) => p.cantidad > 0)
+          .map((p: PasajeDatosReserva) => ({
+            id_tipo_pasaje: p.idTipoPasaje,
+            cantidad: p.cantidad,
+            precio_unitario: p.precioUnitario
+          }));
+      } 
+      // Si tenemos seleccionPasajes (formato objeto), convertir a array
+      else if (datosReserva.seleccionPasajes) {
+        // Precios por tipo de pasaje (en producción, estos deberían venir del backend)
+        const precios: Record<string, number> = {
+          "1": 120, // Adulto
+          "2": 80,  // Niño
+          "3": 100  // Estudiante
+        };
         
-        const endpoint = endpoints.mercadoPago.pagarReserva(datosReserva.reservaId);
-        console.log("Endpoint utilizado:", endpoint);
+        // Asegurarse que Object.entries() devuelva el tipo correcto
+        pasajes = Object.entries(datosReserva.seleccionPasajes)
+          .filter(([_, cantidadValue]) => {
+            // Asegurarse que cantidad sea un número y mayor que 0
+            const cantidad = Number(cantidadValue);
+            return !isNaN(cantidad) && cantidad > 0;
+          })
+          .map(([tipoId, cantidadValue]) => {
+            // Convertir explícitamente a número
+            const cantidad = Number(cantidadValue);
+            const precio = precios[tipoId] || 100;
+            
+            return {
+              id_tipo_pasaje: parseInt(tipoId),
+              cantidad: cantidad,
+              precio_unitario: precio
+            };
+          });
+      }
+      
+      console.log("Pasajes formateados:", JSON.stringify(pasajes, null, 2));
+      
+      // Verificar que haya pasajes
+      if (pasajes.length === 0) {
+        console.error("Error: No hay pasajes seleccionados");
+        throw new Error("Debe seleccionar al menos un pasaje");
+      }
+      
+      // Preparar los datos de paquetes en el formato correcto
+      let paquetes: Paquete[] = [];
+      
+      // Si tenemos paquetes (formato array), usar ese
+      if (datosReserva.paquetes && Array.isArray(datosReserva.paquetes)) {
+        paquetes = datosReserva.paquetes
+          .filter((p: PaqueteDatosReserva) => p.seleccionado)
+          .map((p: PaqueteDatosReserva) => ({
+            // Usar id_paquete en lugar de id_paquete_pasajes
+            id_paquete: p.idPaquetePasajes,
+            precio: p.precio
+          }));
+      } 
+      // Si tenemos seleccionPaquetes (formato objeto), convertir a array
+      else if (datosReserva.seleccionPaquetes) {
+        // Precios por tipo de paquete (en producción, estos deberían venir del backend)
+        const preciosPaquetes: Record<string, number> = {
+          "1": 250, // Paquete familiar
+          "2": 200, // Paquete estándar
+          "3": 300  // Paquete premium
+        };
         
-        const response = await clienteAxios.post(endpoint);
-        console.log("Respuesta del servidor para reserva existente:", response.data);
+        paquetes = Object.entries(datosReserva.seleccionPaquetes)
+          .filter(([_, seleccionadoValue]) => {
+            // Verificar que sea verdadero (true o 1)
+            return seleccionadoValue === true || seleccionadoValue === 1 || seleccionadoValue === '1';
+          })
+          .map(([paqueteId, _]) => ({
+            // Usar id_paquete en lugar de id_paquete_pasajes
+            id_paquete: parseInt(paqueteId),
+            precio: preciosPaquetes[paqueteId] || 200 // Precio por defecto
+          }));
+      }
+      
+      console.log("Paquetes formateados:", JSON.stringify(paquetes, null, 2));
+      
+      // Datos para enviar al backend
+      const datosParaEnviar = {
+        id_tour_programado: Number(datosReserva.instanciaId), // Cambiado de id_instancia a id_tour_programado
+        id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
+        pasajes: pasajes,
+        paquetes: paquetes,
+        monto: parseFloat((datosReserva.total || total).toFixed(2)),
+        total_pagar: parseFloat((datosReserva.total || total).toFixed(2)), // Campo requerido
+        tour_nombre: datosReserva.tourNombre || "Tour",
+        email: usuario?.correo || datosUsuario.correo || "",
+        nombre: usuario?.nombres || datosUsuario.nombres || "",
+        apellido: usuario?.apellidos || datosUsuario.apellidos || "",
+        telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
+        documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
+      };
+      
+      // Validación de datos críticos
+      if (!datosParaEnviar.email) {
+        console.error("Error: No hay email");
+        throw new Error("El email es obligatorio");
+      }
+      
+      if (!datosParaEnviar.nombre) {
+        console.error("Error: No hay nombre");
+        throw new Error("El nombre es obligatorio");
+      }
+      
+      if (!datosParaEnviar.apellido) {
+        console.error("Error: No hay apellido");
+        throw new Error("El apellido es obligatorio");
+      }
+      
+      // Log detallado de los datos que se enviarán
+      console.log("DATOS QUE SE ENVIARÁN A /mercadopago/reservar:", JSON.stringify(datosParaEnviar, null, 2));
+      console.log("Endpoint utilizado:", endpoints.mercadoPago.reservar);
+      console.log("Headers:", JSON.stringify(clienteAxios.defaults.headers, null, 2));
+      
+      try {
+        console.log("Iniciando solicitud POST...");
+        const response = await clienteAxios.post(endpoints.mercadoPago.reservar, datosParaEnviar);
+        console.log("Respuesta del servidor:", JSON.stringify(response.data, null, 2));
         
         if (response.data && response.data.data) {
+          // Si se creó una reserva, guardar su ID
+          if (response.data.data.id_reserva) {
+            console.log("ID de reserva creada:", response.data.data.id_reserva);
+            sessionStorage.setItem('reservaEnProceso', JSON.stringify({
+              id: response.data.data.id_reserva,
+              tour: datosReserva.tourNombre,
+              fecha: datosReserva.fecha
+            }));
+          }
           return response.data.data;
         } else {
           console.error("Respuesta sin datos de preferencia:", response.data);
           throw new Error("La respuesta del servidor no contiene datos de preferencia");
         }
-      } else if (datosReserva.instanciaId) {
-        // Si es una nueva reserva, creamos una reserva con Mercado Pago
-        console.log("Creando nueva reserva con Mercado Pago para instancia:", datosReserva.instanciaId);
-        console.log("Datos de reserva completos:", JSON.stringify(datosReserva, null, 2));
+      } catch (error: any) {
+        console.error("ERROR DETALLADO AL CREAR PREFERENCIA:", error);
         
-        // Verificación de datos esenciales
-        if (!datosReserva.instanciaId) {
-          console.error("Error: No hay ID de instancia");
-          throw new Error("No se encontró ID de instancia");
-        }
-        
-        // Preparar los datos de pasajes en el formato correcto
-        let pasajes: Pasaje[] = [];
-        
-        // Si tenemos cantidadesPasajes (formato array), usar ese
-        if (datosReserva.cantidadesPasajes && Array.isArray(datosReserva.cantidadesPasajes)) {
-          pasajes = datosReserva.cantidadesPasajes
-            .filter((p: PasajeDatosReserva) => p.cantidad > 0)
-            .map((p: PasajeDatosReserva) => ({
-              id_tipo_pasaje: p.idTipoPasaje,
-              cantidad: p.cantidad,
-              precio_unitario: p.precioUnitario
-            }));
-        } 
-        // Si tenemos seleccionPasajes (formato objeto), convertir a array
-        else if (datosReserva.seleccionPasajes) {
-          // Precios por tipo de pasaje (en producción, estos deberían venir del backend)
-          const precios: Record<string, number> = {
-            "1": 120, // Adulto
-            "2": 80,  // Niño
-            "3": 100  // Estudiante
-          };
+        if (error.response) {
+          console.error("Status del error:", error.response.status);
+          console.error("Headers de la respuesta:", JSON.stringify(error.response.headers, null, 2));
+          console.error("Datos de la respuesta de error:", JSON.stringify(error.response.data, null, 2));
           
-          // Asegurarse que Object.entries() devuelva el tipo correcto
-          pasajes = Object.entries(datosReserva.seleccionPasajes)
-            .filter(([_, cantidadValue]) => {
-              // Asegurarse que cantidad sea un número y mayor que 0
-              const cantidad = Number(cantidadValue);
-              return !isNaN(cantidad) && cantidad > 0;
-            })
-            .map(([tipoId, cantidadValue]) => {
-              // Convertir explícitamente a número
-              const cantidad = Number(cantidadValue);
-              const precio = precios[tipoId] || 100;
-              
-              return {
-                id_tipo_pasaje: parseInt(tipoId),
-                cantidad: cantidad,
-                precio_unitario: precio
-              };
-            });
-        }
-        
-        console.log("Pasajes formateados:", JSON.stringify(pasajes, null, 2));
-        
-        // Verificar que haya pasajes
-        if (pasajes.length === 0) {
-          console.error("Error: No hay pasajes seleccionados");
-          throw new Error("Debe seleccionar al menos un pasaje");
-        }
-        
-        // Preparar los datos de paquetes en el formato correcto
-        let paquetes: Paquete[] = [];
-        
-        // Si tenemos paquetes (formato array), usar ese
-        if (datosReserva.paquetes && Array.isArray(datosReserva.paquetes)) {
-          paquetes = datosReserva.paquetes
-            .filter((p: PaqueteDatosReserva) => p.seleccionado)
-            .map((p: PaqueteDatosReserva) => ({
-              // Usar id_paquete en lugar de id_paquete_pasajes
-              id_paquete: p.idPaquetePasajes,
-              precio: p.precio
-            }));
-        } 
-        // Si tenemos seleccionPaquetes (formato objeto), convertir a array
-        else if (datosReserva.seleccionPaquetes) {
-          // Precios por tipo de paquete (en producción, estos deberían venir del backend)
-          const preciosPaquetes: Record<string, number> = {
-            "1": 250, // Paquete familiar
-            "2": 200, // Paquete estándar
-            "3": 300  // Paquete premium
-          };
+          // Intentar extraer un mensaje más específico
+          const mensajeError = error.response.data?.error || 
+                              error.response.data?.message || 
+                              error.response.data?.details || 
+                              "Error desconocido";
           
-          paquetes = Object.entries(datosReserva.seleccionPaquetes)
-            .filter(([_, seleccionadoValue]) => {
-              // Verificar que sea verdadero (true o 1)
-              return seleccionadoValue === true || seleccionadoValue === 1 || seleccionadoValue === '1';
-            })
-            .map(([paqueteId, _]) => ({
-              // Usar id_paquete en lugar de id_paquete_pasajes
-              id_paquete: parseInt(paqueteId),
-              precio: preciosPaquetes[paqueteId] || 200 // Precio por defecto
-            }));
+          throw new Error(`Error del servidor (${error.response.status}): ${mensajeError}`);
+        } else if (error.request) {
+          console.error("Error: No se recibió respuesta del servidor");
+          console.error("Detalles de la solicitud:", JSON.stringify(error.request, null, 2));
+          throw new Error("No se recibió respuesta del servidor. Verifica tu conexión a internet.");
+        } else {
+          console.error("Error al configurar la solicitud:", error.message);
+          throw error;
         }
-        
-        console.log("Paquetes formateados:", JSON.stringify(paquetes, null, 2));
-        
-        // Datos para enviar al backend
-        const datosParaEnviar = {
-          id_instancia: Number(datosReserva.instanciaId),
-          id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
-          pasajes: pasajes,
-          paquetes: paquetes,
-          monto: parseFloat((datosReserva.total || total).toFixed(2)),
-          total_pagar: parseFloat((datosReserva.total || total).toFixed(2)), // Campo requerido
-          tour_nombre: datosReserva.tourNombre || "Tour",
-          email: usuario?.correo || datosUsuario.correo || "",
-          nombre: usuario?.nombres || datosUsuario.nombres || "",
-          apellido: usuario?.apellidos || datosUsuario.apellidos || "",
-          telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
-          documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
-        };
-        
-        // Validación de datos críticos
-        if (!datosParaEnviar.email) {
-          console.error("Error: No hay email");
-          throw new Error("El email es obligatorio");
-        }
-        
-        if (!datosParaEnviar.nombre) {
-          console.error("Error: No hay nombre");
-          throw new Error("El nombre es obligatorio");
-        }
-        
-        if (!datosParaEnviar.apellido) {
-          console.error("Error: No hay apellido");
-          throw new Error("El apellido es obligatorio");
-        }
-        
-        // Log detallado de los datos que se enviarán
-        console.log("DATOS QUE SE ENVIARÁN A /mercadopago/reservar:", JSON.stringify(datosParaEnviar, null, 2));
-        console.log("Endpoint utilizado:", endpoints.mercadoPago.reservar);
-        console.log("Headers:", JSON.stringify(clienteAxios.defaults.headers, null, 2));
-        
-        try {
-          console.log("Iniciando solicitud POST...");
-          const response = await clienteAxios.post(endpoints.mercadoPago.reservar, datosParaEnviar);
-          console.log("Respuesta del servidor:", JSON.stringify(response.data, null, 2));
-          
-          if (response.data && response.data.data) {
-            // Si se creó una reserva, guardar su ID
-            if (response.data.data.id_reserva) {
-              console.log("ID de reserva creada:", response.data.data.id_reserva);
-              sessionStorage.setItem('reservaEnProceso', JSON.stringify({
-                id: response.data.data.id_reserva,
-                tour: datosReserva.tourNombre,
-                fecha: datosReserva.fecha
-              }));
-            }
-            return response.data.data;
-          } else {
-            console.error("Respuesta sin datos de preferencia:", response.data);
-            throw new Error("La respuesta del servidor no contiene datos de preferencia");
-          }
-        } catch (error: any) {
-          console.error("ERROR DETALLADO AL CREAR PREFERENCIA:", error);
-          
-          if (error.response) {
-            console.error("Status del error:", error.response.status);
-            console.error("Headers de la respuesta:", JSON.stringify(error.response.headers, null, 2));
-            console.error("Datos de la respuesta de error:", JSON.stringify(error.response.data, null, 2));
-            
-            // Intentar extraer un mensaje más específico
-            const mensajeError = error.response.data?.error || 
-                                error.response.data?.message || 
-                                error.response.data?.details || 
-                                "Error desconocido";
-            
-            throw new Error(`Error del servidor (${error.response.status}): ${mensajeError}`);
-          } else if (error.request) {
-            console.error("Error: No se recibió respuesta del servidor");
-            console.error("Detalles de la solicitud:", JSON.stringify(error.request, null, 2));
-            throw new Error("No se recibió respuesta del servidor. Verifica tu conexión a internet.");
-          } else {
-            console.error("Error al configurar la solicitud:", error.message);
-            throw error;
-          }
-        }
-      } else {
-        console.error("Error: No hay ID de reserva ni de instancia");
-        throw new Error("No se encontró ID de reserva o instancia");
       }
-    } catch (error: any) {
-      // Log completo del error
-      console.error("ERROR COMPLETO AL CREAR PREFERENCIA REAL:", error);
-      console.error("Mensaje:", error.message);
-      console.error("Stack:", error.stack);
-      
-      // Mostrar mensaje de error más detallado
-      if (error.response && error.response.data) {
-        const mensaje = error.response.data.message || error.response.data.error || "Error desconocido del servidor";
-        const detalles = error.response.data.details || "";
-        const mensajeCompleto = `Error del servidor: ${mensaje}${detalles ? ` (${detalles})` : ""}`;
-        console.error("Mensaje de error formateado:", mensajeCompleto);
-        setError(mensajeCompleto);
-      } else {
-        const mensajeGeneral = `Error al crear preferencia: ${error.message || "Error desconocido"}`;
-        console.error("Mensaje de error general:", mensajeGeneral);
-        setError(mensajeGeneral);
-      }
-      
-      throw error;
+    } else {
+      console.error("Error: No hay ID de reserva ni de instancia");
+      throw new Error("No se encontró ID de reserva o instancia");
     }
-  }, [datosReserva, datosUsuario, usuario, total]);
+  } catch (error: any) {
+    // Log completo del error
+    console.error("ERROR COMPLETO AL CREAR PREFERENCIA REAL:", error);
+    console.error("Mensaje:", error.message);
+    console.error("Stack:", error.stack);
+    
+    // Mostrar mensaje de error más detallado
+    if (error.response && error.response.data) {
+      const mensaje = error.response.data.message || error.response.data.error || "Error desconocido del servidor";
+      const detalles = error.response.data.details || "";
+      const mensajeCompleto = `Error del servidor: ${mensaje}${detalles ? ` (${detalles})` : ""}`;
+      console.error("Mensaje de error formateado:", mensajeCompleto);
+      setError(mensajeCompleto);
+    } else {
+      const mensajeGeneral = `Error al crear preferencia: ${error.message || "Error desconocido"}`;
+      console.error("Mensaje de error general:", mensajeGeneral);
+      setError(mensajeGeneral);
+    }
+    
+    throw error;
+  }
+}, [datosReserva, datosUsuario, usuario, total]);
 
   // Resto del código permanece igual...
   
