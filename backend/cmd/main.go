@@ -114,7 +114,6 @@ func main() {
 	if err := runMigrations(db); err != nil {
 		log.Fatalf("❌ Error al ejecutar migraciones: %v", err)
 	}
-
 	// Inicializar repositorios
 	usuarioRepo := repositorios.NewUsuarioRepository(db)
 	idiomaRepo := repositorios.NewIdiomaRepository(db)
@@ -142,7 +141,6 @@ func main() {
 
 	// Inicializar servicios
 	authService := servicios.NewAuthService(usuarioRepo, sedeRepo, cfg)
-	//usuarioService := servicios.NewUsuarioService(usuarioRepo)
 	usuarioService := servicios.NewUsuarioService(usuarioRepo, usuarioIdiomaRepo)                         // Modificado para incluir usuarioIdiomaRepo
 	usuarioIdiomaService := servicios.NewUsuarioIdiomaService(usuarioIdiomaRepo, idiomaRepo, usuarioRepo) // Nuevo servicio
 
@@ -171,19 +169,21 @@ func main() {
 	tipoPasajeService := servicios.NewTipoPasajeService(tipoPasajeRepo, sedeRepo, tipoTourRepo)
 	canalVentaService := servicios.NewCanalVentaService(canalVentaRepo, sedeRepo)
 	clienteService := servicios.NewClienteService(clienteRepo, cfg)
+	mercadoPagoService := servicios.NewMercadoPagoService()
 
 	// Servicios de reserva
-	/*reservaService := servicios.NewReservaService(
+	reservaService := servicios.NewReservaService(
 		db,
 		reservaRepo,
 		clienteRepo,
-		tourProgramadoRepo,
+		instanciaTourRepo,
 		canalVentaRepo,
 		tipoPasajeRepo,
+		paquetePasajesRepo,
 		usuarioRepo,
 		sedeRepo,
 	)
-	*/
+
 	// Servicios de pago
 	pagoService := servicios.NewPagoService(
 		pagoRepo,
@@ -227,11 +227,15 @@ func main() {
 	canalVentaController := controladores.NewCanalVentaController(canalVentaService)
 	sedeController := controladores.NewSedeController(sedeService)
 	clienteController := controladores.NewClienteController(clienteService, cfg)
-	/*reservaController := controladores.NewReservaController(reservaService)*/
+	reservaController := controladores.NewReservaController(reservaService, mercadoPagoService)
 	pagoController := controladores.NewPagoController(pagoService)
 	comprobantePagoController := controladores.NewComprobantePagoController(comprobantePagoService)
 	instanciaTourController := controladores.NewInstanciaTourController(instanciaTourService)
-
+	mercadoPagoController := controladores.NewMercadoPagoController(
+		mercadoPagoService,
+		pagoService,
+		reservaService,
+		clienteService)
 	// Configurar rutas
 	rutas.SetupRoutes(
 		router,
@@ -252,13 +256,18 @@ func main() {
 		metodoPagoController,
 		canalVentaController,
 		clienteController,
-		/*	reservaController,*/
+		reservaController,
 		pagoController,
 		comprobantePagoController,
 		sedeController,
 		instanciaTourController, // Agregar el nuevo controlador aquí
+		mercadoPagoController,   // Añadido aquí
 
+		reservaService,
+		clienteService,
+		mercadoPagoService,
 	)
+
 	// Iniciar servidor
 	serverAddr := fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort)
 	log.Printf("🚀 Servidor iniciado en %s (entorno: %s)", serverAddr, cfg.Env)

@@ -7,11 +7,14 @@ import (
 	"sistema-toursseft/internal/controladores"
 	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/middleware"
+	"sistema-toursseft/internal/servicios"
 	"sistema-toursseft/internal/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
+
+// SetupRoutes configura todas las rutas de la API
 
 // SetupRoutes configura todas las rutas de la API
 func SetupRoutes(
@@ -35,13 +38,22 @@ func SetupRoutes(
 	metodoPagoController *controladores.MetodoPagoController,
 	canalVentaController *controladores.CanalVentaController,
 	clienteController *controladores.ClienteController,
-	/*reservaController *controladores.ReservaController,*/
+	reservaController *controladores.ReservaController, // Agregar controlador de reservas
 	pagoController *controladores.PagoController,
 	comprobantePagoController *controladores.ComprobantePagoController,
 	sedeController *controladores.SedeController,
 	instanciaTourController *controladores.InstanciaTourController, // Nuevo controlador
+	mercadoPagoController *controladores.MercadoPagoController, // Añadido aquí
+
+	// Servicios necesarios para acceso directo en rutas
+	reservaService *servicios.ReservaService,
+	clienteService *servicios.ClienteService,
+	mercadoPagoService *servicios.MercadoPagoService,
 
 ) {
+
+	clienteHandlers := NewClienteHandlers(reservaService, clienteService, mercadoPagoService)
+
 	// Middleware global
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(middleware.ErrorMiddleware())
@@ -56,14 +68,9 @@ func SetupRoutes(
 		public.POST("/auth/logout", authController.Logout)
 
 		// Registro de cliente
-
-		// Autenticación de clientes
-		/*public.POST("/clientes/login", clienteController.Login)
-		public.POST("/clientes/refresh", clienteController.RefreshToken)
-		public.POST("/clientes/logout", clienteController.Logout)*/
-
-		// Autenticación de clientes
 		public.POST("/clientes/registro", clienteController.Create)
+
+		// Autenticación de clientes
 		public.POST("/clientes/login", clienteController.Login)
 		public.POST("/clientes/refresh", clienteController.RefreshToken)
 		public.POST("/clientes/logout", clienteController.Logout)
@@ -137,6 +144,20 @@ func SetupRoutes(
 
 		// Idiomas (acceso público para ver opciones disponibles)
 		public.GET("/idiomas", idiomaController.List)
+
+		//reservas mercado pago
+
+		public.POST("/mercadopago/reservar", func(ctx *gin.Context) {
+			clienteHandlers.ReservarConMercadoPago(ctx, reservaController)
+		})
+
+		// Webhook para recibir notificaciones de Mercado Pago
+		public.POST("/webhook/mercadopago", reservaController.WebhookMercadoPago)
+
+		// Verificar disponibilidad de instancia
+		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
+		// En la sección de rutas públicas (public)
+		public.GET("/mercadopago/public-key", mercadoPagoController.GetPublicKey)
 	}
 
 	// Rutas protegidas (requieren autenticación)
@@ -361,6 +382,21 @@ func SetupRoutes(
 			admin.POST("/instancias-tour/filtrar", instanciaTourController.ListByFiltros)
 			admin.POST("/instancias-tour/generar/:id_tour_programado", instanciaTourController.GenerarInstanciasDeTourProgramado)
 
+			admin.POST("/reservas", reservaController.Create)
+			admin.GET("/reservas", reservaController.List)
+			admin.GET("/reservas/:id", reservaController.GetByID)
+			admin.PUT("/reservas/:id", reservaController.Update)
+			admin.DELETE("/reservas/:id", reservaController.Delete)
+			admin.POST("/reservas/:id/estado", reservaController.CambiarEstado)
+			admin.GET("/reservas/cliente/:idCliente", reservaController.ListByCliente)
+			admin.GET("/reservas/instancia/:idInstancia", reservaController.ListByInstancia)
+			admin.GET("/reservas/fecha/:fecha", reservaController.ListByFecha)
+			admin.GET("/reservas/estado/:estado", reservaController.ListByEstado)
+			admin.GET("/reservas/sede/:idSede", reservaController.ListBySede)
+
+			// Confirmación manual de pagos con Mercado Pago
+			admin.POST("/reservas/confirmar-pago", reservaController.ConfirmarPagoReserva)
+
 		}
 
 		// Vendedores
@@ -463,6 +499,19 @@ func SetupRoutes(
 			vendedor.GET("/comprobantes/:id", comprobantePagoController.GetByID)
 			vendedor.GET("/comprobantes/buscar", comprobantePagoController.GetByTipoAndNumero)
 			vendedor.GET("/comprobantes/reserva/:idReserva", comprobantePagoController.ListByReserva)
+			//reservas mercado pago
+			vendedor.POST("/reservas", reservaController.Create)
+			vendedor.GET("/reservas", reservaController.List)
+			vendedor.GET("/reservas/:id", reservaController.GetByID)
+			vendedor.PUT("/reservas/:id", reservaController.Update)
+			vendedor.POST("/reservas/:id/estado", reservaController.CambiarEstado)
+			vendedor.GET("/reservas/cliente/:idCliente", reservaController.ListByCliente)
+			vendedor.GET("/reservas/instancia/:idInstancia", reservaController.ListByInstancia)
+			vendedor.GET("/reservas/fecha/:fecha", reservaController.ListByFecha)
+			vendedor.GET("/reservas/estado/:estado", reservaController.ListByEstado)
+
+			// Confirmación manual de pagos con Mercado Pago
+			vendedor.POST("/reservas/confirmar-pago", reservaController.ConfirmarPagoReserva)
 		}
 
 		// Choferes
@@ -514,160 +563,117 @@ func SetupRoutes(
 
 				instanciaTourController.ListByFiltros(ctx)
 			})
+
 		}
+		clienteHandlers := NewClienteHandlers(reservaService, clienteService, mercadoPagoService)
 
 		// Clientes
-		/*	cliente := protected.Group("/cliente")
-			cliente.Use(middleware.RoleMiddleware("ADMIN", "CLIENTE"))
-			{
-				// Cambiar contraseña (cliente)
-				cliente.POST("/change-password", clienteController.ChangePassword)
-
-				// Ver tipos de tour disponibles (solo lectura)
-				cliente.GET("/tipos-tour", tipoTourController.List)
-				cliente.GET("/tipos-tour/:id", tipoTourController.GetByID)
-
-				// Ver horarios de tour disponibles (solo lectura)
-				cliente.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
-
-				// Ver tours disponibles
-				cliente.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
-				cliente.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
-				cliente.GET("/tours/:id", tourProgramadoController.GetByID)
-				cliente.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
-				cliente.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
-				cliente.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
-
-				// Ver tipos de pasaje (solo lectura)
-				cliente.GET("/tipos-pasaje", tipoPasajeController.List)
-				cliente.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
-				cliente.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
-
-				// Ver paquetes de pasajes (solo lectura)
-				cliente.GET("/paquetes-pasajes", paquetePasajesController.List)
-				cliente.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
-				cliente.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
-				cliente.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
-
-				// Ver métodos de pago (solo lectura)
-				cliente.GET("/metodos-pago", metodoPagoController.List)
-
-				// Ver canales de venta (solo lectura)
-				cliente.GET("/canales-venta", canalVentaController.List)
-
-				// Gestión del perfil propio
-				cliente.GET("/mi-perfil", func(ctx *gin.Context) {
-					clienteID := ctx.GetInt("userID")
-					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
-					clienteController.GetByID(ctx)
-				})
-
-				cliente.PUT("/mi-perfil", func(ctx *gin.Context) {
-					clienteID := ctx.GetInt("userID")
-					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
-					clienteController.Update(ctx)
-				})
-
-				// Actualizar datos de empresa propios (cambiar de "datos-facturacion" a "datos-empresa")
-				cliente.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
-					clienteID := ctx.GetInt("userID")
-					ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
-					clienteController.UpdateDatosEmpresa(ctx)
-				})
-				// Ver galería de imágenes (solo lectura)
-				cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
-				cliente.GET("/galerias/:id", galeriaTourController.GetByID)
-
-				// Ver mis pagos
-				cliente.GET("/mis-pagos", func(ctx *gin.Context) {
-					clienteID := ctx.GetInt("userID")
-					ctx.Request.URL.Path = "/api/v1/admin/pagos/cliente/" + strconv.Itoa(clienteID)
-					router.HandleContext(ctx)
-				})
-
-				// Ver mis comprobantes
-				cliente.GET("/mis-comprobantes", func(ctx *gin.Context) {
-					clienteID := ctx.GetInt("userID")
-					ctx.Request.URL.Path = "/api/v1/admin/comprobantes/cliente/" + strconv.Itoa(clienteID)
-					router.HandleContext(ctx)
-				})
-			}*/
-
-		clienteProtected := router.Group("/api/v1/clientes")
-		clienteProtected.Use(middleware.ClienteAuthMiddleware(config))
+		cliente := protected.Group("/cliente")
+		cliente.Use(middleware.RoleMiddleware("ADMIN", "CLIENTE"))
 		{
 			// Cambiar contraseña (cliente)
-			clienteProtected.POST("/change-password", clienteController.ChangePassword)
+			cliente.POST("/change-password", clienteController.ChangePassword)
 
 			// Ver tipos de tour disponibles (solo lectura)
-			clienteProtected.GET("/tipos-tour", tipoTourController.List)
-			clienteProtected.GET("/tipos-tour/:id", tipoTourController.GetByID)
+			cliente.GET("/tipos-tour", tipoTourController.List)
+			cliente.GET("/tipos-tour/:id", tipoTourController.GetByID)
 
 			// Ver horarios de tour disponibles (solo lectura)
-			clienteProtected.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
+			cliente.GET("/horarios-tour/tipo/:idTipoTour", horarioTourController.ListByTipoTour)
 
 			// Ver tours disponibles
-			clienteProtected.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
-			clienteProtected.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
-			clienteProtected.GET("/tours/:id", tourProgramadoController.GetByID)
-			clienteProtected.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
-			clienteProtected.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
-			clienteProtected.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
+			cliente.GET("/tours/disponibles", tourProgramadoController.ListToursProgramadosDisponibles)
+			cliente.GET("/tours/disponibilidad/:fecha", tourProgramadoController.GetDisponibilidadDia)
+			cliente.GET("/tours/:id", tourProgramadoController.GetByID)
+			cliente.GET("/tours/disponibles-en-fecha/:fecha", tourProgramadoController.GetToursDisponiblesEnFecha)
+			cliente.GET("/tours/disponibles-en-rango", tourProgramadoController.GetToursDisponiblesEnRangoFechas)
+			cliente.GET("/tours/verificar-disponibilidad", tourProgramadoController.VerificarDisponibilidadHorario)
 
 			// Ver tipos de pasaje (solo lectura)
-			clienteProtected.GET("/tipos-pasaje", tipoPasajeController.List)
-			clienteProtected.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
-			clienteProtected.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
+			cliente.GET("/tipos-pasaje", tipoPasajeController.List)
+			cliente.GET("/tipos-pasaje/sede/:idSede", tipoPasajeController.ListBySede)
+			cliente.GET("/tipos-pasaje/tipo-tour/:id_tipo_tour", tipoPasajeController.ListByTipoTour)
 
 			// Ver paquetes de pasajes (solo lectura)
-			clienteProtected.GET("/paquetes-pasajes", paquetePasajesController.List)
-			clienteProtected.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
-			clienteProtected.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
-			clienteProtected.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
+			cliente.GET("/paquetes-pasajes", paquetePasajesController.List)
+			cliente.GET("/paquetes-pasajes/:id", paquetePasajesController.GetByID)
+			cliente.GET("/paquetes-pasajes/sede/:id_sede", paquetePasajesController.ListBySede)
+			cliente.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
 
 			// Ver métodos de pago (solo lectura)
-			clienteProtected.GET("/metodos-pago", metodoPagoController.List)
+			cliente.GET("/metodos-pago", metodoPagoController.List)
 
 			// Ver canales de venta (solo lectura)
-			clienteProtected.GET("/canales-venta", canalVentaController.List)
+			cliente.GET("/canales-venta", canalVentaController.List)
 
 			// Gestión del perfil propio
-			clienteProtected.GET("/mi-perfil", func(ctx *gin.Context) {
+			cliente.GET("/mi-perfil", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.GetByID(ctx)
 			})
 
-			clienteProtected.PUT("/mi-perfil", func(ctx *gin.Context) {
+			cliente.PUT("/mi-perfil", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.Update(ctx)
 			})
 
-			// Actualizar datos de empresa propios
-			clienteProtected.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
+			// Actualizar datos de empresa propios (cambiar de "datos-facturacion" a "datos-empresa")
+			cliente.PUT("/mi-perfil/datos-empresa", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Params = append(ctx.Params, gin.Param{Key: "id", Value: strconv.Itoa(clienteID)})
 				clienteController.UpdateDatosEmpresa(ctx)
 			})
-
 			// Ver galería de imágenes (solo lectura)
-			clienteProtected.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
-			clienteProtected.GET("/galerias/:id", galeriaTourController.GetByID)
+			cliente.GET("/tipo-tours/:id_tipo_tour/galerias", galeriaTourController.ListByTipoTour)
+			cliente.GET("/galerias/:id", galeriaTourController.GetByID)
 
 			// Ver mis pagos
-			clienteProtected.GET("/mis-pagos", func(ctx *gin.Context) {
+			cliente.GET("/mis-pagos", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Request.URL.Path = "/api/v1/admin/pagos/cliente/" + strconv.Itoa(clienteID)
 				router.HandleContext(ctx)
 			})
 
 			// Ver mis comprobantes
-			clienteProtected.GET("/mis-comprobantes", func(ctx *gin.Context) {
+			cliente.GET("/mis-comprobantes", func(ctx *gin.Context) {
 				clienteID := ctx.GetInt("userID")
 				ctx.Request.URL.Path = "/api/v1/admin/comprobantes/cliente/" + strconv.Itoa(clienteID)
 				router.HandleContext(ctx)
 			})
+
+			// Ver mis reservas
+			// Ver mis reservas
+			cliente.GET("/mis-reservas", reservaController.ListMyReservas)
+
+			// Ver detalle de una reserva específica - usando el handler personalizado
+			cliente.GET("/mis-reservas/:id", clienteHandlers.GetReservaDetalle)
+
+			// Realizar reserva (desde área de cliente)
+			cliente.POST("/reservas", func(ctx *gin.Context) {
+				// Asegurar que la reserva se crea para el cliente autenticado
+				clienteID := ctx.GetInt("userID")
+
+				var reservaReq entidades.NuevaReservaRequest
+				if err := ctx.ShouldBindJSON(&reservaReq); err != nil {
+					ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+					return
+				}
+
+				// Forzar el ID del cliente al usuario autenticado
+				reservaReq.IDCliente = clienteID
+
+				// Llamar al controlador para crear la reserva
+				ctx.Set("reservaRequest", reservaReq)
+				reservaController.Create(ctx)
+			})
+
+			// Cancelar una reserva - usando el handler personalizado
+			cliente.POST("/mis-reservas/:id/cancelar", clienteHandlers.CancelarReserva)
+
+			// Pagar una reserva con Mercado Pago - usando el handler personalizado
+			cliente.POST("/mis-reservas/:id/pagar", clienteHandlers.PagarReserva)
 		}
 	}
 }

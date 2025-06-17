@@ -59,6 +59,28 @@ export const endpoints = {
     cambiarContrasena: (id: number) => `/clientes/${id}/cambiar-contrasena`,       
     obtenerPerfil: "/cliente/mi-perfil"
 
+  },  reserva: {
+    listar: "/reservas",
+    obtenerPorId: (id: number) => `/reservas/${id}`,
+    crear: "/reservas",
+    actualizar: (id: number) => `/reservas/${id}`,
+    eliminar: (id: number) => `/reservas/${id}`,
+    cambiarEstado: (id: number) => `/reservas/${id}/estado`,
+    listarPorCliente: (idCliente: number) => `/reservas/cliente/${idCliente}`,
+    listarPorInstancia: (idInstancia: number) => `/reservas/instancia/${idInstancia}`,
+    listarPorFecha: (fecha: string) => `/reservas/fecha/${fecha}`,
+    listarPorEstado: (estado: string) => `/reservas/estado/${estado}`,
+    listarMisReservas: "/cliente/mis-reservas",
+    cancelarReserva: (id: number) => `/cliente/mis-reservas/${id}/cancelar`,
+    pagarReserva: (id: number) => `/cliente/mis-reservas/${id}/pagar`,
+  },
+  
+  // Endpoints para Mercado Pago
+    mercadoPago: {
+    reservar: "/mercadopago/reservar", // Ya tiene el prefijo correcto
+    pagarReserva: (id:number) => `/cliente/mis-reservas/${id}/pagar`, 
+    webhook: "/webhook/mercadopago",
+    publicKey: "/mercadopago/public-key" // Cambiado de "/api/v1/mercadopago/public-key"
   },
   
 };
