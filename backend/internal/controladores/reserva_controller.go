@@ -1,12 +1,15 @@
 package controladores
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/servicios"
 	"sistema-toursseft/internal/utils"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -304,47 +307,71 @@ func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
 }
 */
 // ListMyReservas lista todas las reservas del cliente autenticado
+// ListMyReservas lista todas las reservas del cliente autenticado
 func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
 	// Agregar logs para depuración
 	fmt.Println("ListMyReservas: Iniciando obtención de reservas del cliente")
+	fmt.Printf("ListMyReservas: Contexto disponible: %v\n", ctx.Keys)
 
-	// Obtener ID del cliente del contexto
-	clienteIDValue, exists := ctx.Get("userID")
-	if !exists {
-		fmt.Println("ListMyReservas: No se encontró userID en el contexto")
-		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Cliente no autenticado", nil))
-		return
+	// Obtener token de la cookie para procesarlo manualmente si es necesario
+	tokenString, err := ctx.Cookie("access_token")
+	if err != nil {
+		fmt.Printf("ListMyReservas: Error al obtener cookie access_token: %v\n", err)
+	} else if len(tokenString) > 20 {
+		fmt.Printf("ListMyReservas: Token encontrado (primeros 20 caracteres): %s...\n", tokenString[:20])
 	}
 
-	// Verificar el tipo de usuario
-	userType, existsType := ctx.Get("userType")
-	if !existsType || userType.(string) != "CLIENTE" {
-		// Verificar si hay userRole como alternativa
-		userRole, existsRole := ctx.Get("userRole")
-		if !existsRole || userRole.(string) != "CLIENTE" {
-			fmt.Println("ListMyReservas: El usuario no es un cliente o no está correctamente autenticado")
-			// Continuar de todos modos si al menos tenemos un userID válido
-		} else {
-			fmt.Println("ListMyReservas: Cliente autenticado por userRole")
+	// Intentar obtener el ID del cliente del contexto
+	clienteIDValue, exists := ctx.Get("userID")
+	fmt.Printf("ListMyReservas: userID del contexto: %v, existe: %v\n", clienteIDValue, exists)
+
+	var clienteID int
+
+	if exists {
+		// Intentar convertir al tipo correcto
+		var ok bool
+		clienteID, ok = clienteIDValue.(int)
+		if !ok {
+			fmt.Printf("ListMyReservas: No se pudo convertir userID a int: %v, tipo: %T\n", clienteIDValue, clienteIDValue)
+
+			// Intentar otras conversiones
+			if floatID, okFloat := clienteIDValue.(float64); okFloat {
+				clienteID = int(floatID)
+				fmt.Printf("ListMyReservas: Convertido float64 a int: %d\n", clienteID)
+			} else {
+				// Si todo falla, intentar extraer del token manualmente
+				if tokenString != "" {
+					extractedID, extractErr := extractClienteIDFromToken(tokenString)
+					if extractErr == nil && extractedID > 0 {
+						clienteID = extractedID
+						fmt.Printf("ListMyReservas: ID extraído manualmente del token: %d\n", clienteID)
+					} else if extractErr != nil {
+						fmt.Printf("ListMyReservas: Error al extraer ID del token: %v\n", extractErr)
+					}
+				}
+			}
 		}
 	} else {
-		fmt.Println("ListMyReservas: Cliente autenticado por userType")
+		// Si no existe en el contexto, intentar extraer del token
+		if tokenString != "" {
+			extractedID, extractErr := extractClienteIDFromToken(tokenString)
+			if extractErr == nil && extractedID > 0 {
+				clienteID = extractedID
+				fmt.Printf("ListMyReservas: ID extraído manualmente del token: %d\n", clienteID)
+			} else if extractErr != nil {
+				fmt.Printf("ListMyReservas: Error al extraer ID del token: %v\n", extractErr)
+			}
+		}
 	}
 
-	clienteID, ok := clienteIDValue.(int)
-	if !ok {
-		fmt.Printf("ListMyReservas: El userID no es un entero: %v, tipo: %T\n", clienteIDValue, clienteIDValue)
-		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de cliente inválido (tipo incorrecto)", nil))
-		return
-	}
-
+	// Verificar que tenemos un ID de cliente válido
 	if clienteID <= 0 {
-		fmt.Printf("ListMyReservas: ID de cliente inválido (valor no positivo): %d\n", clienteID)
-		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de cliente inválido (valor no positivo)", nil))
+		fmt.Printf("ListMyReservas: ID de cliente inválido: %d\n", clienteID)
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Cliente no autenticado o ID inválido", nil))
 		return
 	}
 
-	fmt.Printf("ListMyReservas: Obteniendo reservas para cliente ID: %d\n", clienteID)
+	fmt.Printf("ListMyReservas: Usando ID de cliente: %d\n", clienteID)
 
 	// Obtener reservas del cliente
 	reservas, err := c.reservaService.ListByCliente(clienteID)
@@ -361,6 +388,35 @@ func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
 
 	fmt.Printf("ListMyReservas: Se encontraron %d reservas para el cliente ID: %d\n", len(reservas), clienteID)
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Mis reservas listadas exitosamente", reservas))
+}
+
+// Función auxiliar para extraer el ID del cliente del token JWT
+func extractClienteIDFromToken(tokenString string) (int, error) {
+	// Dividir el token en sus partes
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("formato de token inválido")
+	}
+
+	// Decodificar la parte del payload (claims)
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return 0, fmt.Errorf("error al decodificar payload: %v", err)
+	}
+
+	// Parsear el JSON
+	var claims map[string]interface{}
+	err = json.Unmarshal(payloadBytes, &claims)
+	if err != nil {
+		return 0, fmt.Errorf("error al parsear claims: %v", err)
+	}
+
+	// Extraer cliente_id
+	if clienteIDFloat, ok := claims["cliente_id"].(float64); ok {
+		return int(clienteIDFloat), nil
+	}
+
+	return 0, fmt.Errorf("cliente_id no encontrado en el token")
 }
 
 // VerificarDisponibilidadInstancia verifica si hay suficiente cupo para una cantidad de pasajeros
