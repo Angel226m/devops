@@ -1,6 +1,7 @@
 package controladores
 
 import (
+	"fmt"
 	"net/http"
 	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/servicios"
@@ -281,6 +282,7 @@ func (c *ReservaController) ListByEstado(ctx *gin.Context) {
 }
 
 // ListMyReservas lista todas las reservas del cliente autenticado
+/*
 func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
 	clienteID := ctx.GetInt("userID")
 	if clienteID == 0 {
@@ -298,6 +300,66 @@ func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
 		reservas = []*entidades.Reserva{}
 	}
 
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Mis reservas listadas exitosamente", reservas))
+}
+*/
+// ListMyReservas lista todas las reservas del cliente autenticado
+func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
+	// Agregar logs para depuración
+	fmt.Println("ListMyReservas: Iniciando obtención de reservas del cliente")
+
+	// Obtener ID del cliente del contexto
+	clienteIDValue, exists := ctx.Get("userID")
+	if !exists {
+		fmt.Println("ListMyReservas: No se encontró userID en el contexto")
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Cliente no autenticado", nil))
+		return
+	}
+
+	// Verificar el tipo de usuario
+	userType, existsType := ctx.Get("userType")
+	if !existsType || userType.(string) != "CLIENTE" {
+		// Verificar si hay userRole como alternativa
+		userRole, existsRole := ctx.Get("userRole")
+		if !existsRole || userRole.(string) != "CLIENTE" {
+			fmt.Println("ListMyReservas: El usuario no es un cliente o no está correctamente autenticado")
+			// Continuar de todos modos si al menos tenemos un userID válido
+		} else {
+			fmt.Println("ListMyReservas: Cliente autenticado por userRole")
+		}
+	} else {
+		fmt.Println("ListMyReservas: Cliente autenticado por userType")
+	}
+
+	clienteID, ok := clienteIDValue.(int)
+	if !ok {
+		fmt.Printf("ListMyReservas: El userID no es un entero: %v, tipo: %T\n", clienteIDValue, clienteIDValue)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de cliente inválido (tipo incorrecto)", nil))
+		return
+	}
+
+	if clienteID <= 0 {
+		fmt.Printf("ListMyReservas: ID de cliente inválido (valor no positivo): %d\n", clienteID)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de cliente inválido (valor no positivo)", nil))
+		return
+	}
+
+	fmt.Printf("ListMyReservas: Obteniendo reservas para cliente ID: %d\n", clienteID)
+
+	// Obtener reservas del cliente
+	reservas, err := c.reservaService.ListByCliente(clienteID)
+	if err != nil {
+		fmt.Printf("ListMyReservas: Error al obtener reservas: %v\n", err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas del cliente", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+
+	fmt.Printf("ListMyReservas: Se encontraron %d reservas para el cliente ID: %d\n", len(reservas), clienteID)
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Mis reservas listadas exitosamente", reservas))
 }
 
