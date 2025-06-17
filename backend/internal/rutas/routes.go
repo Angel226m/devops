@@ -146,7 +146,7 @@ func SetupRoutes(
 		public.GET("/idiomas", idiomaController.List)
 
 		//reservas mercado pago
-
+		//reservas mercado pago
 		public.POST("/mercadopago/reservar", func(ctx *gin.Context) {
 			clienteHandlers.ReservarConMercadoPago(ctx, reservaController)
 		})
@@ -156,7 +156,6 @@ func SetupRoutes(
 
 		// Verificar disponibilidad de instancia
 		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
-		// En la sección de rutas públicas (public)
 		public.GET("/mercadopago/public-key", mercadoPagoController.GetPublicKey)
 	}
 
@@ -392,8 +391,6 @@ func SetupRoutes(
 			admin.GET("/reservas/instancia/:idInstancia", reservaController.ListByInstancia)
 			admin.GET("/reservas/fecha/:fecha", reservaController.ListByFecha)
 			admin.GET("/reservas/estado/:estado", reservaController.ListByEstado)
-			admin.GET("/reservas/sede/:idSede", reservaController.ListBySede)
-
 			// Confirmación manual de pagos con Mercado Pago
 			admin.POST("/reservas/confirmar-pago", reservaController.ConfirmarPagoReserva)
 

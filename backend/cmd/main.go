@@ -177,11 +177,9 @@ func main() {
 		reservaRepo,
 		clienteRepo,
 		instanciaTourRepo,
-		canalVentaRepo,
 		tipoPasajeRepo,
 		paquetePasajesRepo,
 		usuarioRepo,
-		sedeRepo,
 	)
 
 	// Servicios de pago

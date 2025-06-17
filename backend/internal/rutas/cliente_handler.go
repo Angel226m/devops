@@ -147,13 +147,8 @@ func (h *ClienteHandlers) CancelarReserva(ctx *gin.Context) {
 		return
 	}
 
-	// Crear el request para cambiar estado
-	estadoReq := entidades.CambiarEstadoReservaRequest{
-		Estado: "CANCELADA",
-	}
-
 	// Actualizar estado directamente con el servicio
-	err = h.reservaService.CambiarEstado(id, estadoReq.Estado)
+	err = h.reservaService.CambiarEstado(id, "CANCELADA")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al cancelar la reserva", err))
 		return
@@ -171,21 +166,29 @@ func (h *ClienteHandlers) CancelarReserva(ctx *gin.Context) {
 
 // ReservarConMercadoPago es un wrapper para el controlador de reservas con Mercado Pago
 func (h *ClienteHandlers) ReservarConMercadoPago(ctx *gin.Context, reservaController interface{}) {
-	// Determinar la URL base según el entorno
-	baseURL := h.determinarBaseURL(ctx)
-
-	// Usar la URL específica para el proceso de pago
-	frontendURL := baseURL + "/proceso-pago"
-
-	// Guardar la URL en el contexto para que el controlador pueda acceder a ella
-	ctx.Set("frontendURL", frontendURL)
-
-	// Llamar al controlador original
-	rc, ok := reservaController.(interface{ ReservarConMercadoPago(*gin.Context) })
-	if !ok {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error interno del servidor", nil))
+	// Extraer y validar el cuerpo de la solicitud
+	var request entidades.ReservaMercadoPagoRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
 		return
 	}
 
-	rc.ReservarConMercadoPago(ctx)
+	if err := utils.ValidateStruct(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Determinar la URL base según el entorno
+	baseURL := h.determinarBaseURL(ctx)
+	frontendURL := baseURL + "/proceso-pago"
+
+	// Procesar la reserva con Mercado Pago
+	response, err := h.reservaService.ReservarConMercadoPago(&request, h.mercadoPagoService, frontendURL)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al crear reserva con Mercado Pago", err))
+		return
+	}
+
+	// Devolver la respuesta
+	ctx.JSON(http.StatusCreated, utils.SuccessResponse("Reserva creada exitosamente", response))
 }

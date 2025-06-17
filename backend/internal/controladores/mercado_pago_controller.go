@@ -108,6 +108,7 @@ func (c *MercadoPagoController) CreatePreference(w http.ResponseWriter, r *http.
 }
 
 // ProcessWebhook procesa las notificaciones de webhook de Mercado Pago
+// ProcessWebhook procesa las notificaciones de webhook de Mercado Pago
 func (c *MercadoPagoController) ProcessWebhook(w http.ResponseWriter, r *http.Request) {
 	// Verificar que sea un POST
 	if r.Method != http.MethodPost {
@@ -161,8 +162,6 @@ func (c *MercadoPagoController) ProcessWebhook(w http.ResponseWriter, r *http.Re
 	nuevoPago := &entidades.NuevoPagoRequest{
 		IDReserva:    idReserva,
 		IDMetodoPago: 1, // Asumimos que 1 es Mercado Pago en tu sistema
-		IDCanal:      1, // Canal web/online
-		IDSede:       1, // Sede principal o predeterminada
 		Monto:        paymentInfo.TransactionAmount,
 		Comprobante:  fmt.Sprintf("MP-%d", paymentInfo.ID), // Usar ID de MP como referencia
 	}

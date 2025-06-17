@@ -312,15 +312,13 @@ CREATE INDEX idx_paquete_pasajes_tipo_tour ON paquete_pasajes(id_tipo_tour);
 CREATE INDEX idx_paquete_pasajes_eliminado ON paquete_pasajes(eliminado);
 
 -- 16. Tabla reserva (depende de usuario, cliente, tour_programado, canal_venta, sede, paquete_pasajes)
--- Corregida para incluir id_paquete
+ 
 CREATE TABLE reserva (
     id_reserva SERIAL PRIMARY KEY,
     id_vendedor INT,
     id_cliente INT NOT NULL,
-    id_tour_programado INT NOT NULL,
-    id_canal INT NOT NULL,
-    id_sede INT NOT NULL,
-    id_paquete INT, -- Agregada columna id_paquete
+    id_instancia INT NOT NULL, -- Columna principal para referencia
+    id_paquete INT,
     fecha_reserva TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_pagar DECIMAL(10,2) NOT NULL,
     notas TEXT,
@@ -328,14 +326,13 @@ CREATE TABLE reserva (
     eliminado BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (id_vendedor) REFERENCES usuario(id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON UPDATE CASCADE ON DELETE RESTRICT,
-    FOREIGN KEY (id_tour_programado) REFERENCES tour_programado(id_tour_programado) ON UPDATE CASCADE ON DELETE RESTRICT,
-    FOREIGN KEY (id_canal) REFERENCES canal_venta(id_canal) ON UPDATE CASCADE ON DELETE RESTRICT,
-    FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (id_instancia) REFERENCES instancia_tour(id_instancia) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_paquete) REFERENCES paquete_pasajes(id_paquete) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 CREATE INDEX idx_reserva_vendedor ON reserva(id_vendedor);
 CREATE INDEX idx_reserva_cliente ON reserva(id_cliente);
 CREATE INDEX idx_reserva_tour_programado ON reserva(id_tour_programado);
+CREATE INDEX idx_reserva_instancia ON reserva(id_instancia); -- Nuevo índice
 CREATE INDEX idx_reserva_canal ON reserva(id_canal);
 CREATE INDEX idx_reserva_sede ON reserva(id_sede);
 CREATE INDEX idx_reserva_paquete ON reserva(id_paquete);

@@ -50,11 +50,6 @@ func (c *ReservaController) Create(ctx *gin.Context) {
 		reservaReq.IDVendedor = &vendedorID
 	}
 
-	// Si no se especifica la sede, usar la sede del usuario autenticado
-	if reservaReq.IDSede == 0 && ctx.GetInt("sede_id") != 0 {
-		reservaReq.IDSede = ctx.GetInt("sede_id")
-	}
-
 	// Crear reserva
 	id, err := c.reservaService.Create(&reservaReq)
 	if err != nil {
@@ -87,12 +82,6 @@ func (c *ReservaController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	// Verificar acceso
-	if !c.tieneAccesoAReserva(ctx, reserva) {
-		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para acceder a esta reserva", nil))
-		return
-	}
-
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reserva obtenida", reserva))
 }
 
@@ -104,14 +93,10 @@ func (c *ReservaController) Update(ctx *gin.Context) {
 		return
 	}
 
-	reservaActual, err := c.reservaService.GetByID(id)
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
-		return
-	}
-
-	if !c.tieneAccesoAReserva(ctx, reservaActual) {
-		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para modificar esta reserva", nil))
 		return
 	}
 
@@ -126,20 +111,10 @@ func (c *ReservaController) Update(ctx *gin.Context) {
 		return
 	}
 
+	// Si es una reserva de vendedor, obtener el ID del vendedor del contexto
 	if ctx.GetString("rol") == "VENDEDOR" {
 		vendedorID := ctx.GetInt("user_id")
 		reservaReq.IDVendedor = &vendedorID
-	}
-
-	if reservaReq.IDSede == 0 {
-		reservaReq.IDSede = reservaActual.IDSede
-	}
-
-	if ctx.GetString("rol") != "ADMIN" {
-		if reservaReq.IDSede != ctx.GetInt("sede_id") {
-			ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para cambiar la sede de la reserva", nil))
-			return
-		}
 	}
 
 	err = c.reservaService.Update(id, &reservaReq)
@@ -148,6 +123,7 @@ func (c *ReservaController) Update(ctx *gin.Context) {
 		return
 	}
 
+	// Obtener la reserva actualizada
 	reserva, err := c.reservaService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
@@ -159,23 +135,7 @@ func (c *ReservaController) Update(ctx *gin.Context) {
 
 // List lista todas las reservas activas
 func (c *ReservaController) List(ctx *gin.Context) {
-	var reservas []*entidades.Reserva
-	var err error
-
-	// Si es ADMIN, puede ver todas las reservas sin filtrar por sede
-	if ctx.GetString("rol") == "ADMIN" {
-		// Para ADMIN, usar List() directamente - muestra todas las reservas sin filtro de sede
-		reservas, err = c.reservaService.List()
-	} else {
-		// Para otros roles, mostrar solo las reservas de su sede
-		sedeID := ctx.GetInt("sede_id")
-		if sedeID == 0 {
-			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Usuario no tiene sede asignada", nil))
-			return
-		}
-		reservas, err = c.reservaService.ListBySede(sedeID)
-	}
-
+	reservas, err := c.reservaService.List()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas: "+err.Error(), err))
 		return
@@ -197,14 +157,10 @@ func (c *ReservaController) CambiarEstado(ctx *gin.Context) {
 		return
 	}
 
-	reserva, err := c.reservaService.GetByID(id)
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
-		return
-	}
-
-	if !c.tieneAccesoAReserva(ctx, reserva) {
-		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para cambiar el estado de esta reserva", nil))
 		return
 	}
 
@@ -225,6 +181,7 @@ func (c *ReservaController) CambiarEstado(ctx *gin.Context) {
 		return
 	}
 
+	// Obtener la reserva actualizada
 	reservaActualizada, err := c.reservaService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
@@ -242,14 +199,10 @@ func (c *ReservaController) Delete(ctx *gin.Context) {
 		return
 	}
 
-	reserva, err := c.reservaService.GetByID(id)
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
-		return
-	}
-
-	if !c.tieneAccesoAReserva(ctx, reserva) {
-		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para eliminar esta reserva", nil))
 		return
 	}
 
@@ -270,24 +223,13 @@ func (c *ReservaController) ListByCliente(ctx *gin.Context) {
 		return
 	}
 
-	reservasCompletas, err := c.reservaService.ListByCliente(idCliente)
+	reservas, err := c.reservaService.ListByCliente(idCliente)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar reservas del cliente", err))
 		return
 	}
 
-	if ctx.GetString("rol") != "ADMIN" {
-		sedeID := ctx.GetInt("sede_id")
-		reservasFiltradas := []*entidades.Reserva{}
-		for _, reserva := range reservasCompletas {
-			if reserva.IDSede == sedeID {
-				reservasFiltradas = append(reservasFiltradas, reserva)
-			}
-		}
-		reservasCompletas = reservasFiltradas
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas del cliente listadas exitosamente", reservasCompletas))
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas del cliente listadas exitosamente", reservas))
 }
 
 // ListByInstancia lista todas las reservas para una instancia específica
@@ -304,14 +246,6 @@ func (c *ReservaController) ListByInstancia(ctx *gin.Context) {
 		return
 	}
 
-	if ctx.GetString("rol") != "ADMIN" && len(reservas) > 0 {
-		sedeID := ctx.GetInt("sede_id")
-		if reservas[0].IDSede != sedeID {
-			ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para ver reservas de otra sede", nil))
-			return
-		}
-	}
-
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas de la instancia listadas exitosamente", reservas))
 }
 
@@ -324,109 +258,26 @@ func (c *ReservaController) ListByFecha(ctx *gin.Context) {
 		return
 	}
 
-	reservasCompletas, err := c.reservaService.ListByFecha(fecha)
+	reservas, err := c.reservaService.ListByFecha(fecha)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas por fecha", err))
 		return
 	}
 
-	if ctx.GetString("rol") != "ADMIN" {
-		sedeID := ctx.GetInt("sede_id")
-		reservasFiltradas := []*entidades.Reserva{}
-		for _, reserva := range reservasCompletas {
-			if reserva.IDSede == sedeID {
-				reservasFiltradas = append(reservasFiltradas, reserva)
-			}
-		}
-		reservasCompletas = reservasFiltradas
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas por fecha listadas exitosamente", reservasCompletas))
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas por fecha listadas exitosamente", reservas))
 }
 
 // ListByEstado lista todas las reservas por estado
 func (c *ReservaController) ListByEstado(ctx *gin.Context) {
 	estado := ctx.Param("estado")
 
-	reservasCompletas, err := c.reservaService.ListByEstado(estado)
+	reservas, err := c.reservaService.ListByEstado(estado)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar reservas por estado", err))
 		return
 	}
 
-	if ctx.GetString("rol") != "ADMIN" {
-		sedeID := ctx.GetInt("sede_id")
-		reservasFiltradas := []*entidades.Reserva{}
-		for _, reserva := range reservasCompletas {
-			if reserva.IDSede == sedeID {
-				reservasFiltradas = append(reservasFiltradas, reserva)
-			}
-		}
-		reservasCompletas = reservasFiltradas
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas por estado listadas exitosamente", reservasCompletas))
-}
-
-// ListBySede lista todas las reservas de una sede específica
-func (c *ReservaController) ListBySede(ctx *gin.Context) {
-	idSede, err := strconv.Atoi(ctx.Param("idSede"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de sede inválido", err))
-		return
-	}
-
-	userRole := ctx.GetString("rol")
-	userSedeID := ctx.GetInt("sede_id")
-
-	if idSede == 0 {
-		if userRole != "ADMIN" {
-			ctx.JSON(http.StatusForbidden, utils.ErrorResponse(
-				"Solo los administradores pueden ver todas las reservas", nil))
-			return
-		}
-		// Para ADMIN, obtener todas las reservas sin filtro de sede
-		reservas, err := c.reservaService.List()
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse(
-				"Error al obtener todas las reservas", err))
-			return
-		}
-		if reservas == nil {
-			reservas = []*entidades.Reserva{}
-		}
-		ctx.JSON(http.StatusOK, utils.SuccessResponse(
-			"Todas las reservas listadas exitosamente", reservas))
-		return
-	}
-
-	if userRole != "ADMIN" && idSede != userSedeID {
-		ctx.JSON(http.StatusForbidden, utils.ErrorResponse(
-			"No tiene permiso para ver reservas de otra sede", nil))
-		return
-	}
-
-	reservas, err := c.reservaService.ListBySede(idSede)
-	if err != nil {
-		if err.Error() == "la sede especificada no existe" {
-			ctx.JSON(http.StatusNotFound, utils.ErrorResponse("La sede no existe", err))
-			return
-		}
-		if err.Error() == "la sede especificada está eliminada" {
-			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("La sede está eliminada", err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse(
-			"Error al obtener las reservas de la sede", err))
-		return
-	}
-
-	if reservas == nil {
-		reservas = []*entidades.Reserva{}
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse(
-		"Reservas de la sede listadas exitosamente", reservas))
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Reservas por estado listadas exitosamente", reservas))
 }
 
 // ListMyReservas lista todas las reservas del cliente autenticado
@@ -592,16 +443,4 @@ func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 
 	// Siempre responder con éxito para que Mercado Pago no reintente
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Webhook procesado exitosamente", nil))
-}
-
-// tieneAccesoAReserva verifica si el usuario tiene acceso a una reserva específica
-func (c *ReservaController) tieneAccesoAReserva(ctx *gin.Context, reserva *entidades.Reserva) bool {
-	// Los administradores tienen acceso a todas las reservas sin importar la sede
-	if ctx.GetString("rol") == "ADMIN" {
-		return true
-	}
-
-	// Otros usuarios solo tienen acceso a reservas de su sede
-	sedeUsuario := ctx.GetInt("sede_id")
-	return reserva.IDSede == sedeUsuario
 }
