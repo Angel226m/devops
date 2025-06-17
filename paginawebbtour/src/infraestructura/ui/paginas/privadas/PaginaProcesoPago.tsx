@@ -244,19 +244,21 @@ const PaginaProcesoPago = () => {
         console.log("Paquetes formateados:", JSON.stringify(paquetes, null, 2));
         
         // Datos para enviar al backend
-        const datosParaEnviar = {
-          id_instancia: Number(datosReserva.instanciaId), // Asegurar que sea un número
-          id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
-          pasajes: pasajes,
-          paquetes: paquetes,
-          monto: parseFloat((datosReserva.total || total).toFixed(2)), // Asegurar formato numérico correcto
-          tour_nombre: datosReserva.tourNombre || "Tour",
-          email: usuario?.correo || datosUsuario.correo || "",
-          nombre: usuario?.nombres || datosUsuario.nombres || "",
-          apellido: usuario?.apellidos || datosUsuario.apellidos || "",
-          telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
-          documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
-        };
+        // En la sección donde preparas los datos para enviar
+const datosParaEnviar = {
+  id_instancia: Number(datosReserva.instanciaId),
+  id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
+  pasajes: pasajes,
+  paquetes: paquetes,
+  monto: parseFloat((datosReserva.total || total).toFixed(2)),
+  total_pagar: parseFloat((datosReserva.total || total).toFixed(2)), // Campo requerido por el backend
+  tour_nombre: datosReserva.tourNombre || "Tour",
+  email: usuario?.correo || datosUsuario.correo || "",
+  nombre: usuario?.nombres || datosUsuario.nombres || "",
+  apellido: usuario?.apellidos || datosUsuario.apellidos || "",
+  telefono: usuario?.numero_celular || datosUsuario.numero_celular || "",
+  documento: usuario?.numero_documento || datosUsuario.numero_documento || ""
+};
         
         // Validación de datos críticos
         if (!datosParaEnviar.email) {
