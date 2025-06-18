@@ -565,8 +565,8 @@ func SetupRoutes(
 		clienteHandlers := NewClienteHandlers(reservaService, clienteService, mercadoPagoService)
 
 		// Clientes
-		cliente := protected.Group("/cliente")
-		cliente.Use(middleware.RoleMiddleware("ADMIN", "CLIENTE"))
+		cliente := router.Group("/api/v1/cliente")
+		cliente.Use(middleware.ClienteAuthMiddleware(config)) // Este es el middleware correcto
 		{
 			// Cambiar contraseña (cliente)
 			cliente.POST("/change-password", clienteController.ChangePassword)
