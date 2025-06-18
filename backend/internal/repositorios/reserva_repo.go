@@ -3,6 +3,7 @@ package repositorios
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"sistema-toursseft/internal/entidades"
 	"time"
 )
@@ -1520,6 +1521,46 @@ func (r *ReservaRepository) ReservarInstanciaMercadoPago(reserva *entidades.Rese
 	}
 
 	return idReserva, nombreTour, nil
+}
+
+// En repositorios/reserva_repository.go
+
+// ConfirmarReservaConPago confirma una reserva y registra su pago asociado
+func (r *ReservaRepository) ConfirmarReservaConPago(idReserva int, idTransaccion string, monto float64) error {
+	// Iniciar transacción
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Si hay error, hacer rollback
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. Actualizar estado de la reserva
+	queryUpdateReserva := `UPDATE reserva SET estado = 'CONFIRMADA' WHERE id_reserva = $1 AND eliminado = FALSE`
+	_, err = tx.Exec(queryUpdateReserva, idReserva)
+	if err != nil {
+		return err
+	}
+
+	// 2. Registrar el pago
+	queryInsertPago := `INSERT INTO pago (id_reserva, id_metodo_pago, monto, comprobante, estado, fecha_pago, eliminado)
+                        VALUES ($1, 1, $2, $3, 'PROCESADO', NOW(), FALSE)`
+
+	// Formato del comprobante: MP-{idTransaccion}
+	comprobante := fmt.Sprintf("MP-%s", idTransaccion)
+
+	_, err = tx.Exec(queryInsertPago, idReserva, monto, comprobante)
+	if err != nil {
+		return err
+	}
+
+	// Commit de la transacción
+	return tx.Commit()
 }
 
 // ListBySede ha sido eliminado ya que no tiene sentido sin el campo id_sede

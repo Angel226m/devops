@@ -562,3 +562,73 @@ func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 	// Siempre responder con éxito para que Mercado Pago no reintente
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Webhook procesado exitosamente", nil))
 }
+
+// En controladores/reserva.go
+
+// VerificarYConfirmarPago verifica el estado del pago con Mercado Pago y actualiza la reserva
+// En controladores/reserva.go, corregir la parte del código que causa el error
+
+// VerificarYConfirmarPago verifica el estado del pago con Mercado Pago y actualiza la reserva
+func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
+	// Obtener parámetros de la URL
+	idReservaStr := ctx.Query("id_reserva")
+	status := ctx.Query("status")
+	paymentID := ctx.Query("payment_id")
+	preferenceID := ctx.Query("preference_id")
+
+	// Validar que tenemos el ID de reserva
+	if idReservaStr == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Se requiere el ID de la reserva", nil))
+		return
+	}
+
+	// Convertir ID de reserva a entero
+	idReserva, err := strconv.Atoi(idReservaStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+		return
+	}
+
+	// Log para debug
+	fmt.Printf("VerificarYConfirmarPago: Verificando reserva ID=%d, status=%s, paymentID=%s, preferenceID=%s\n",
+		idReserva, status, paymentID, preferenceID)
+
+	// Usar el servicio para verificar y confirmar el pago
+	nuevoEstado, err := c.reservaService.VerificarYConfirmarPago(idReserva, status, paymentID, preferenceID, c.mercadoPagoService)
+	if err != nil {
+		fmt.Printf("Error al verificar y confirmar pago: %v\n", err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al verificar y confirmar pago", err))
+		return
+	}
+
+	// Obtener la reserva actualizada
+	reservaActualizada, err := c.reservaService.GetByID(idReserva)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+		return
+	}
+
+	// Determinar estado anterior (evitando el operador ternario que no existe en Go)
+	var estadoAnterior string
+	if reservaActualizada.Estado != nuevoEstado {
+		estadoAnterior = reservaActualizada.Estado
+	} else {
+		estadoAnterior = nuevoEstado
+	}
+
+	// Preparar respuesta
+	respuesta := gin.H{
+		"reserva":         reservaActualizada,
+		"estado_anterior": estadoAnterior,
+		"estado_nuevo":    nuevoEstado,
+	}
+
+	// Si el estado cambió a CONFIRMADA, incluir mensaje especial
+	if nuevoEstado == "CONFIRMADA" && reservaActualizada.Estado == "CONFIRMADA" {
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Reserva confirmada exitosamente", respuesta))
+	} else if nuevoEstado == "CANCELADA" && reservaActualizada.Estado == "CANCELADA" {
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Reserva cancelada debido a pago rechazado", respuesta))
+	} else {
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Estado de la reserva verificado", respuesta))
+	}
+}

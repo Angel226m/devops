@@ -73,6 +73,8 @@ export const endpoints = {
     listarMisReservas: "/cliente/mis-reservas",
     cancelarReserva: (id: number) => `/cliente/mis-reservas/${id}/cancelar`,
     pagarReserva: (id: number) => `/cliente/mis-reservas/${id}/pagar`,
+    verificarConfirmarPago: "/reservas/verificar-confirmar-pago"
+
   },
   
   // Endpoints para Mercado Pago
@@ -82,6 +84,7 @@ export const endpoints = {
     webhook: "/webhook/mercadopago",
     publicKey: "/mercadopago/public-key", // Cambiado de "/api/v1/mercadopago/public-key"
     verificarPago: "/mercadopago/verificar-pago" // Nuevo endpoint para verificar pagos
+    
 
   },
   

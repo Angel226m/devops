@@ -428,3 +428,66 @@ func (s *ReservaService) UpdateEstado(id int, estado string) error {
 	// Actualizar estado en la base de datos
 	return s.reservaRepo.UpdateEstado(id, estado)
 }
+
+// En servicios/reserva_service.go
+
+// VerificarYConfirmarPago verifica el estado del pago con Mercado Pago y actualiza la reserva si es necesario
+func (s *ReservaService) VerificarYConfirmarPago(idReserva int, status string, paymentID string,
+	preferenceID string, mercadoPagoService *MercadoPagoService) (string, error) {
+	// Verificar que la reserva existe
+	reserva, err := s.GetByID(idReserva)
+	if err != nil {
+		return "", fmt.Errorf("error al obtener la reserva: %v", err)
+	}
+
+	// Si ya está confirmada, no hacer nada
+	if reserva.Estado == "CONFIRMADA" {
+		return "CONFIRMADA", nil
+	}
+
+	// Determinar estado del pago según los parámetros recibidos
+	estadoPago := ""
+
+	// Si tenemos status directo, usarlo
+	if status != "" {
+		estadoPago = status
+	} else if paymentID != "" {
+		// Si tenemos payment_id, verificar con Mercado Pago
+		paymentInfo, err := mercadoPagoService.GetPaymentInfo(paymentID)
+		if err != nil {
+			return "", fmt.Errorf("error al obtener información del pago: %v", err)
+		}
+		estadoPago = paymentInfo.Status
+	} else if preferenceID != "" {
+		// Si tenemos preference_id, verificar con Mercado Pago
+		status, _, _, err := mercadoPagoService.VerificarEstadoPago(preferenceID, "")
+		if err != nil {
+			return "", fmt.Errorf("error al verificar estado del pago: %v", err)
+		}
+		estadoPago = status
+	} else {
+		return "", fmt.Errorf("no se proporcionó información suficiente para verificar el pago")
+	}
+
+	// Si el pago está aprobado, confirmar la reserva
+	if estadoPago == "approved" {
+		// Confirmar reserva con pago
+		err = s.reservaRepo.ConfirmarReservaConPago(idReserva, paymentID, reserva.TotalPagar)
+		if err != nil {
+			return "", fmt.Errorf("error al confirmar reserva con pago: %v", err)
+		}
+		return "CONFIRMADA", nil
+	}
+
+	// Si el pago está rechazado, actualizar estado
+	if estadoPago == "rejected" || estadoPago == "cancelled" {
+		err = s.UpdateEstado(idReserva, "CANCELADA")
+		if err != nil {
+			return "", fmt.Errorf("error al actualizar estado de la reserva: %v", err)
+		}
+		return "CANCELADA", nil
+	}
+
+	// En otros casos, mantener el estado actual
+	return reserva.Estado, nil
+}
