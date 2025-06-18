@@ -80,7 +80,9 @@ export const endpoints = {
     reservar: "/mercadopago/reservar", // Ya tiene el prefijo correcto
     pagarReserva: (id:number) => `/cliente/mis-reservas/${id}/pagar`, 
     webhook: "/webhook/mercadopago",
-    publicKey: "/mercadopago/public-key" // Cambiado de "/api/v1/mercadopago/public-key"
+    publicKey: "/mercadopago/public-key", // Cambiado de "/api/v1/mercadopago/public-key"
+    verificarPago: "/mercadopago/verificar-pago" // Nuevo endpoint para verificar pagos
+
   },
   
 };

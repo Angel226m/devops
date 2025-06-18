@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"sistema-toursseft/internal/entidades"
+	"strconv" // Añadir esta importación
+	"strings" // Añadir esta importación
 	"time"
 )
 
@@ -343,4 +345,93 @@ func (s *MercadoPagoService) GeneratePreferenceForExistingReserva(
 	tourNombre := "Reserva de Tour"
 
 	return s.CreatePreference(tourNombre, monto, idReserva, cliente, frontendURL)
+}
+
+//opcional por ahora
+
+// VerificarEstadoPago verifica el estado de un pago usando el ID de preferencia o el ID de pago
+func (s *MercadoPagoService) VerificarEstadoPago(preferenceID string, paymentID string) (string, string, int, error) {
+	// Si tenemos un paymentID, usarlo directamente
+	if paymentID != "" {
+		paymentInfo, err := s.GetPaymentInfo(paymentID)
+		if err != nil {
+			return "", "", 0, err
+		}
+
+		// Extraer ID de reserva del external_reference (formato "RESERVA-12345")
+		var reservaID int
+		if paymentInfo.ExternalReference != "" {
+			idReservaStr := strings.TrimPrefix(paymentInfo.ExternalReference, "RESERVA-")
+			reservaID, _ = strconv.Atoi(idReservaStr)
+		}
+
+		return paymentInfo.Status, paymentID, reservaID, nil
+	}
+
+	// Si no tenemos paymentID pero sí preferenceID, buscar pagos asociados a esa preferencia
+	if preferenceID != "" {
+		// Construir URL para buscar pagos por preferencia
+		searchURL := fmt.Sprintf("%s/v1/payments/search?preference_id=%s", s.ApiBaseURL, preferenceID)
+
+		// Crear la solicitud HTTP
+		req, err := http.NewRequest("GET", searchURL, nil)
+		if err != nil {
+			return "", "", 0, err
+		}
+
+		// Configurar headers
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.AccessToken))
+
+		// Realizar la solicitud
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			return "", "", 0, err
+		}
+		defer resp.Body.Close()
+
+		// Leer respuesta
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", "", 0, err
+		}
+
+		// Verificar código de respuesta
+		if resp.StatusCode != http.StatusOK {
+			return "", "", 0, fmt.Errorf("error al buscar pagos: %s - código: %d", string(body), resp.StatusCode)
+		}
+
+		// Estructura para parsear resultados
+		var searchResult struct {
+			Paging struct {
+				Total int `json:"total"`
+			} `json:"paging"`
+			Results []PaymentResponse `json:"results"`
+		}
+
+		// Deserializar respuesta
+		err = json.Unmarshal(body, &searchResult)
+		if err != nil {
+			return "", "", 0, err
+		}
+
+		// Si no hay resultados, no hay pagos asociados aún
+		if searchResult.Paging.Total == 0 || len(searchResult.Results) == 0 {
+			return "pending", "", 0, nil
+		}
+
+		// Tomar el pago más reciente
+		payment := searchResult.Results[0]
+
+		// Extraer ID de reserva del external_reference
+		var reservaID int
+		if payment.ExternalReference != "" {
+			idReservaStr := strings.TrimPrefix(payment.ExternalReference, "RESERVA-")
+			reservaID, _ = strconv.Atoi(idReservaStr)
+		}
+
+		return payment.Status, fmt.Sprintf("%d", payment.ID), reservaID, nil
+	}
+
+	return "", "", 0, errors.New("se requiere preferenceID o paymentID para verificar estado")
 }

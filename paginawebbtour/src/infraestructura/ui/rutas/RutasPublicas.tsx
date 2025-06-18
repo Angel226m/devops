@@ -1,10 +1,10 @@
  /*
 
-
 import { Routes, Route } from 'react-router-dom';
 import { lazy } from 'react';
+import RutasPrivadas from './RutasPrivadas';
 
-// Importaciones lazy loading
+// Importaciones lazy loading para páginas públicas
 const PaginaInicio = lazy(() => import('../paginas/publicas/PaginaInicio'));
 const PaginaTours = lazy(() => import('../paginas/publicas/PaginaTours'));
 const PaginaDetalleTour = lazy(() => import('../paginas/publicas/PaginaDetalleTour'));
@@ -16,12 +16,16 @@ const PaginaIngreso = lazy(() => import('../paginas/publicas/PaginaIngreso'));
 const PaginaRegistro = lazy(() => import('../paginas/publicas/PaginaRegistro'));
 const PaginaRecuperacion = lazy(() => import('../paginas/publicas/PaginaRecuperacion'));
 const PaginaNoEncontrada = lazy(() => import('../paginas/publicas/PaginaNoEncontrada'));
-// Añadir la nueva página de proceso de pago
+
+// Importaciones lazy loading para páginas privadas
 const PaginaProcesoPago = lazy(() => import('../paginas/privadas/PaginaProcesoPago'));
+const PaginaPerfil = lazy(() => import('../paginas/privadas/PaginaPerfil'));
+const PaginaReservasUsuario = lazy(() => import('../paginas/privadas/PaginaReservasUsuario'));
  
 const RutasPublicas = () => {
   return (
     <Routes>
+      {/* Rutas públicas *//*}
       <Route path="inicio" element={<PaginaInicio />} />
       <Route path="tours" element={<PaginaTours />} />
       <Route path="tours/:idTour" element={<PaginaDetalleTour />} />
@@ -33,10 +37,14 @@ const RutasPublicas = () => {
       <Route path="registrarse" element={<PaginaRegistro />} />
       <Route path="recuperar-contrasena" element={<PaginaRecuperacion />} />
       
-      {/* Nuevas rutas para proceso de pago y confirmación *//*}
-      <Route path="proceso-pago" element={<PaginaProcesoPago />} />
+      {/* Rutas privadas protegidas por autenticación *//*}
+      <Route element={<RutasPrivadas />}>
+        <Route path="proceso-pago" element={<PaginaProcesoPago />} />
+        <Route path="perfil" element={<PaginaPerfil />} />
+        <Route path="mis-reservas" element={<PaginaReservasUsuario />} />
+      </Route>
        
-      {/* Ruta de fallback para rutas no encontradas dentro del ámbito público *//*}
+      {/* Ruta de fallback para rutas no encontradas *//*}
       <Route path="*" element={<PaginaNoEncontrada />} />
     </Routes>
   );
@@ -65,6 +73,10 @@ const PaginaNoEncontrada = lazy(() => import('../paginas/publicas/PaginaNoEncont
 const PaginaProcesoPago = lazy(() => import('../paginas/privadas/PaginaProcesoPago'));
 const PaginaPerfil = lazy(() => import('../paginas/privadas/PaginaPerfil'));
 const PaginaReservasUsuario = lazy(() => import('../paginas/privadas/PaginaReservasUsuario'));
+
+// Importaciones para las nuevas páginas de resultado de pago
+const PaginaReservaExitosa = lazy(() => import('../paginas/privadas/PaginaReservaExitosa'));
+const PaginaPagoFallido = lazy(() => import('../paginas/privadas/PaginaPagoFallido'));
  
 const RutasPublicas = () => {
   return (
@@ -86,6 +98,10 @@ const RutasPublicas = () => {
         <Route path="proceso-pago" element={<PaginaProcesoPago />} />
         <Route path="perfil" element={<PaginaPerfil />} />
         <Route path="mis-reservas" element={<PaginaReservasUsuario />} />
+        
+        {/* Nuevas rutas para los resultados de pago */}
+        <Route path="reserva-exitosa" element={<PaginaReservaExitosa />} />
+        <Route path="pago-fallido" element={<PaginaPagoFallido />} />
       </Route>
        
       {/* Ruta de fallback para rutas no encontradas */}

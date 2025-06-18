@@ -210,3 +210,46 @@ func (c *MercadoPagoController) GetPublicKey(ctx *gin.Context) {
 		"public_key": c.mercadoPagoService.PublicKey,
 	})
 }
+
+// opcional
+// VerificarPago verifica el estado de un pago a través de su preferencia o ID de pago
+func (c *MercadoPagoController) VerificarPago(ctx *gin.Context) {
+	// Obtener parámetros
+	preferenceID := ctx.Query("preference_id")
+	paymentID := ctx.Query("payment_id")
+
+	// Validar que tenemos al menos uno de los dos
+	if preferenceID == "" && paymentID == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Se requiere preference_id o payment_id", nil))
+		return
+	}
+
+	// Verificar estado del pago
+	status, paymentIDResult, reservationID, err := c.mercadoPagoService.VerificarEstadoPago(preferenceID, paymentID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al verificar estado del pago", err))
+		return
+	}
+
+	// Preparar respuesta
+	response := map[string]interface{}{
+		"status":          status,
+		"payment_id":      paymentIDResult,
+		"reservation_id":  reservationID,
+		"internal_status": c.mercadoPagoService.MapMercadoPagoStatusToInternal(status),
+	}
+
+	// Si el pago está aprobado y tenemos un ID de reserva, actualizar estado de la reserva
+	if status == "approved" && reservationID > 0 {
+		err := c.reservaService.ConfirmarPagoReserva(reservationID, paymentIDResult, 0)
+		if err != nil {
+			// No fallamos la API por esto, solo lo registramos
+			fmt.Printf("Error al confirmar reserva %d: %v\n", reservationID, err)
+			response["reservation_updated"] = false
+		} else {
+			response["reservation_updated"] = true
+		}
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Estado del pago verificado", response))
+}
