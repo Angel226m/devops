@@ -361,7 +361,7 @@ func (s *ReservaService) ReservarConMercadoPago(
 }
 
 // ConfirmarPagoReserva confirma una reserva después de recibir el pago
-func (s *ReservaService) ConfirmarPagoReserva(idReserva int, idTransaccion string, monto float64) error {
+/*func (s *ReservaService) ConfirmarPagoReserva(idReserva int, idTransaccion string, monto float64) error {
 	// Verificar que la reserva existe
 	reserva, err := s.reservaRepo.GetByID(idReserva)
 	if err != nil {
@@ -380,6 +380,11 @@ func (s *ReservaService) ConfirmarPagoReserva(idReserva int, idTransaccion strin
 	}
 
 	return nil
+}*/
+// ConfirmarPagoReserva confirma una reserva con un pago exitoso
+func (s *ReservaService) ConfirmarPagoReserva(idReserva int, idTransaccion string, monto float64) error {
+	// Simplemente actualizar el estado a CONFIRMADA
+	return s.UpdateEstado(idReserva, "CONFIRMADA")
 }
 
 // GetTotalPasajerosByInstancia obtiene el total de pasajeros reservados para una instancia

@@ -305,6 +305,7 @@ func (s *MercadoPagoService) GetPaymentInfo(paymentId string) (*PaymentResponse,
 	return &paymentResp, nil
 }
 
+/*
 // MapMercadoPagoStatusToInternal mapea los estados de Mercado Pago a estados internos del sistema
 func (s *MercadoPagoService) MapMercadoPagoStatusToInternal(mpStatus string) string {
 	switch mpStatus {
@@ -316,6 +317,22 @@ func (s *MercadoPagoService) MapMercadoPagoStatusToInternal(mpStatus string) str
 		return "PENDIENTE"
 	default:
 		return "PENDIENTE"
+	}
+}
+
+*/
+
+// MapMercadoPagoStatusToInternal mapea los estados de Mercado Pago a estados internos del sistema
+func (s *MercadoPagoService) MapMercadoPagoStatusToInternal(mpStatus string) string {
+	switch mpStatus {
+	case "approved":
+		return "CONFIRMADA" // <-- Cambiado de "PROCESADO" a "CONFIRMADA"
+	case "refunded", "cancelled", "rejected":
+		return "CANCELADA" // <-- Cambiado si es necesario
+	case "pending", "in_process", "authorized":
+		return "RESERVADO" // <-- Cambiado a tu estado inicial
+	default:
+		return "RESERVADO" // <-- Valor por defecto también cambiado
 	}
 }
 
