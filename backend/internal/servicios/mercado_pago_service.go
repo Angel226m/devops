@@ -206,12 +206,13 @@ func (s *MercadoPagoService) CreatePreference(
 
 	// Crear la solicitud completa
 	preferenceReq := PreferenceRequest{
-		Items:               items,
-		Payer:               payer,
-		BackURLs:            backURLs,
-		AutoReturn:          "approved",
-		PaymentMethods:      paymentMethods,
-		NotificationURL:     fmt.Sprintf("%s/api/webhook/mercadopago", frontendURL),
+		Items:          items,
+		Payer:          payer,
+		BackURLs:       backURLs,
+		AutoReturn:     "approved",
+		PaymentMethods: paymentMethods,
+		/*NotificationURL:     fmt.Sprintf("%s/api/webhook/mercadopago", frontendURL),*/
+		NotificationURL:     "https://reservas.angelproyect.com/api/v1/webhook/mercadopago",
 		ExternalReference:   fmt.Sprintf("RESERVA-%d", idReserva),
 		StatementDescriptor: "TOURS PERU",
 	}
