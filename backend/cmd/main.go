@@ -186,8 +186,6 @@ func main() {
 	pagoService := servicios.NewPagoService(
 		pagoRepo,
 		reservaRepo,
-		metodoPagoRepo,
-		canalVentaRepo,
 		sedeRepo,
 	)
 

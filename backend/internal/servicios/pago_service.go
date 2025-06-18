@@ -9,27 +9,21 @@ import (
 
 // PagoService maneja la lógica de negocio para pagos
 type PagoService struct {
-	pagoRepo       *repositorios.PagoRepository
-	reservaRepo    *repositorios.ReservaRepository
-	metodoPagoRepo *repositorios.MetodoPagoRepository
-	canalVentaRepo *repositorios.CanalVentaRepository
-	sedeRepo       *repositorios.SedeRepository // Añadido repositorio de sede
+	pagoRepo    *repositorios.PagoRepository
+	reservaRepo *repositorios.ReservaRepository
+	sedeRepo    *repositorios.SedeRepository // Solo mantenemos referencia al repositorio de sedes
 }
 
 // NewPagoService crea una nueva instancia de PagoService
 func NewPagoService(
 	pagoRepo *repositorios.PagoRepository,
 	reservaRepo *repositorios.ReservaRepository,
-	metodoPagoRepo *repositorios.MetodoPagoRepository,
-	canalVentaRepo *repositorios.CanalVentaRepository,
-	sedeRepo *repositorios.SedeRepository, // Añadido repositorio de sede
+	sedeRepo *repositorios.SedeRepository,
 ) *PagoService {
 	return &PagoService{
-		pagoRepo:       pagoRepo,
-		reservaRepo:    reservaRepo,
-		metodoPagoRepo: metodoPagoRepo,
-		canalVentaRepo: canalVentaRepo,
-		sedeRepo:       sedeRepo, // Asignado repositorio de sede
+		pagoRepo:    pagoRepo,
+		reservaRepo: reservaRepo,
+		sedeRepo:    sedeRepo,
 	}
 }
 
@@ -46,22 +40,39 @@ func (s *PagoService) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 		return 0, errors.New("no se puede registrar un pago para una reserva cancelada")
 	}
 
-	// Verificar que el método de pago existe
-	_, err = s.metodoPagoRepo.GetByID(pago.IDMetodoPago)
-	if err != nil {
-		return 0, errors.New("el método de pago especificado no existe")
+	// Verificar método de pago válido
+	metodosValidos := map[string]bool{
+		"EFECTIVO":      true,
+		"TRANSFERENCIA": true,
+		"TARJETA":       true,
+		"YAPE":          true,
+		"PLIN":          true,
+		"MERCADOPAGO":   true,
+		"DEPOSITO":      true,
 	}
 
-	// Verificar que el canal de venta existe
-	_, err = s.canalVentaRepo.GetByID(pago.IDCanal)
-	if err != nil {
-		return 0, errors.New("el canal de venta especificado no existe")
+	if !metodosValidos[pago.MetodoPago] {
+		return 0, errors.New("método de pago no válido")
 	}
 
-	// Verificar que la sede existe
-	_, err = s.sedeRepo.GetByID(pago.IDSede)
-	if err != nil {
-		return 0, errors.New("la sede especificada no existe")
+	// Verificar canal de pago válido
+	canalesValidos := map[string]bool{
+		"LOCAL":    true,
+		"WEB":      true,
+		"APP":      true,
+		"TELEFONO": true,
+	}
+
+	if !canalesValidos[pago.CanalPago] {
+		return 0, errors.New("canal de pago no válido")
+	}
+
+	// Verificar que la sede existe si se proporcionó una
+	if pago.IDSede != nil && *pago.IDSede > 0 {
+		_, err = s.sedeRepo.GetByID(*pago.IDSede)
+		if err != nil {
+			return 0, errors.New("la sede especificada no existe")
+		}
 	}
 
 	// Verificar que el monto sea positivo
@@ -96,22 +107,39 @@ func (s *PagoService) Update(id int, pago *entidades.ActualizarPagoRequest) erro
 		return err
 	}
 
-	// Verificar que el método de pago existe
-	_, err = s.metodoPagoRepo.GetByID(pago.IDMetodoPago)
-	if err != nil {
-		return errors.New("el método de pago especificado no existe")
+	// Verificar método de pago válido
+	metodosValidos := map[string]bool{
+		"EFECTIVO":      true,
+		"TRANSFERENCIA": true,
+		"TARJETA":       true,
+		"YAPE":          true,
+		"PLIN":          true,
+		"MERCADOPAGO":   true,
+		"DEPOSITO":      true,
 	}
 
-	// Verificar que el canal de venta existe
-	_, err = s.canalVentaRepo.GetByID(pago.IDCanal)
-	if err != nil {
-		return errors.New("el canal de venta especificado no existe")
+	if !metodosValidos[pago.MetodoPago] {
+		return errors.New("método de pago no válido")
 	}
 
-	// Verificar que la sede existe
-	_, err = s.sedeRepo.GetByID(pago.IDSede)
-	if err != nil {
-		return errors.New("la sede especificada no existe")
+	// Verificar canal de pago válido
+	canalesValidos := map[string]bool{
+		"LOCAL":    true,
+		"WEB":      true,
+		"APP":      true,
+		"TELEFONO": true,
+	}
+
+	if !canalesValidos[pago.CanalPago] {
+		return errors.New("canal de pago no válido")
+	}
+
+	// Verificar que la sede existe si se proporcionó una
+	if pago.IDSede != nil && *pago.IDSede > 0 {
+		_, err = s.sedeRepo.GetByID(*pago.IDSede)
+		if err != nil {
+			return errors.New("la sede especificada no existe")
+		}
 	}
 
 	// Verificar que el monto sea positivo
@@ -150,8 +178,14 @@ func (s *PagoService) Update(id int, pago *entidades.ActualizarPagoRequest) erro
 // CambiarEstado cambia el estado de un pago
 func (s *PagoService) CambiarEstado(id int, estado string) error {
 	// Verificar estado válido
-	if estado != "PROCESADO" && estado != "ANULADO" {
-		return errors.New("estado inválido, debe ser PROCESADO o ANULADO")
+	estadosValidos := map[string]bool{
+		"PROCESADO": true,
+		"PENDIENTE": true,
+		"ANULADO":   true,
+	}
+
+	if !estadosValidos[estado] {
+		return errors.New("estado inválido, debe ser PROCESADO, PENDIENTE o ANULADO")
 	}
 
 	// Verificar que el pago existe
@@ -163,12 +197,6 @@ func (s *PagoService) CambiarEstado(id int, estado string) error {
 	// Si ya tiene ese estado, no hacer nada
 	if pago.Estado == estado {
 		return nil
-	}
-
-	// Si está anulando el pago, verificar que no tenga comprobantes asociados
-	if estado == "ANULADO" {
-		// Lógica para verificar comprobantes
-		// (Esto dependería de la estructura de tu aplicación)
 	}
 
 	// Cambiar estado
@@ -224,8 +252,14 @@ func (s *PagoService) GetTotalPagadoByReserva(idReserva int) (float64, error) {
 // ListByEstado lista todos los pagos con un estado específico
 func (s *PagoService) ListByEstado(estado string) ([]*entidades.Pago, error) {
 	// Verificar estado válido
-	if estado != "PROCESADO" && estado != "ANULADO" {
-		return nil, errors.New("estado inválido, debe ser PROCESADO o ANULADO")
+	estadosValidos := map[string]bool{
+		"PROCESADO": true,
+		"PENDIENTE": true,
+		"ANULADO":   true,
+	}
+
+	if !estadosValidos[estado] {
+		return nil, errors.New("estado inválido, debe ser PROCESADO, PENDIENTE o ANULADO")
 	}
 
 	// Listar pagos por estado
@@ -234,9 +268,6 @@ func (s *PagoService) ListByEstado(estado string) ([]*entidades.Pago, error) {
 
 // ListByCliente lista todos los pagos relacionados con un cliente específico
 func (s *PagoService) ListByCliente(idCliente int) ([]*entidades.Pago, error) {
-	// Verificar que el cliente existe
-	// Esto dependería de cómo tienes organizados tus servicios
-
 	// Listar pagos por cliente
 	return s.pagoRepo.ListByCliente(idCliente)
 }
@@ -281,4 +312,21 @@ func (s *PagoService) UpdateEstado(id int, estado string) error {
 
 	// Actualizar estado en la base de datos
 	return s.pagoRepo.UpdateEstado(id, estado)
+}
+
+// CrearPagoMercadoPago crea un pago específicamente para transacciones de MercadoPago
+func (s *PagoService) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {
+	// Verificar que la reserva existe
+	reserva, err := s.reservaRepo.GetByID(idReserva)
+	if err != nil {
+		return 0, errors.New("la reserva especificada no existe")
+	}
+
+	// Verificar que la reserva no esté cancelada
+	if reserva.Estado == "CANCELADA" {
+		return 0, errors.New("no se puede registrar un pago para una reserva cancelada")
+	}
+
+	// Crear un nuevo pago con valores predeterminados para MercadoPago
+	return s.pagoRepo.CrearPagoMercadoPago(idReserva, monto, referenciaPago)
 }

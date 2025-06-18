@@ -22,27 +22,28 @@ func NewPagoRepository(db *sql.DB) *PagoRepository {
 // GetByID obtiene un pago por su ID
 func (r *PagoRepository) GetByID(id int) (*entidades.Pago, error) {
 	pago := &entidades.Pago{}
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE p.id_pago = $1 AND p.eliminado = FALSE`
 
+	var idSede sql.NullInt64
+
 	err := r.db.QueryRow(query, id).Scan(
-		&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-		&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+		&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+		&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 		&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-		&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-		&pago.TourNombre, &pago.TourFecha,
+		&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 	)
 
 	if err != nil {
@@ -52,24 +53,35 @@ func (r *PagoRepository) GetByID(id int) (*entidades.Pago, error) {
 		return nil, err
 	}
 
+	// Convertir el campo nullable a puntero
+	if idSede.Valid {
+		idSedeInt := int(idSede.Int64)
+		pago.IDSede = &idSedeInt
+	} else {
+		pago.IDSede = nil
+	}
+
 	return pago, nil
 }
 
 // Create guarda un nuevo pago en la base de datos
 func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 	var id int
-	query := `INSERT INTO pago (id_reserva, id_metodo_pago, id_canal, id_sede, monto, comprobante, eliminado)
-              VALUES ($1, $2, $3, $4, $5, $6, FALSE)
+	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, 
+              numero_comprobante, url_comprobante, eliminado)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
               RETURNING id_pago`
 
 	err := r.db.QueryRow(
 		query,
 		pago.IDReserva,
-		pago.IDMetodoPago,
-		pago.IDCanal,
-		pago.IDSede,
+		pago.MetodoPago,
+		pago.CanalPago,
+		pago.IDSede, // Si es nil, se insertará NULL
 		pago.Monto,
 		pago.Comprobante,
+		pago.NumeroComprobante,
+		pago.URLComprobante,
 	).Scan(&id)
 
 	if err != nil {
@@ -82,21 +94,25 @@ func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 // Update actualiza la información de un pago
 func (r *PagoRepository) Update(id int, pago *entidades.ActualizarPagoRequest) error {
 	query := `UPDATE pago SET
-              id_metodo_pago = $1,
-              id_canal = $2,
+              metodo_pago = $1,
+              canal_pago = $2,
               id_sede = $3,
               monto = $4,
               comprobante = $5,
-              estado = $6
-              WHERE id_pago = $7 AND eliminado = FALSE`
+              numero_comprobante = $6,
+              url_comprobante = $7,
+              estado = $8
+              WHERE id_pago = $9 AND eliminado = FALSE`
 
 	_, err := r.db.Exec(
 		query,
-		pago.IDMetodoPago,
-		pago.IDCanal,
+		pago.MetodoPago,
+		pago.CanalPago,
 		pago.IDSede,
 		pago.Monto,
 		pago.Comprobante,
+		pago.NumeroComprobante,
+		pago.URLComprobante,
 		pago.Estado,
 		id,
 	)
@@ -121,17 +137,6 @@ func (r *PagoRepository) Delete(id int) error {
 		return err
 	}
 
-	var countComprobantes int
-	queryCheckComprobantes := `SELECT COUNT(*) FROM comprobante_pago WHERE id_reserva = $1 AND eliminado = FALSE`
-	err = r.db.QueryRow(queryCheckComprobantes, idReserva).Scan(&countComprobantes)
-	if err != nil {
-		return err
-	}
-
-	if countComprobantes > 0 {
-		return errors.New("no se puede eliminar este pago porque la reserva tiene comprobantes asociados")
-	}
-
 	// Eliminación lógica
 	query := `UPDATE pago SET eliminado = TRUE WHERE id_pago = $1`
 	_, err = r.db.Exec(query, id)
@@ -140,18 +145,17 @@ func (r *PagoRepository) Delete(id int) error {
 
 // List lista todos los pagos activos
 func (r *PagoRepository) List() ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE p.eliminado = FALSE
               ORDER BY p.fecha_pago DESC`
@@ -166,16 +170,26 @@ func (r *PagoRepository) List() ([]*entidades.Pago, error) {
 
 	for rows.Next() {
 		pago := &entidades.Pago{}
+		var idSede sql.NullInt64
+
 		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Convertir el campo nullable a puntero
+		if idSede.Valid {
+			idSedeInt := int(idSede.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
+		}
+
 		pagos = append(pagos, pago)
 	}
 
@@ -188,18 +202,17 @@ func (r *PagoRepository) List() ([]*entidades.Pago, error) {
 
 // ListByReserva lista todos los pagos de una reserva específica
 func (r *PagoRepository) ListByReserva(idReserva int) ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE p.id_reserva = $1 AND p.eliminado = FALSE
               ORDER BY p.fecha_pago DESC`
@@ -214,64 +227,26 @@ func (r *PagoRepository) ListByReserva(idReserva int) ([]*entidades.Pago, error)
 
 	for rows.Next() {
 		pago := &entidades.Pago{}
+		var idSede sql.NullInt64
+
 		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 		)
 		if err != nil {
 			return nil, err
 		}
-		pagos = append(pagos, pago)
-	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return pagos, nil
-}
-
-// ListByFecha lista todos los pagos de una fecha específica
-func (r *PagoRepository) ListByFecha(fecha time.Time) ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
-              c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
-              FROM pago p
-              INNER JOIN reserva r ON p.id_reserva = r.id_reserva
-              INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
-              INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
-              WHERE DATE(p.fecha_pago) = $1 AND p.eliminado = FALSE
-              ORDER BY p.fecha_pago DESC`
-
-	rows, err := r.db.Query(query, fecha)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	pagos := []*entidades.Pago{}
-
-	for rows.Next() {
-		pago := &entidades.Pago{}
-		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
-			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
-		)
-		if err != nil {
-			return nil, err
+		// Convertir el campo nullable a puntero
+		if idSede.Valid {
+			idSedeInt := int(idSede.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
 		}
+
 		pagos = append(pagos, pago)
 	}
 
@@ -297,18 +272,17 @@ func (r *PagoRepository) GetTotalPagadoByReserva(idReserva int) (float64, error)
 
 // ListByEstado lista todos los pagos con un estado específico
 func (r *PagoRepository) ListByEstado(estado string) ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE p.estado = $1 AND p.eliminado = FALSE
               ORDER BY p.fecha_pago DESC`
@@ -323,16 +297,26 @@ func (r *PagoRepository) ListByEstado(estado string) ([]*entidades.Pago, error) 
 
 	for rows.Next() {
 		pago := &entidades.Pago{}
+		var idSede sql.NullInt64
+
 		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Convertir el campo nullable a puntero
+		if idSede.Valid {
+			idSedeInt := int(idSede.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
+		}
+
 		pagos = append(pagos, pago)
 	}
 
@@ -345,18 +329,17 @@ func (r *PagoRepository) ListByEstado(estado string) ([]*entidades.Pago, error) 
 
 // ListByCliente lista todos los pagos de un cliente específico
 func (r *PagoRepository) ListByCliente(idCliente int) ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
-              INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE r.id_cliente = $1 AND p.eliminado = FALSE
               ORDER BY p.fecha_pago DESC`
@@ -371,16 +354,26 @@ func (r *PagoRepository) ListByCliente(idCliente int) ([]*entidades.Pago, error)
 
 	for rows.Next() {
 		pago := &entidades.Pago{}
+		var idSede sql.NullInt64
+
 		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Convertir el campo nullable a puntero
+		if idSede.Valid {
+			idSedeInt := int(idSede.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
+		}
+
 		pagos = append(pagos, pago)
 	}
 
@@ -393,18 +386,17 @@ func (r *PagoRepository) ListByCliente(idCliente int) ([]*entidades.Pago, error)
 
 // ListBySede lista todos los pagos de una sede específica
 func (r *PagoRepository) ListBySede(idSede int) ([]*entidades.Pago, error) {
-	query := `SELECT p.id_pago, p.id_reserva, p.id_metodo_pago, p.id_canal, p.id_sede,
-              p.monto, p.fecha_pago, p.comprobante, p.estado, p.eliminado,
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
               c.nombres, c.apellidos, c.numero_documento,
-              mp.nombre, cv.nombre, s.nombre,
-              tt.nombre, tp.fecha
+              s.nombre as nombre_sede,
+              tt.nombre, it.fecha_especifica
               FROM pago p
               INNER JOIN reserva r ON p.id_reserva = r.id_reserva
               INNER JOIN cliente c ON r.id_cliente = c.id_cliente
-              INNER JOIN metodo_pago mp ON p.id_metodo_pago = mp.id_metodo_pago
-              INNER JOIN canal_venta cv ON p.id_canal = cv.id_canal
               INNER JOIN sede s ON p.id_sede = s.id_sede
-              INNER JOIN tour_programado tp ON r.id_tour_programado = tp.id_tour_programado
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
               INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
               WHERE p.id_sede = $1 AND p.eliminado = FALSE
               ORDER BY p.fecha_pago DESC`
@@ -419,16 +411,105 @@ func (r *PagoRepository) ListBySede(idSede int) ([]*entidades.Pago, error) {
 
 	for rows.Next() {
 		pago := &entidades.Pago{}
+		var idSedeDB sql.NullInt64
+
 		err := rows.Scan(
-			&pago.ID, &pago.IDReserva, &pago.IDMetodoPago, &pago.IDCanal, &pago.IDSede,
-			&pago.Monto, &pago.FechaPago, &pago.Comprobante, &pago.Estado, &pago.Eliminado,
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSedeDB,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
 			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
-			&pago.NombreMetodoPago, &pago.NombreCanalVenta, &pago.NombreSede,
-			&pago.TourNombre, &pago.TourFecha,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Convertir el campo nullable a puntero
+		if idSedeDB.Valid {
+			idSedeInt := int(idSedeDB.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
+		}
+
+		pagos = append(pagos, pago)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return pagos, nil
+}
+
+// CrearPagoMercadoPago crea un pago específico para MercadoPago
+func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {
+	var id int
+	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, estado, eliminado)
+              VALUES ($1, 'MERCADOPAGO', 'WEB', NULL, $2, $3, 'PROCESADO', FALSE)
+              RETURNING id_pago`
+
+	err := r.db.QueryRow(
+		query,
+		idReserva,
+		monto,
+		referenciaPago,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+// ListByFecha lista todos los pagos de una fecha específica
+func (r *PagoRepository) ListByFecha(fecha time.Time) ([]*entidades.Pago, error) {
+	// Consulta para obtener pagos en una fecha específica
+	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
+              p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
+              c.nombres, c.apellidos, c.numero_documento,
+              COALESCE(s.nombre, 'Web') as nombre_sede,
+              tt.nombre, it.fecha_especifica
+              FROM pago p
+              INNER JOIN reserva r ON p.id_reserva = r.id_reserva
+              INNER JOIN cliente c ON r.id_cliente = c.id_cliente
+              LEFT JOIN sede s ON p.id_sede = s.id_sede
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
+              INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
+              WHERE DATE(p.fecha_pago) = $1 AND p.eliminado = FALSE
+              ORDER BY p.fecha_pago DESC`
+
+	rows, err := r.db.Query(query, fecha.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pagos := []*entidades.Pago{}
+
+	for rows.Next() {
+		pago := &entidades.Pago{}
+		var idSede sql.NullInt64
+
+		err := rows.Scan(
+			&pago.ID, &pago.IDReserva, &pago.MetodoPago, &pago.CanalPago, &idSede,
+			&pago.Monto, &pago.FechaPago, &pago.Estado, &pago.Comprobante, &pago.NumeroComprobante, &pago.URLComprobante, &pago.Eliminado,
+			&pago.NombreCliente, &pago.ApellidosCliente, &pago.DocumentoCliente,
+			&pago.NombreSede, &pago.TourNombre, &pago.TourFecha,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convertir el campo nullable a puntero
+		if idSede.Valid {
+			idSedeInt := int(idSede.Int64)
+			pago.IDSede = &idSedeInt
+		} else {
+			pago.IDSede = nil
+		}
+
 		pagos = append(pagos, pago)
 	}
 

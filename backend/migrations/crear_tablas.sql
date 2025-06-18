@@ -369,29 +369,31 @@ CREATE INDEX idx_pasajes_cantidad_tipo_pasaje ON pasajes_cantidad(id_tipo_pasaje
 CREATE INDEX idx_pasajes_cantidad_eliminado ON pasajes_cantidad(eliminado);
 
 -- 19. Tabla pago (depende de reserva, metodo_pago, canal_venta, sede)
+-- 19. Tabla pago (depende solo de reserva)
+-- Recrear la tabla pago con los nombres de columnas correctos
 CREATE TABLE pago (
     id_pago SERIAL PRIMARY KEY,
     id_reserva INT NOT NULL,
-    id_metodo_pago INT NOT NULL,
-    id_canal INT NOT NULL,
-    id_sede INT NOT NULL,
+    metodo_pago VARCHAR(50) NOT NULL, -- Ej: "MERCADOPAGO", "EFECTIVO", "TRANSFERENCIA"
+    canal_pago VARCHAR(50) NOT NULL, -- Ej: "WEB", "LOCAL", "TELEFONO" (cambiado de canal_venta a canal_pago)
+    id_sede INT, -- Puede ser NULL para pagos online
     monto DECIMAL(10,2) NOT NULL,
     fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(20) DEFAULT 'PROCESADO',
-    numero_comprobante VARCHAR(20),
-    url_comprobante TEXT,
+    estado VARCHAR(20) DEFAULT 'PROCESADO', -- "PROCESADO", "PENDIENTE", "ANULADO"
+    comprobante VARCHAR(100), -- Para referencias de pago externas como "MP-12345"
+    numero_comprobante VARCHAR(20), -- Para facturas o boletas internas
+    url_comprobante TEXT, -- URL a un comprobante digital
     eliminado BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (id_reserva) REFERENCES reserva(id_reserva) ON UPDATE CASCADE ON DELETE RESTRICT,
-    FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id_metodo_pago) ON UPDATE CASCADE ON DELETE RESTRICT,
-    FOREIGN KEY (id_canal) REFERENCES canal_venta(id_canal) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
+-- Índices para mejorar el rendimiento (corregidos)
 CREATE INDEX idx_pago_reserva ON pago(id_reserva);
-CREATE INDEX idx_pago_metodo_pago ON pago(id_metodo_pago);
-CREATE INDEX idx_pago_canal ON pago(id_canal);
-CREATE INDEX idx_pago_sede ON pago(id_sede);
 CREATE INDEX idx_pago_fecha ON pago(fecha_pago);
 CREATE INDEX idx_pago_estado ON pago(estado);
+CREATE INDEX idx_pago_canal_pago ON pago(canal_pago);
+CREATE INDEX idx_pago_metodo_pago ON pago(metodo_pago);
 CREATE INDEX idx_pago_eliminado ON pago(eliminado);
 
 -- 20. Tabla devolucion_pago (depende de pago)

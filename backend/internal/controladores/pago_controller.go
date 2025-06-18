@@ -39,9 +39,10 @@ func (c *PagoController) Create(ctx *gin.Context) {
 		return
 	}
 
-	// Si no se especifica la sede, usar la sede del usuario autenticado
-	if pagoReq.IDSede == 0 && ctx.GetInt("sede_id") > 0 {
-		pagoReq.IDSede = ctx.GetInt("sede_id")
+	// Si no se especifica la sede y el usuario tiene sede asignada, usarla
+	if pagoReq.IDSede == nil && ctx.GetInt("sede_id") > 0 {
+		sedeID := ctx.GetInt("sede_id")
+		pagoReq.IDSede = &sedeID
 	}
 
 	// Crear pago
@@ -72,7 +73,11 @@ func (c *PagoController) GetByID(ctx *gin.Context) {
 	}
 
 	// Verificar acceso según el rol
-	if ctx.GetString("rol") != "ADMIN" && pago.IDSede != ctx.GetInt("sede_id") {
+	sedeUsuario := ctx.GetInt("sede_id")
+	if ctx.GetString("rol") != "ADMIN" &&
+		pago.IDSede != nil &&
+		*pago.IDSede != sedeUsuario &&
+		pago.CanalPago != "WEB" {
 		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para ver este pago", nil))
 		return
 	}
@@ -98,7 +103,11 @@ func (c *PagoController) Update(ctx *gin.Context) {
 	}
 
 	// Verificar acceso según el rol
-	if ctx.GetString("rol") != "ADMIN" && pago.IDSede != ctx.GetInt("sede_id") {
+	sedeUsuario := ctx.GetInt("sede_id")
+	if ctx.GetString("rol") != "ADMIN" &&
+		pago.IDSede != nil &&
+		*pago.IDSede != sedeUsuario &&
+		pago.CanalPago != "WEB" {
 		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para modificar este pago", nil))
 		return
 	}
@@ -118,7 +127,10 @@ func (c *PagoController) Update(ctx *gin.Context) {
 	}
 
 	// Verificar que la sede es la misma del usuario para no-administradores
-	if ctx.GetString("rol") != "ADMIN" && pagoReq.IDSede != ctx.GetInt("sede_id") {
+	if ctx.GetString("rol") != "ADMIN" &&
+		pagoReq.IDSede != nil &&
+		*pagoReq.IDSede != sedeUsuario &&
+		pagoReq.CanalPago != "WEB" {
 		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para cambiar la sede del pago", nil))
 		return
 	}
@@ -151,7 +163,11 @@ func (c *PagoController) CambiarEstado(ctx *gin.Context) {
 	}
 
 	// Verificar acceso según el rol
-	if ctx.GetString("rol") != "ADMIN" && pago.IDSede != ctx.GetInt("sede_id") {
+	sedeUsuario := ctx.GetInt("sede_id")
+	if ctx.GetString("rol") != "ADMIN" &&
+		pago.IDSede != nil &&
+		*pago.IDSede != sedeUsuario &&
+		pago.CanalPago != "WEB" {
 		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para modificar este pago", nil))
 		return
 	}
@@ -198,7 +214,11 @@ func (c *PagoController) Delete(ctx *gin.Context) {
 	}
 
 	// Verificar acceso según el rol
-	if ctx.GetString("rol") != "ADMIN" && pago.IDSede != ctx.GetInt("sede_id") {
+	sedeUsuario := ctx.GetInt("sede_id")
+	if ctx.GetString("rol") != "ADMIN" &&
+		pago.IDSede != nil &&
+		*pago.IDSede != sedeUsuario &&
+		pago.CanalPago != "WEB" {
 		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permiso para eliminar este pago", nil))
 		return
 	}
@@ -268,7 +288,8 @@ func (c *PagoController) ListByReserva(ctx *gin.Context) {
 		pagosFiltrados := []*entidades.Pago{}
 
 		for _, pago := range pagos {
-			if pago.IDSede == sedeUsuario {
+			// Incluir pagos web o de la sede del usuario
+			if pago.CanalPago == "WEB" || (pago.IDSede != nil && *pago.IDSede == sedeUsuario) {
 				pagosFiltrados = append(pagosFiltrados, pago)
 			}
 		}
@@ -302,7 +323,8 @@ func (c *PagoController) ListByFecha(ctx *gin.Context) {
 		pagosFiltrados := []*entidades.Pago{}
 
 		for _, pago := range pagos {
-			if pago.IDSede == sedeUsuario {
+			// Incluir pagos web o de la sede del usuario
+			if pago.CanalPago == "WEB" || (pago.IDSede != nil && *pago.IDSede == sedeUsuario) {
 				pagosFiltrados = append(pagosFiltrados, pago)
 			}
 		}
@@ -351,7 +373,8 @@ func (c *PagoController) ListByEstado(ctx *gin.Context) {
 		pagosFiltrados := []*entidades.Pago{}
 
 		for _, pago := range pagos {
-			if pago.IDSede == sedeUsuario {
+			// Incluir pagos web o de la sede del usuario
+			if pago.CanalPago == "WEB" || (pago.IDSede != nil && *pago.IDSede == sedeUsuario) {
 				pagosFiltrados = append(pagosFiltrados, pago)
 			}
 		}
@@ -384,7 +407,8 @@ func (c *PagoController) ListByCliente(ctx *gin.Context) {
 		pagosFiltrados := []*entidades.Pago{}
 
 		for _, pago := range pagos {
-			if pago.IDSede == sedeUsuario {
+			// Incluir pagos web o de la sede del usuario
+			if pago.CanalPago == "WEB" || (pago.IDSede != nil && *pago.IDSede == sedeUsuario) {
 				pagosFiltrados = append(pagosFiltrados, pago)
 			}
 		}
@@ -424,4 +448,45 @@ func (c *PagoController) ListBySede(ctx *gin.Context) {
 
 	// Respuesta exitosa
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Pagos de la sede listados exitosamente", pagos))
+}
+
+// CrearPagoMercadoPago crea un pago específico para MercadoPago
+func (c *PagoController) CrearPagoMercadoPago(ctx *gin.Context) {
+	// Estructura para la solicitud
+	type MercadoPagoRequest struct {
+		IDReserva      int     `json:"id_reserva" validate:"required"`
+		Monto          float64 `json:"monto" validate:"required,min=0"`
+		ReferenciaPago string  `json:"referencia_pago" validate:"required"`
+	}
+
+	var request MercadoPagoRequest
+
+	// Parsear request
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	// Validar datos
+	if err := utils.ValidateStruct(request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Crear pago de MercadoPago
+	idPago, err := c.pagoService.CrearPagoMercadoPago(
+		request.IDReserva,
+		request.Monto,
+		request.ReferenciaPago,
+	)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al crear pago de MercadoPago", err))
+		return
+	}
+
+	// Respuesta exitosa
+	ctx.JSON(http.StatusCreated, utils.SuccessResponse("Pago de MercadoPago registrado exitosamente", gin.H{
+		"id_pago": idPago,
+	}))
 }
