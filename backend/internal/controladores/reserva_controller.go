@@ -569,7 +569,7 @@ func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 // En controladores/reserva.go, corregir la parte del código que causa el error
 
 // VerificarYConfirmarPago verifica el estado del pago con Mercado Pago y actualiza la reserva
-func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
+/*func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
 	// Obtener parámetros de la URL
 	idReservaStr := ctx.Query("id_reserva")
 	status := ctx.Query("status")
@@ -631,4 +631,82 @@ func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusOK, utils.SuccessResponse("Estado de la reserva verificado", respuesta))
 	}
+}
+*/ // VerificarYConfirmarPago - versión simplificada que solo actualiza el estado de la reserva
+func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
+	// Obtener parámetros
+	idReservaStr := ctx.Query("id_reserva")
+	status := ctx.Query("status")
+
+	fmt.Printf("VerificarYConfirmarPago: id_reserva=%s, status=%s\n", idReservaStr, status)
+
+	// Validar que tenemos el ID de reserva
+	if idReservaStr == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Se requiere id_reserva", nil))
+		return
+	}
+
+	// Convertir ID de reserva a entero
+	idReserva, err := strconv.Atoi(idReservaStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+		return
+	}
+
+	// Intentar obtener la reserva
+	reserva, err := c.reservaService.GetByID(idReserva)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+
+	// Si la reserva ya está confirmada, no hacer nada
+	if reserva.Estado == "CONFIRMADA" {
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("La reserva ya está confirmada", reserva))
+		return
+	}
+
+	// Si el status es "approved", confirmar la reserva
+	if status == "approved" {
+		// Actualizar el estado de la reserva directamente
+		err = c.reservaService.UpdateEstado(idReserva, "CONFIRMADA")
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al confirmar la reserva", err))
+			return
+		}
+
+		// Obtener la reserva actualizada
+		reservaActualizada, err := c.reservaService.GetByID(idReserva)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+			return
+		}
+
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Reserva confirmada exitosamente", reservaActualizada))
+		return
+	} else if status == "pending" {
+		// Si el pago está pendiente, mantener el estado actual
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Pago pendiente, reserva sin cambios", reserva))
+		return
+	} else if status == "rejected" || status == "failure" {
+		// Si el pago fue rechazado, cambiar el estado a CANCELADA
+		err = c.reservaService.UpdateEstado(idReserva, "CANCELADA")
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al cancelar la reserva", err))
+			return
+		}
+
+		// Obtener la reserva actualizada
+		reservaActualizada, err := c.reservaService.GetByID(idReserva)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+			return
+		}
+
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("Reserva cancelada debido a pago rechazado", reservaActualizada))
+		return
+	}
+
+	// Si el status no es ninguno de los esperados, devolver error
+	ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Estado de pago no válido", nil))
 }
