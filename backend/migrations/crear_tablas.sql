@@ -323,6 +323,7 @@ CREATE TABLE reserva (
     total_pagar DECIMAL(10,2) NOT NULL,
     notas TEXT,
     estado VARCHAR(20) DEFAULT 'RESERVADO',
+    fecha_expiracion TIMESTAMP,
     eliminado BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (id_vendedor) REFERENCES usuario(id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON UPDATE CASCADE ON DELETE RESTRICT,

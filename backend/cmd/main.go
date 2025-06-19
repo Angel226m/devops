@@ -7,6 +7,7 @@ import (
 	"os"
 	"sistema-toursseft/internal/config"
 	"sistema-toursseft/internal/controladores"
+	"sistema-toursseft/internal/jobs"
 	"sistema-toursseft/internal/repositorios"
 	"sistema-toursseft/internal/rutas"
 	"sistema-toursseft/internal/servicios"
@@ -19,6 +20,8 @@ import (
 )
 
 func main() {
+
+	//
 	// Cargar configuración
 	cfg := config.LoadConfig()
 
@@ -197,6 +200,9 @@ func main() {
 		sedeRepo,
 	)
 	instanciaTourService := servicios.NewInstanciaTourService(instanciaTourRepo)
+	// Iniciar job de limpieza (cada 1 hora)
+	cleanupJob := jobs.NewCleanupJob(reservaService, 1)
+	cleanupJob.Start()
 
 	// Middleware global para agregar la configuración al contexto
 	router.Use(func(c *gin.Context) {

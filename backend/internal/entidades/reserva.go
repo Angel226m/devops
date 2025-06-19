@@ -10,8 +10,7 @@ import "time"
 		IDVendedor   *int      `json:"id_vendedor,omitempty" db:"id_vendedor"`
 		IDCliente    int       `json:"id_cliente" db:"id_cliente"`
 		IDInstancia  int       `json:"id_instancia" db:"id_instancia"`
-		IDCanal      int       `json:"id_canal" db:"id_canal"`
-		IDSede       int       `json:"id_sede" db:"id_sede"`
+		IDPaquete    *int      `json:"id_paquete,omitempty" db:"id_paquete"`
 		FechaReserva time.Time `json:"fecha_reserva" db:"fecha_reserva"`
 		TotalPagar   float64   `json:"total_pagar" db:"total_pagar"`
 		Notas        string    `json:"notas" db:"notas"`
@@ -25,8 +24,6 @@ import "time"
 		FechaTour       string                 `json:"fecha_tour,omitempty" db:"-"`
 		HoraInicioTour  string                 `json:"hora_inicio_tour,omitempty" db:"-"`
 		HoraFinTour     string                 `json:"hora_fin_tour,omitempty" db:"-"`
-		NombreCanal     string                 `json:"nombre_canal,omitempty" db:"-"`
-		NombreSede      string                 `json:"nombre_sede,omitempty" db:"-"`
 		CantidadPasajes []PasajeCantidad       `json:"cantidad_pasajes,omitempty" db:"-"`
 		Paquetes        []PaquetePasajeDetalle `json:"paquetes,omitempty" db:"-"`
 	}
@@ -55,8 +52,7 @@ import "time"
 	type NuevaReservaRequest struct {
 		IDCliente       int                     `json:"id_cliente" validate:"required"`
 		IDInstancia     int                     `json:"id_instancia" validate:"required"`
-		IDCanal         int                     `json:"id_canal" validate:"required"`
-		IDSede          int                     `json:"id_sede" validate:"required"`
+		IDPaquete       *int                    `json:"id_paquete,omitempty"`
 		IDVendedor      *int                    `json:"id_vendedor,omitempty"` // Opcional, solo si es reserva en LOCAL
 		TotalPagar      float64                 `json:"total_pagar" validate:"required,min=0"`
 		Notas           string                  `json:"notas"`
@@ -83,8 +79,7 @@ import "time"
 	type ActualizarReservaRequest struct {
 		IDCliente       int                     `json:"id_cliente" validate:"required"`
 		IDInstancia     int                     `json:"id_instancia" validate:"required"`
-		IDCanal         int                     `json:"id_canal" validate:"required"`
-		IDSede          int                     `json:"id_sede" validate:"required"`
+		IDPaquete       *int                    `json:"id_paquete,omitempty"`
 		IDVendedor      *int                    `json:"id_vendedor,omitempty"` // Opcional, solo si es reserva en LOCAL
 		TotalPagar      float64                 `json:"total_pagar" validate:"required,min=0"`
 		Notas           string                  `json:"notas"`
@@ -110,6 +105,7 @@ import "time"
 		Email           string                  `json:"email" validate:"required,email"`
 		Telefono        string                  `json:"telefono"`
 		Documento       string                  `json:"documento"`
+		TourNombre      string                  `json:"tour_nombre"` // Útil para mostrar en la preferencia de MP
 	}
 
 // ReservaMercadoPagoResponse representa la respuesta a una solicitud de reserva por Mercado Pago
@@ -121,22 +117,24 @@ import "time"
 		InitPoint        string `json:"init_point"`
 		SandboxInitPoint string `json:"sandbox_init_point"`
 	}
-*/package entidades
+*/
+package entidades
 
 import "time"
 
 // Reserva representa la estructura de una reserva en el sistema
 type Reserva struct {
-	ID           int       `json:"id_reserva" db:"id_reserva"`
-	IDVendedor   *int      `json:"id_vendedor,omitempty" db:"id_vendedor"`
-	IDCliente    int       `json:"id_cliente" db:"id_cliente"`
-	IDInstancia  int       `json:"id_instancia" db:"id_instancia"`
-	IDPaquete    *int      `json:"id_paquete,omitempty" db:"id_paquete"`
-	FechaReserva time.Time `json:"fecha_reserva" db:"fecha_reserva"`
-	TotalPagar   float64   `json:"total_pagar" db:"total_pagar"`
-	Notas        string    `json:"notas" db:"notas"`
-	Estado       string    `json:"estado" db:"estado"` // RESERVADO, CANCELADA, CONFIRMADA, etc.
-	Eliminado    bool      `json:"eliminado" db:"eliminado"`
+	ID              int        `json:"id_reserva" db:"id_reserva"`
+	IDVendedor      *int       `json:"id_vendedor,omitempty" db:"id_vendedor"`
+	IDCliente       int        `json:"id_cliente" db:"id_cliente"`
+	IDInstancia     int        `json:"id_instancia" db:"id_instancia"`
+	IDPaquete       *int       `json:"id_paquete,omitempty" db:"id_paquete"`
+	FechaReserva    time.Time  `json:"fecha_reserva" db:"fecha_reserva"`
+	TotalPagar      float64    `json:"total_pagar" db:"total_pagar"`
+	Notas           string     `json:"notas" db:"notas"`
+	Estado          string     `json:"estado" db:"estado"` // RESERVADO, CANCELADA, CONFIRMADA, etc.
+	Eliminado       bool       `json:"eliminado" db:"eliminado"`
+	FechaExpiracion *time.Time `json:"fecha_expiracion,omitempty" db:"fecha_expiracion"` // Nueva: para manejar expiración de reservas
 
 	// Campos adicionales para mostrar información relacionada
 	NombreCliente   string                 `json:"nombre_cliente,omitempty" db:"-"`
@@ -147,6 +145,9 @@ type Reserva struct {
 	HoraFinTour     string                 `json:"hora_fin_tour,omitempty" db:"-"`
 	CantidadPasajes []PasajeCantidad       `json:"cantidad_pasajes,omitempty" db:"-"`
 	Paquetes        []PaquetePasajeDetalle `json:"paquetes,omitempty" db:"-"`
+	MetodoPago      string                 `json:"metodo_pago,omitempty" db:"-"`     // Nuevo: para mostrar método de pago
+	TotalPasajeros  int                    `json:"total_pasajeros,omitempty" db:"-"` // Nuevo campo
+
 }
 
 // PasajeCantidad representa la cantidad de pasajes de un tipo en la reserva
@@ -228,4 +229,14 @@ type ReservaMercadoPagoResponse struct {
 	PreferenceID     string `json:"preference_id"`
 	InitPoint        string `json:"init_point"`
 	SandboxInitPoint string `json:"sandbox_init_point"`
+}
+
+// ReservaExpiredResponse representa la respuesta para una verificación de estado expirado
+type ReservaExpiredResponse struct {
+	IDReserva       int       `json:"id_reserva"`
+	Estado          string    `json:"estado"`
+	EstadoAnterior  string    `json:"estado_anterior"`
+	FechaExpiracion time.Time `json:"fecha_expiracion"`
+	Expirada        bool      `json:"expirada"`
+	Mensaje         string    `json:"mensaje"`
 }
