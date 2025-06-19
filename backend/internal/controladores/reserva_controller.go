@@ -514,7 +514,7 @@ func (c *ReservaController) ConfirmarPagoReserva(ctx *gin.Context) {
 }
 
 // WebhookMercadoPago procesa las notificaciones de webhook de Mercado Pago
-func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
+/*func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 	// Los webhooks de Mercado Pago pueden ser notificaciones de pagos u otros eventos
 	topic := ctx.Query("topic")
 	id := ctx.Query("id")
@@ -560,6 +560,95 @@ func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 	}
 
 	// Siempre responder con éxito para que Mercado Pago no reintente
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Webhook procesado exitosamente", nil))
+}
+*/ // WebhookMercadoPago procesa las notificaciones de webhook de Mercado Pago
+func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
+	// Registrar la URL completa para diagnóstico
+	fmt.Printf("WebhookMercadoPago: URL recibida: %s\n", ctx.Request.URL.String())
+
+	// Intentar obtener parámetros de diferentes formas
+	topic := ctx.Query("topic")
+	id := ctx.Query("id")
+
+	// Si no están en el formato esperado, probar con el formato alternativo
+	if topic == "" {
+		topic = ctx.Query("type")
+	}
+
+	if id == "" {
+		id = ctx.Query("data.id")
+	}
+
+	fmt.Printf("WebhookMercadoPago: Procesando con topic/type=%s, id/data.id=%s\n", topic, id)
+
+	// Validar que tenemos los parámetros necesarios
+	if topic == "" || id == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Parámetros inválidos: se requiere topic/type e id/data.id", nil))
+		return
+	}
+
+	// Si es una notificación de pago, procesar el pago
+	if topic == "payment" {
+		paymentInfo, err := c.mercadoPagoService.GetPaymentInfo(id)
+		if err != nil {
+			fmt.Printf("WebhookMercadoPago: Error al obtener información del pago: %v\n", err)
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener información del pago", err))
+			return
+		}
+
+		fmt.Printf("WebhookMercadoPago: Información del pago obtenida: status=%s, external_reference=%s\n",
+			paymentInfo.Status, paymentInfo.ExternalReference)
+
+		// Extraer ID de reserva del external_reference (formato "RESERVA-12345")
+		idReservaStr := ""
+		if paymentInfo.ExternalReference != "" {
+			idReservaStr = strings.TrimPrefix(paymentInfo.ExternalReference, "RESERVA-")
+		}
+
+		if idReservaStr == "" {
+			fmt.Println("WebhookMercadoPago: Referencia externa vacía o inválida")
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Referencia externa inválida", nil))
+			return
+		}
+
+		idReserva, err := strconv.Atoi(idReservaStr)
+		if err != nil {
+			fmt.Printf("WebhookMercadoPago: Error al convertir ID de reserva: %v\n", err)
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+			return
+		}
+
+		fmt.Printf("WebhookMercadoPago: Procesando reserva ID=%d con estado de pago=%s\n", idReserva, paymentInfo.Status)
+
+		// Procesar según el estado del pago
+		switch paymentInfo.Status {
+		case "approved":
+			err = c.reservaService.ConfirmarPagoReserva(idReserva, id, paymentInfo.TransactionAmount)
+			if err != nil {
+				fmt.Printf("WebhookMercadoPago: Error al confirmar reserva: %v\n", err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al confirmar reserva", err))
+				return
+			}
+			fmt.Printf("WebhookMercadoPago: Reserva %d confirmada exitosamente\n", idReserva)
+
+		case "rejected", "cancelled":
+			err = c.reservaService.UpdateEstado(idReserva, "CANCELADA")
+			if err != nil {
+				fmt.Printf("WebhookMercadoPago: Error al cancelar reserva: %v\n", err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al cancelar reserva", err))
+				return
+			}
+			fmt.Printf("WebhookMercadoPago: Reserva %d cancelada por pago rechazado\n", idReserva)
+
+		default:
+			// Para otros estados (pending, in_process), no cambiar el estado de la reserva
+			fmt.Printf("WebhookMercadoPago: Reserva %d mantiene estado actual (pago en estado %s)\n",
+				idReserva, paymentInfo.Status)
+		}
+	}
+
+	// Siempre responder con éxito para que MercadoPago no reintente
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Webhook procesado exitosamente", nil))
 }
 
@@ -639,6 +728,7 @@ func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
 	status := ctx.Query("status")
 
 	fmt.Printf("VerificarYConfirmarPago: id_reserva=%s, status=%s\n", idReservaStr, status)
+	fmt.Printf("VerificarYConfirmarPago: Iniciando verificación para reserva=%s con status=%s\n", idReservaStr, status)
 
 	// Validar que tenemos el ID de reserva
 	if idReservaStr == "" {
@@ -659,6 +749,7 @@ func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
 		return
 	}
+	fmt.Printf("VerificarYConfirmarPago: Reserva ID=%d encontrada en estado=%s\n", idReserva, reserva.Estado)
 
 	// Si la reserva ya está confirmada, no hacer nada
 	if reserva.Estado == "CONFIRMADA" {
