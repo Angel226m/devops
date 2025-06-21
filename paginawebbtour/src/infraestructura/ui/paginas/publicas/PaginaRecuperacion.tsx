@@ -1,4 +1,3 @@
- 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -7,6 +6,16 @@ import Seccion from '../../componentes/layout/Seccion';
 import Boton from '../../componentes/comunes/Boton';
 import Entrada from '../../componentes/comunes/Entrada';
 import Alerta from '../../componentes/comunes/Alerta';
+// Importar directamente desde axios si clientePublico no está disponible
+import axios from 'axios';
+
+// Función para obtener la URL base
+const getBaseURL = () => {
+  if (import.meta.env.PROD) {
+    return 'https://reservas.angelproyect.com/api/v1';
+  }
+  return '/api/v1';
+};
 
 const PaginaRecuperacion = () => {
   const { t } = useTranslation();
@@ -32,11 +41,16 @@ const PaginaRecuperacion = () => {
     setError('');
     
     try {
-      // En un caso real, aquí se haría la petición a la API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Usar axios directamente si clientePublico no está disponible
+      await axios.post(`${getBaseURL()}/clientes/recuperar-contrasena`, {
+        correo: correo
+      });
       
+      // Siempre mostramos éxito por seguridad, incluso si el correo no existe
       setEnviado(true);
     } catch (err) {
+      console.error('Error al solicitar recuperación:', err);
+      // Mensaje genérico para no revelar información sensible
       setError(t('recuperacion.errorEnvio'));
     } finally {
       setCargando(false);
@@ -44,25 +58,25 @@ const PaginaRecuperacion = () => {
   };
 
   return (
-    <Seccion className="py-16">
+    <Seccion className="py-16 bg-gradient-to-b from-blue-50 via-sky-50 to-cyan-50 min-h-screen">
       <div className="max-w-md mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8"
+          className="bg-white rounded-xl shadow-lg p-8 border border-blue-100"
         >
           {enviado ? (
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-100 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 {t('recuperacion.correoEnviado')}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-gray-600 mb-6">
                 {t('recuperacion.instrucciones')}
               </p>
               <div className="flex flex-col space-y-4">
@@ -72,11 +86,12 @@ const PaginaRecuperacion = () => {
                   tamano="lg"
                   ancho="full"
                   ruta="/inicio"
+                  className="bg-blue-600 hover:bg-blue-700"
                 />
                 <button
                   type="button"
                   onClick={() => setEnviado(false)}
-                  className="text-primary-600 hover:text-primary-500 text-sm font-medium"
+                  className="text-blue-600 hover:text-blue-500 text-sm font-medium"
                 >
                   {t('recuperacion.intentarOtroCorreo')}
                 </button>
@@ -84,10 +99,10 @@ const PaginaRecuperacion = () => {
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {t('recuperacion.titulo')}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-gray-600 mb-6">
                 {t('recuperacion.descripcion')}
               </p>
               
@@ -117,13 +132,14 @@ const PaginaRecuperacion = () => {
                   tamano="lg"
                   ancho="full"
                   cargando={cargando}
+                  className="bg-blue-600 hover:bg-blue-700"
                 />
               </form>
               
               <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600">
                   {t('recuperacion.recordaste')}{' '}
-                  <Link to="/ingresar" className="font-medium text-primary-600 hover:text-primary-500">
+                  <Link to="/ingresar" className="font-medium text-blue-600 hover:text-blue-500">
                     {t('recuperacion.volverLogin')}
                   </Link>
                 </p>

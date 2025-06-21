@@ -176,6 +176,7 @@ contacto: {
   masPreguntas: 'Do you have more questions?',
   verMasPreguntas: 'View all frequently asked questions'
 },
+
 };
 
 export default en;

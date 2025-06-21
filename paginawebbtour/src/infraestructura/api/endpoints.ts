@@ -87,5 +87,10 @@ export const endpoints = {
     
 
   },
+    recuperacion: {
+    solicitar: "/clientes/recuperar-contrasena",
+    validarToken: "/auth/validar-token",
+    cambiarContrasena: "/auth/cambiar-contrasena"
+  },
   
 };
