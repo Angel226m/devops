@@ -15,6 +15,7 @@ type EmailService struct {
 	client               *resend.Client
 	fromEmail            string
 	fromName             string
+	replyToEmail         string
 	clienteAppURL        string
 	administrativoAppURL string
 }
@@ -26,14 +27,21 @@ func NewEmailService() (*EmailService, error) {
 		apiKey = "re_Ddxs19PD_9KD6K4yPpZa84yzYqCRVmmZH" // Valor por defecto (solo para desarrollo)
 	}
 
+	// IMPORTANTE: Usar siempre un correo del dominio verificado
 	fromEmail := os.Getenv("EMAIL_FROM_ADDRESS")
 	if fromEmail == "" {
-		fromEmail = "oceantours.pisco@gmail.com" // Usar el correo que proporcionaste
+		fromEmail = "no-reply@correo.angelproyect.com" // Correo con dominio verificado
+	}
+
+	// Opcional: Configurar el correo de respuesta (puede ser gmail u otro)
+	replyToEmail := os.Getenv("EMAIL_REPLY_TO")
+	if replyToEmail == "" {
+		replyToEmail = "oceantours.pisco@gmail.com" // Email para recibir respuestas
 	}
 
 	fromName := os.Getenv("EMAIL_FROM_NAME")
 	if fromName == "" {
-		fromName = "Angel Ocean Tours" // Usar un nombre más acorde a tu negocio
+		fromName = "Ocean Tours" // Nombre de remitente
 	}
 
 	clienteAppURL := os.Getenv("CLIENTE_APP_URL")
@@ -48,13 +56,14 @@ func NewEmailService() (*EmailService, error) {
 
 	client := resend.NewClient(apiKey)
 
-	log.Printf("EmailService inicializado con URLs: cliente=%s, admin=%s",
-		clienteAppURL, administrativoAppURL)
+	log.Printf("EmailService inicializado con: remitente=%s, reply-to=%s, cliente URL=%s, admin URL=%s",
+		fromEmail, replyToEmail, clienteAppURL, administrativoAppURL)
 
 	return &EmailService{
 		client:               client,
 		fromEmail:            fromEmail,
 		fromName:             fromName,
+		replyToEmail:         replyToEmail,
 		clienteAppURL:        clienteAppURL,
 		administrativoAppURL: administrativoAppURL,
 	}, nil
@@ -65,19 +74,16 @@ func (s *EmailService) EnviarCorreoRecuperacionContrasena(email, token, nombreDe
 	// Determinar la URL de recuperación según el tipo de entidad
 	var resetURL string
 	if tipoEntidad == "USUARIO" {
-		resetURL = fmt.Sprintf("%s/cambiar-contrasena", s.administrativoAppURL) // URL corregida
+		resetURL = fmt.Sprintf("%s/cambiar-contrasena", s.administrativoAppURL)
 	} else {
-		resetURL = fmt.Sprintf("%s/cambiar-contrasena", s.clienteAppURL) // URL corregida
+		resetURL = fmt.Sprintf("%s/cambiar-contrasena", s.clienteAppURL)
 	}
 
 	resetLink := fmt.Sprintf("%s?token=%s", resetURL, token)
 	log.Printf("Generando enlace de recuperación: %s", resetLink)
 
 	// Preparar el remitente con formato "Nombre <email>"
-	from := s.fromEmail
-	if s.fromName != "" {
-		from = fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail)
-	}
+	from := fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail)
 
 	// Construir el asunto
 	subject := "Recuperación de contraseña - Angel Ocean Tours"
@@ -124,15 +130,17 @@ func (s *EmailService) EnviarCorreoRecuperacionContrasena(email, token, nombreDe
 	</html>
 	`, nombreDestinatario, resetLink, resetLink, time.Now().Format("2006-01-02 15:04:05"), time.Now().Year())
 
-	// Configurar los parámetros del correo
+	// Configurar los parámetros del correo con ReplyTo
 	params := &resend.SendEmailRequest{
 		From:    from,
 		To:      []string{email},
+		ReplyTo: s.replyToEmail, // Agregar Reply-To para respuestas
 		Subject: subject,
 		Html:    htmlBody,
 	}
 
-	log.Printf("Enviando correo de recuperación a: %s", email)
+	log.Printf("Enviando correo de recuperación a: %s, desde: %s, reply-to: %s",
+		email, from, s.replyToEmail)
 
 	// Enviar el correo
 	response, err := s.client.Emails.Send(params)
@@ -141,7 +149,7 @@ func (s *EmailService) EnviarCorreoRecuperacionContrasena(email, token, nombreDe
 		return fmt.Errorf("error al enviar correo: %w", err)
 	}
 
-	// Verificar la respuesta - corregido para usar Id en lugar de ID
+	// Verificar la respuesta
 	if response.Id == "" {
 		log.Printf("Error: No se recibió ID en la respuesta")
 		return errors.New("no se recibió ID de correo en la respuesta")
