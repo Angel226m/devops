@@ -19,35 +19,6 @@ func NewClienteRepository(db *sql.DB) *ClienteRepository {
 }
 
 // GetByID obtiene un cliente por su ID
-/*func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
-	cliente := &entidades.Cliente{}
-	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos,
-                   correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
-              FROM cliente
-              WHERE id_cliente = $1 AND eliminado = false`
-
-	err := r.db.QueryRow(query, id).Scan(
-		&cliente.ID, &cliente.TipoDocumento, &cliente.NumeroDocumento,
-		&cliente.Nombres, &cliente.Apellidos, &cliente.Correo, &cliente.NumeroCelular,
-		&cliente.RazonSocial, &cliente.DireccionFiscal, &cliente.Contrasena, &cliente.Eliminado,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("cliente no encontrado")
-		}
-		return nil, err
-	}
-
-	// Establecer nombre completo si es persona natural
-	if cliente.TipoDocumento != "RUC" {
-		cliente.NombreCompleto = cliente.Nombres + " " + cliente.Apellidos
-	}
-
-	return cliente, nil
-}*/
-
-// GetByID obtiene un cliente por su ID
 func (r *ClienteRepository) GetByID(id int) (*entidades.Cliente, error) {
 	cliente := &entidades.Cliente{}
 
@@ -146,35 +117,6 @@ func (r *ClienteRepository) GetByRazonSocial(razonSocial string) (*entidades.Cli
 
 	return cliente, nil
 }
-
-// GetByCorreo obtiene un cliente por su correo electrónico
-/*func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, error) {
-	cliente := &entidades.Cliente{}
-	query := `SELECT id_cliente, tipo_documento, numero_documento, nombres, apellidos,
-                   correo, numero_celular, razon_social, direccion_fiscal, contrasena, eliminado
-              FROM cliente
-              WHERE correo = $1 AND eliminado = false`
-
-	err := r.db.QueryRow(query, correo).Scan(
-		&cliente.ID, &cliente.TipoDocumento, &cliente.NumeroDocumento,
-		&cliente.Nombres, &cliente.Apellidos, &cliente.Correo, &cliente.NumeroCelular,
-		&cliente.RazonSocial, &cliente.DireccionFiscal, &cliente.Contrasena, &cliente.Eliminado,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("cliente no encontrado")
-		}
-		return nil, err
-	}
-
-	// Establecer nombre completo si es persona natural
-	if cliente.TipoDocumento != "RUC" {
-		cliente.NombreCompleto = cliente.Nombres + " " + cliente.Apellidos
-	}
-
-	return cliente, nil
-}*/
 
 // GetByCorreo obtiene un cliente por su correo electrónico
 func (r *ClienteRepository) GetByCorreo(correo string) (*entidades.Cliente, error) {

@@ -412,3 +412,31 @@ CREATE INDEX idx_devolucion_pago_pago ON devolucion_pago(id_pago);
 CREATE INDEX idx_devolucion_pago_fecha ON devolucion_pago(fecha_devolucion);
 CREATE INDEX idx_devolucion_pago_estado ON devolucion_pago(estado);
  
+
+
+
+ -- Tabla para almacenar tokens de recuperación de contraseña (para usuarios y clientes)
+CREATE TABLE IF NOT EXISTS recuperacion_contrasena (
+    id SERIAL PRIMARY KEY,
+    entidad_id INTEGER NOT NULL,
+    tipo_entidad VARCHAR(20) NOT NULL, -- USUARIO o CLIENTE
+    token VARCHAR(100) NOT NULL UNIQUE,
+    expiracion TIMESTAMP NOT NULL,
+    utilizado BOOLEAN NOT NULL DEFAULT FALSE,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Restricción para validar el tipo de entidad
+    CONSTRAINT check_tipo_entidad CHECK (tipo_entidad IN ('USUARIO', 'CLIENTE'))
+);
+
+-- Índices para mejorar el rendimiento
+CREATE INDEX IF NOT EXISTS idx_recuperacion_token ON recuperacion_contrasena(token);
+CREATE INDEX IF NOT EXISTS idx_recuperacion_entidad ON recuperacion_contrasena(entidad_id, tipo_entidad);
+
+-- Función para limpiar tokens expirados (para ejecutar con cron)
+CREATE OR REPLACE FUNCTION limpiar_tokens_expirados()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM recuperacion_contrasena
+    WHERE expiracion < NOW() - INTERVAL '7 days';
+END;
+$$ LANGUAGE plpgsql;

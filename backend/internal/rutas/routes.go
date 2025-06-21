@@ -44,6 +44,7 @@ func SetupRoutes(
 	sedeController *controladores.SedeController,
 	instanciaTourController *controladores.InstanciaTourController, // Nuevo controlador
 	mercadoPagoController *controladores.MercadoPagoController, // Añadido aquí
+	recuperacionController *controladores.RecuperacionContrasenaController, // Nuevo parámetro
 
 	// Servicios necesarios para acceso directo en rutas
 	reservaService *servicios.ReservaService,
@@ -62,6 +63,16 @@ func SetupRoutes(
 	// Rutas públicas
 	public := router.Group("/api/v1")
 	{
+		// Rutas de recuperación de contraseña para usuarios administrativos
+		public.POST("/admin/recuperar-contrasena", recuperacionController.SolicitarRecuperacionUsuario)
+
+		// Rutas de recuperación de contraseña para clientes
+		public.POST("/clientes/recuperar-contrasena", recuperacionController.SolicitarRecuperacionCliente)
+
+		// Rutas comunes para validar token y cambiar contraseña
+		public.GET("/auth/validar-token", recuperacionController.ValidarToken)
+		public.POST("/auth/cambiar-contrasena", recuperacionController.CambiarContrasena)
+
 		// Autenticación
 		public.POST("/auth/login", authController.Login)
 		public.POST("/auth/refresh", authController.RefreshToken)

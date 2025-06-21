@@ -227,53 +227,6 @@ func (s *ClienteService) SearchByDocumento(query string) ([]*entidades.Cliente, 
 }
 
 // Login autentica a un cliente y lo retorna si las credenciales son válidas
-/*func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*entidades.Cliente, string, string, error) {
-	// Verificar si existe el cliente con ese correo
-	fmt.Printf("Intento de login para correo: %s\n", correo)
-
-	// Verificar si existe el cliente con ese correo
-	cliente, err := s.clienteRepo.GetByCorreo(correo)
-	if err != nil {
-		fmt.Printf("Error buscando cliente por correo: %v\n", err)
-		return nil, "", "", errors.New("credenciales incorrectas")
-	}
-
-	fmt.Printf("Cliente encontrado con ID: %d\n", cliente.ID)
-
-	// Obtener la contraseña hash
-	hashedPassword, err := s.clienteRepo.GetPasswordByCorreo(correo)
-	if err != nil {
-		fmt.Printf("Error obteniendo hash de contraseña: %v\n", err)
-		return nil, "", "", errors.New("credenciales incorrectas")
-	}
-
-	fmt.Printf("Hash almacenado en DB: %s\n", hashedPassword)
-	fmt.Printf("Contraseña recibida: %s\n", contrasena)
-
-	// Verificar contraseña
-	match := utils.CheckPasswordHash(contrasena, hashedPassword)
-	fmt.Printf("Resultado de verificación de contraseña: %v\n", match)
-
-	if !match {
-		return nil, "", "", errors.New("credenciales incorrectas")
-	}
-
-	// Generar token JWT (15 minutos)
-	token, err := s.generateAccessToken(cliente.ID, correo)
-	if err != nil {
-		return nil, "", "", errors.New("error al generar token")
-	}
-
-	// Generar refresh token (duración basada en rememberMe)
-	refreshToken, err := s.generateRefreshToken(cliente.ID, correo, rememberMe)
-	if err != nil {
-		return nil, "", "", errors.New("error al generar refresh token")
-	}
-
-	return cliente, token, refreshToken, nil
-}*/
-
-// Login autentica a un cliente y lo retorna si las credenciales son válidas
 func (s *ClienteService) Login(correo, contrasena string, rememberMe bool) (*entidades.Cliente, string, string, error) {
 	// Verificar si existe el cliente con ese correo
 	fmt.Printf("Intento de login para correo: %s\n", correo)

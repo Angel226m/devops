@@ -19,6 +19,28 @@ import (
 	_ "github.com/lib/pq"
 )
 
+func initRecuperacionContrasena(db *sql.DB, usuarioRepo *repositorios.UsuarioRepository, clienteRepo *repositorios.ClienteRepository) *controladores.RecuperacionContrasenaController {
+	// 1. Crear el servicio de email
+	emailService, err := servicios.NewEmailService()
+	if err != nil {
+		log.Fatalf("Error al inicializar el servicio de email: %v", err)
+	}
+
+	// 2. Crear el repositorio de recuperación
+	recuperacionRepo := repositorios.NewRecuperacionContrasenaRepository(db)
+
+	// 3. Crear el servicio de recuperación
+	recuperacionService := servicios.NewRecuperacionContrasenaService(
+		usuarioRepo,
+		clienteRepo,
+		recuperacionRepo,
+		emailService,
+	)
+
+	// 4. Crear el controlador
+	return controladores.NewRecuperacionContrasenaController(recuperacionService)
+}
+
 func main() {
 
 	//
@@ -238,6 +260,9 @@ func main() {
 		pagoService,
 		reservaService,
 		clienteService)
+
+	recuperacionController := initRecuperacionContrasena(db, usuarioRepo, clienteRepo)
+
 	// Configurar rutas
 	rutas.SetupRoutes(
 		router,
@@ -264,6 +289,7 @@ func main() {
 		sedeController,
 		instanciaTourController, // Agregar el nuevo controlador aquí
 		mercadoPagoController,   // Añadido aquí
+		recuperacionController,  // Añadido el controlador de recuperación
 
 		reservaService,
 		clienteService,
