@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -9,70 +8,148 @@ const PaginaIngreso = () => {
   const { t } = useTranslation();
   
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50 via-white to-cyan-50">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-cyan-50 via-blue-50 to-white">
+      <div className="max-w-md w-full">
+        {/* Logo y encabezado */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
         >
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-6">
             <OceanLogo />
           </div>
-          <h1 className="mt-4 text-3xl font-extrabold text-gray-900">
+          <h1 className="text-3xl font-extrabold text-gray-900">
             {t('ingreso.titulo', 'Iniciar Sesión')}
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             {t('ingreso.subtitulo', '¿No tienes una cuenta?')}{' '}
-            <Link to="/registrarse" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300">
+            <Link to="/registrarse" className="font-medium text-cyan-600 hover:text-cyan-500 transition-colors duration-300">
               {t('ingreso.registrarse', 'Regístrate aquí')}
             </Link>
           </p>
         </motion.div>
         
+        {/* Formulario */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white py-8 px-6 sm:px-10 shadow-lg sm:rounded-xl border border-blue-100"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="bg-white py-8 px-6 shadow-xl rounded-2xl border border-cyan-100"
         >
-          <FormularioIngreso />
+          {/* Componente de formulario */}
+          <FormularioIngresoEstilizado />
           
-          <div className="mt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  {t('ingreso.mantenerSesion', 'Mantener sesión activa por 7 días')}
-                </label>
-              </div>
+          {/* Opciones adicionales */}
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                {t('ingreso.mantenerSesion', 'Mantener sesión activa por 7 días')}
+              </label>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <Link to="/recuperar-contrasena" className="block w-full text-center text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300">
-              {t('ingreso.olvidasteContrasena', '¿Olvidaste tu contraseña?')}
-            </Link>
+            
+            <div>
+              <Link 
+                to="/recuperar-contrasena" 
+                className="text-sm font-medium text-cyan-600 hover:text-cyan-500 transition-colors duration-300"
+              >
+                {t('ingreso.olvidasteContrasena', '¿Olvidaste tu contraseña?')}
+              </Link>
+            </div>
           </div>
         </motion.div>
         
+        {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-8 text-center"
         >
-          <p className="text-center text-xs text-gray-500">
+          <p className="text-xs text-gray-500">
             © {new Date().getFullYear()} Ocean Tours. Todos los derechos reservados.
           </p>
         </motion.div>
       </div>
     </div>
+  );
+};
+
+// Componente de formulario estilizado
+const FormularioIngresoEstilizado = () => {
+  const { t } = useTranslation();
+  
+  return (
+    <form className="space-y-6" action="#" method="POST">
+      {/* Campo de correo electrónico */}
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          {t('formulario.correoElectronico', 'Correo Electrónico')}
+        </label>
+        <div className="mt-1 relative rounded-md shadow-sm">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+            </svg>
+          </div>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            className="focus:ring-cyan-500 focus:border-cyan-500 block w-full pl-10 py-3 sm:text-sm border-gray-300 rounded-md"
+            placeholder={t('formulario.correoPlaceholder', 'correo@ejemplo.com')}
+          />
+        </div>
+      </div>
+
+      {/* Campo de contraseña */}
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          {t('formulario.contrasena', 'Contraseña')}
+        </label>
+        <div className="mt-1 relative rounded-md shadow-sm">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="focus:ring-cyan-500 focus:border-cyan-500 block w-full pl-10 py-3 sm:text-sm border-gray-300 rounded-md"
+            placeholder="••••••"
+          />
+        </div>
+      </div>
+
+      {/* Botón de ingreso */}
+      <div>
+        <button
+          type="submit"
+          className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+          <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-100 group-hover:text-white transition-colors duration-300" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+          </span>
+          {t('ingreso.botonIngresar', 'Iniciar Sesión')}
+        </button>
+      </div>
+    </form>
   );
 };
 
