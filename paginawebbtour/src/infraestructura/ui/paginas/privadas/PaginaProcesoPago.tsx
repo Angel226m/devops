@@ -1524,6 +1524,7 @@ const PaginaProcesoPago = () => {
 };
 
 export default PaginaProcesoPago;*/
+ 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
@@ -1645,6 +1646,40 @@ const PaginaProcesoPago = () => {
     sessionStorage.removeItem('pagoIniciado');
     sessionStorage.removeItem('reservaEnProceso');
   }, [datosReserva.instanciaId]);
+
+  // NUEVO: Función para analizar errores de MercadoPago
+  const analizarErrorMercadoPago = useCallback((error: any) => {
+    let mensajeUsuario = "Ocurrió un error al procesar el pago. Por favor, intenta nuevamente.";
+    
+    if (error.response && error.response.data) {
+      const respuesta = error.response.data;
+      
+      if (respuesta.cause && Array.isArray(respuesta.cause)) {
+        // Errores específicos de MercadoPago
+        const causa = respuesta.cause[0];
+        switch (causa.code) {
+          case "2001":
+            mensajeUsuario = "La tarjeta fue rechazada por fondos insuficientes.";
+            break;
+          case "2004":
+          case "2005":
+          case "2006":
+            mensajeUsuario = "La tarjeta fue rechazada. Contacta a tu banco para más información.";
+            break;
+          case "3001":
+            mensajeUsuario = "La operación no está permitida para este método de pago.";
+            break;
+          default:
+            mensajeUsuario = `Error: ${causa.description || respuesta.message}`;
+        }
+      } else if (respuesta.message) {
+        mensajeUsuario = respuesta.message;
+      }
+    }
+    
+    console.error("Error analizado de MercadoPago:", error);
+    return mensajeUsuario;
+  }, []);
 
   // Obtener la clave pública desde el backend
   const obtenerClavePublica = useCallback(async () => {
@@ -1802,7 +1837,90 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // Crear preferencia real usando el backend
+  // NUEVO: Función unificada para verificar el pago
+  const verificarPagoUnificado = useCallback(async (idReserva: number, preferenceId: string, paymentId?: string) => {
+    try {
+      console.log(`Verificando pago de forma unificada: reserva=${idReserva}, preferencia=${preferenceId}, pago=${paymentId || 'no disponible'}`);
+      
+      // Si ya verificamos el estado, no seguir intentando
+      if (estadoPagoVerificado) {
+        return { success: true, status: null };
+      }
+      
+      // Verificar si superamos el número máximo de intentos
+      if (intentosVerificacion >= maxIntentosVerificacion) {
+        console.log(`Máximo de intentos de verificación alcanzado (${maxIntentosVerificacion})`);
+        return { success: false, status: null };
+      }
+      
+      // Incrementar contador de intentos
+      setIntentosVerificacion(prev => prev + 1);
+      
+      // 1. Priorizar verificación directa con el backend
+      if (idReserva) {
+        const resultado = await verificarYConfirmarReserva(idReserva, "approved", paymentId);
+        if (resultado.success && resultado.status) {
+          // Si la verificación fue exitosa, navegar según el estado
+          navegarSegunEstadoPago(
+            resultado.status,
+            paymentId || null,
+            idReserva
+          );
+          
+          return {
+            success: true,
+            status: resultado.status,
+            payment_id: paymentId,
+            reservation_id: idReserva
+          };
+        }
+      }
+      
+      // 2. Si no se pudo verificar directamente, usar el endpoint general
+      let url = `${endpoints.mercadoPago.verificarPago}?preference_id=${preferenceId}`;
+      if (paymentId) {
+        url += `&payment_id=${paymentId}`;
+      }
+      
+      console.log("URL de verificación general:", url);
+      const response = await clienteAxios.get(url);
+      
+      if (response.data && response.data.data && response.data.data.status) {
+        // Marcar como verificado
+        setEstadoPagoVerificado(true);
+        
+        // Obtener datos relevantes
+        const { status, payment_id, reservation_id } = response.data.data;
+        
+        // Si tenemos ID de reserva, confirmar explícitamente
+        if (reservation_id) {
+          try {
+            await verificarYConfirmarReserva(reservation_id, status, payment_id);
+          } catch (err) {
+            console.error("Error al confirmar reserva explícitamente:", err);
+          }
+        }
+        
+        // Navegar según estado
+        navegarSegunEstadoPago(status, payment_id, reservation_id);
+        
+        return { 
+          success: true, 
+          status,
+          payment_id,
+          reservation_id 
+        };
+      }
+      
+      // Si llegamos aquí, no se pudo verificar
+      return { success: false, status: null };
+    } catch (error) {
+      console.error("Error en verificación unificada:", error);
+      return { success: false, status: null };
+    }
+  }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago]);
+
+  // MEJORADO: Crear preferencia real usando el backend
   const crearPreferenciaReal = useCallback(async () => {
     try {
       // Verificar si ya existe una preferencia para evitar duplicados
@@ -2040,13 +2158,9 @@ const PaginaProcesoPago = () => {
             console.error("Headers de la respuesta:", JSON.stringify(error.response.headers, null, 2));
             console.error("Datos de la respuesta de error:", JSON.stringify(error.response.data, null, 2));
             
-            // Intentar extraer un mensaje más específico
-            const mensajeError = error.response.data?.error || 
-                                error.response.data?.message || 
-                                error.response.data?.details || 
-                                "Error desconocido";
-            
-            throw new Error(`Error del servidor (${error.response.status}): ${mensajeError}`);
+            // Intentar extraer un mensaje más específico usando el nuevo analizador
+            const mensajeError = analizarErrorMercadoPago(error);
+            throw new Error(mensajeError);
           } else if (error.request) {
             console.error("Error: No se recibió respuesta del servidor");
             console.error("Detalles de la solicitud:", JSON.stringify(error.request, null, 2));
@@ -2066,24 +2180,42 @@ const PaginaProcesoPago = () => {
       console.error("Mensaje:", error.message);
       console.error("Stack:", error.stack);
       
-      // Mostrar mensaje de error más detallado
-      if (error.response && error.response.data) {
-        const mensaje = error.response.data.message || error.response.data.error || "Error desconocido del servidor";
-        const detalles = error.response.data.details || "";
-        const mensajeCompleto = `Error del servidor: ${mensaje}${detalles ? ` (${detalles})` : ""}`;
-        console.error("Mensaje de error formateado:", mensajeCompleto);
-        setError(mensajeCompleto);
-      } else {
-        const mensajeGeneral = `Error al crear preferencia: ${error.message || "Error desconocido"}`;
-        console.error("Mensaje de error general:", mensajeGeneral);
-        setError(mensajeGeneral);
-      }
+      // Mostrar mensaje de error más detallado usando el analizador
+      setError(analizarErrorMercadoPago(error));
       
       throw error;
     }
-  }, [datosReserva, datosUsuario, usuario, total, preferencia]);
+  }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago]);
   
-  // Cargar el SDK de Mercado Pago
+  // MEJORADO: Obtener o crear preferencia
+  const obtenerOCrearPreferencia = useCallback(async () => {
+    // Si ya tenemos una preferencia válida, la usamos
+    if (preferencia && preferencia.id) {
+      return preferencia;
+    }
+    
+    // Intentar obtener preferencia del almacenamiento local primero
+    const cacheKey = `reserva_en_proceso_${datosReserva.instanciaId}`;
+    const reservaCache = localStorage.getItem(cacheKey);
+    
+    if (reservaCache) {
+      try {
+        const datosCacheados = JSON.parse(reservaCache);
+        if (datosCacheados.data && datosCacheados.timestamp && 
+            (Date.now() - datosCacheados.timestamp < CACHE_DURATION_MS)) {
+          setPreferencia(datosCacheados.data);
+          return datosCacheados.data;
+        }
+      } catch (e) {
+        console.error("Error al parsear preferencia cacheada:", e);
+      }
+    }
+    
+    // Si no tenemos preferencia cacheada, crear una nueva
+    return await crearPreferenciaReal();
+  }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal]);
+  
+  // MEJORADO: Cargar el SDK de Mercado Pago
   const cargarMercadoPagoSDK = useCallback(() => {
     if (window.MercadoPago) {
       console.log("SDK de MercadoPago ya está cargado");
@@ -2099,6 +2231,30 @@ const PaginaProcesoPago = () => {
       script.onload = () => {
         console.log("SDK de MercadoPago cargado correctamente");
         setSdkCargado(true);
+        
+        // NUEVO: Agregar listener para ignorar errores específicos de MercadoPago
+        // CORRECCIÓN: Manejo de errores específicos de MercadoPago
+window.addEventListener('error', function(event) {
+  // Verificar si el target es un HTMLElement y tiene una propiedad src
+  const target = event.target as HTMLElement;
+  
+  // Verificar si es un elemento con src (como un script o imagen)
+  if (target && 'src' in target) {
+    const src = (target as HTMLImageElement | HTMLScriptElement).src;
+    
+    // Ignorar errores específicos de MercadoPago que no afectan la funcionalidad
+    if (src && 
+        typeof src === 'string' && 
+        src.includes('mercadopago.com') && 
+        src.includes('jms/lgz/background/session/')) {
+      // Estos errores 404 son normales en el entorno de sandbox y no afectan la funcionalidad
+      console.log("Ignorando error conocido de MercadoPago:", src);
+      event.preventDefault();
+      return false;
+    }
+  }
+}, true);
+        
         resolve();
       };
       
@@ -2112,119 +2268,7 @@ const PaginaProcesoPago = () => {
     });
   }, []);
 
-  // FUNCIÓN: Verificar estado de pago - Definida DESPUÉS de navegarSegunEstadoPago
-  const verificarEstadoPago = useCallback(async (preferenceId: string, paymentId?: string) => {
-    try {
-      // Si ya verificamos el estado del pago con éxito, no seguir intentando
-      if (estadoPagoVerificado) {
-        return { success: true, status: null };
-      }
-      
-      // Si superamos el número máximo de intentos, no seguir intentando
-      if (intentosVerificacion >= maxIntentosVerificacion) {
-        console.log(`Máximo de intentos de verificación (${maxIntentosVerificacion}) alcanzado`);
-        return { success: false, status: null };
-      }
-      
-      console.log(`Verificando estado de pago (intento ${intentosVerificacion + 1}/${maxIntentosVerificacion})...`);
-      setIntentosVerificacion(prev => prev + 1);
-      
-      // Si estamos en modo simulado, usar la simulación
-      if (usarModoSimulado) {
-        // En modo simulado, simular que obtenemos un resultado después de algunos intentos
-        if (intentosVerificacion >= 3) {
-          setEstadoPagoVerificado(true);
-          
-          // Navegar según el estado simulado
-          navegarSegunEstadoPago(
-            estadoSimuladoSeleccionado, 
-            `sim_${Date.now()}`, 
-            datosReserva.reservaId || datosReserva.instanciaId
-          );
-          
-          return { 
-            success: true, 
-            status: estadoSimuladoSeleccionado 
-          };
-        }
-        
-        // En los primeros intentos, seguir esperando
-        return { success: false, status: null };
-      }
-      
-      // Obtener ID de reserva
-      const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
-      const idReserva = reservaEnProceso.id || datosReserva.reservaId;
-      
-      if (idReserva) {
-        // Intentar verificar y confirmar la reserva directamente
-        const resultado = await verificarYConfirmarReserva(idReserva, "approved", paymentId);
-        if (resultado.success && resultado.status) {
-          // Si la verificación fue exitosa, navegar según el estado
-          navegarSegunEstadoPago(
-            resultado.status,
-            paymentId || null,
-            idReserva
-          );
-          
-          return {
-            success: true,
-            status: resultado.status,
-            payment_id: paymentId,
-            reservation_id: idReserva
-          };
-        }
-      }
-      
-      // Si no se pudo verificar con la nueva función, usar el método antiguo
-      let url = `${endpoints.mercadoPago.verificarPago}?preference_id=${preferenceId}`;
-      if (paymentId) {
-        url += `&payment_id=${paymentId}`;
-      }
-      
-      console.log("URL de verificación:", url);
-      
-      // Realizar la solicitud al backend
-      const response = await clienteAxios.get(url);
-      console.log("Respuesta de verificación:", response.data);
-      
-      if (response.data && response.data.data && response.data.data.status) {
-        // Si tenemos un estado, marcar como verificado
-        setEstadoPagoVerificado(true);
-        
-        // Obtener los datos relevantes
-        const { status, payment_id, reservation_id } = response.data.data;
-        
-        // Si tenemos un ID de reserva, intentar confirmarla explícitamente
-        if (reservation_id) {
-          try {
-            await verificarYConfirmarReserva(reservation_id, status, payment_id);
-          } catch (err) {
-            console.error("Error al confirmar reserva explícitamente:", err);
-            // Continuar aunque falle esta confirmación explícita
-          }
-        }
-        
-        // Navegar automáticamente según el estado
-        navegarSegunEstadoPago(status, payment_id, reservation_id);
-        
-        return { 
-          success: true, 
-          status,
-          payment_id,
-          reservation_id
-        };
-      } else {
-        // Si no tenemos un estado, seguir intentando
-        return { success: false, status: null };
-      }
-    } catch (error) {
-      console.error("Error al verificar estado del pago:", error);
-      return { success: false, status: null };
-    }
-  }, [intentosVerificacion, estadoPagoVerificado, maxIntentosVerificacion, navegarSegunEstadoPago, usarModoSimulado, estadoSimuladoSeleccionado, datosReserva, verificarYConfirmarReserva]);
-
-  // Renderizar el botón de Mercado Pago
+  // MEJORADO: Renderizar el botón de Mercado Pago
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
       console.log("No hay preferencia para renderizar el botón");
@@ -2268,7 +2312,7 @@ const PaginaProcesoPago = () => {
         return;
       }
       
-      // Renderizar el botón
+      // MEJORADO: Renderizar el botón con más opciones
       mp.checkout({
         preference: {
           id: preferenceId
@@ -2276,6 +2320,21 @@ const PaginaProcesoPago = () => {
         render: {
           container: '.mercado-pago-button',
           label: 'Pagar con Mercado Pago',
+        },
+        theme: {
+          elementsColor: '#0062cc',
+          headerColor: '#0062cc'
+        },
+        autoOpen: false, // No abrir automáticamente, esperar a que el usuario haga clic
+        callbacks: {
+          onError: (error: any) => {
+            console.error("Error en MercadoPago Checkout:", error);
+            setError(`Error en el procesamiento del pago: ${error.message || 'Error desconocido'}`);
+          },
+          onReady: () => {
+            console.log("MercadoPago Checkout listo");
+            setCargandoMercadoPago(false);
+          }
         }
       });
       
@@ -2286,18 +2345,11 @@ const PaginaProcesoPago = () => {
     }
   }, [preferencia, publicKey]);
 
-  // Iniciar el proceso de pago
+  // MEJORADO: Iniciar el proceso de pago
   const iniciarProcesoPago = useCallback(async () => {
     try {
       setCargandoMercadoPago(true);
       setError(null);
-      
-      // Si ya tenemos una preferencia, no crear otra
-      if (preferencia) {
-        console.log("Ya existe una preferencia, no se creará otra:", preferencia);
-        setCargandoMercadoPago(false);
-        return preferencia;
-      }
       
       // 1. Cargar el SDK si no está cargado
       await cargarMercadoPagoSDK();
@@ -2310,15 +2362,15 @@ const PaginaProcesoPago = () => {
         }
       }
       
-      // 3. Crear preferencia (simulada o real)
+      // 3. Crear u obtener preferencia (simulada o real)
       let nuevaPreferencia;
       
       if (usarModoSimulado) {
         console.log("Usando modo simulado para crear preferencia");
         nuevaPreferencia = crearPreferenciaSimulada();
       } else {
-        console.log("Usando modo real para crear preferencia");
-        nuevaPreferencia = await crearPreferenciaReal();
+        console.log("Usando modo real para obtener o crear preferencia");
+        nuevaPreferencia = await obtenerOCrearPreferencia();
       }
       
       // 4. Actualizar el estado solo si no tenemos una preferencia ya
@@ -2329,16 +2381,14 @@ const PaginaProcesoPago = () => {
       return nuevaPreferencia;
     } catch (error: any) {
       console.error("Error al iniciar el proceso de pago:", error);
-      if (!error.message || !error.message.includes('Error al crear preferencia')) {
-        setError("No se pudo iniciar el proceso de pago. Por favor, intenta nuevamente.");
-      }
+      setError(analizarErrorMercadoPago(error));
       return null;
     } finally {
       setCargandoMercadoPago(false);
     }
-  }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, crearPreferenciaReal, obtenerClavePublica, publicKey, usarModoSimulado, preferencia]);
+  }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, usarModoSimulado, preferencia, analizarErrorMercadoPago]);
 
-  // Función para procesar pago directo
+  // MEJORADO: Procesar pago directo
   const procesarPagoDirecto = async () => {
     if (cargandoPago) return;
     
@@ -2445,9 +2495,7 @@ const PaginaProcesoPago = () => {
       
     } catch (error: any) {
       console.error('Error al procesar el pago:', error);
-      if (!error.message || !error.message.includes('Error al crear preferencia')) {
-        setError('No se pudo procesar el pago. Por favor, inténtalo nuevamente.');
-      }
+      setError(analizarErrorMercadoPago(error));
     } finally {
       setCargandoPago(false);
     }
@@ -2500,14 +2548,18 @@ const PaginaProcesoPago = () => {
     }
   }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago]);
   
-  // EFECTO: Verificar periódicamente el estado del pago en modo sandbox
+  // MEJORADO: Verificar periódicamente el estado del pago en modo sandbox
   useEffect(() => {
     // Solo activar en modo sandbox y cuando tenemos una preferencia Y después de un intento de pago
     if (IS_SANDBOX && preferencia && preferencia.id && !estadoPagoVerificado && pagoIniciado) {
       console.log("Iniciando verificación periódica del estado de pago...");
       
+      // Obtener ID de reserva si está disponible
+      const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
+      const idReserva = reservaEnProceso.id || datosReserva.reservaId || datosReserva.instanciaId;
+      
       // Verificar inmediatamente
-      verificarEstadoPago(preferencia.id).then(result => {
+      verificarPagoUnificado(idReserva, preferencia.id).then(result => {
         if (result.success && result.status) {
           console.log(`Estado de pago verificado: ${result.status}`);
           navegarSegunEstadoPago(result.status, result.payment_id || null, result.reservation_id || null);
@@ -2516,7 +2568,7 @@ const PaginaProcesoPago = () => {
       
       // Configurar verificación periódica
       const intervalId = setInterval(async () => {
-        const result = await verificarEstadoPago(preferencia.id);
+        const result = await verificarPagoUnificado(idReserva, preferencia.id);
         if (result.success && result.status) {
           clearInterval(intervalId);
           console.log(`Estado de pago verificado en intervalo: ${result.status}`);
@@ -2530,9 +2582,9 @@ const PaginaProcesoPago = () => {
         console.log("Verificación periódica detenida");
       };
     }
-  }, [preferencia, IS_SANDBOX, verificarEstadoPago, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado]);
+  }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva]);
   
-  // Verificar si estamos regresando de un pago en Mercado Pago
+  // MEJORADO: Verificar si estamos regresando de un pago en Mercado Pago
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
@@ -2787,7 +2839,7 @@ const PaginaProcesoPago = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input 
-                      type="email" 
+                                          type="email" 
                       name="correo"
                       value={datosUsuario.correo}
                       onChange={handleUsuarioChange}
@@ -2829,7 +2881,7 @@ const PaginaProcesoPago = () => {
                       }`}
                     />
                   </div>
-                                </div>
+                </div>
                 
                 {editandoUsuario && (
                   <div className="mt-4 flex justify-end">
