@@ -759,7 +759,18 @@ func (s *MercadoPagoService) CreatePreference(
 	}
 
 	// Configuración de métodos de pago
+	/*paymentMethods := PaymentMethods{
+		Installments: 1, // Solo pago en una cuota
+	}*/
+	// Configuración de métodos de pago CORREGIDA
 	paymentMethods := PaymentMethods{
+		// Declaramos correctamente con las etiquetas JSON
+		ExcludedPaymentMethods: []struct {
+			ID string `json:"id"`
+		}{}, // Array vacío
+		ExcludedPaymentTypes: []struct {
+			ID string `json:"id"`
+		}{}, // Array vacío
 		Installments: 1, // Solo pago en una cuota
 	}
 
