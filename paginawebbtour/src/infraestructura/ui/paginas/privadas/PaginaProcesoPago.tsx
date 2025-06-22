@@ -1541,7 +1541,7 @@ const PaginaProcesoPago = () => {
 };
 
 export default PaginaProcesoPago;*/
-import { useState, useEffect, useRef, useCallback } from 'react';
+ import { useState, useEffect, useRef, useCallback,useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1567,7 +1567,7 @@ interface Pasaje {
 
 // Interfaces para los tipos de pasaje y paquetes
 interface Paquete {
-  id_paquete: number; // Asegurarse de usar id_paquete en lugar de id_paquete_pasajes
+  id_paquete: number; 
   cantidad: number;
 }
 
@@ -1588,6 +1588,20 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_SANDBOX = !IS_PRODUCTION;
 const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutos en milisegundos
 
+// Precios por tipo de pasaje para cuando no vienen del backend
+const PRECIOS_PASAJE_DEFAULT: Record<string, number> = {
+  "1": 120, // Adulto
+  "2": 80,  // Niño
+  "3": 100  // Estudiante
+};
+
+// Precios por tipo de paquete para cuando no vienen del backend
+const PRECIOS_PAQUETE_DEFAULT: Record<string, number> = {
+  "1": 250, // Paquete familiar
+  "2": 200, // Paquete estándar
+  "3": 300  // Paquete premium
+};
+
 const PaginaProcesoPago = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -1595,7 +1609,52 @@ const PaginaProcesoPago = () => {
   const { usuario, autenticado } = useSelector((state: RootState) => state.autenticacion);
   
   // Recuperar datos de la reserva del state o de sessionStorage
-  const datosReserva = location.state || JSON.parse(sessionStorage.getItem('datosReservaPendiente') || '{}');
+  const datosReservaRaw = location.state || JSON.parse(sessionStorage.getItem('datosReservaPendiente') || '{}');
+  
+  // Log detallado de datos de reserva para depuración
+  console.log("DATOS DE RESERVA RECIBIDOS:", JSON.stringify(datosReservaRaw, null, 2));
+  
+  // Normalizar los datos para asegurar compatibilidad con ambos formatos
+  const datosReserva = useMemo(() => {
+    const datos = {...datosReservaRaw};
+    
+    // Extraer ID de instancia de horarioSeleccionado si existe
+    if (datos.horarioSeleccionado && typeof datos.horarioSeleccionado === 'object') {
+      datos.instanciaId = datos.horarioSeleccionado.id || datos.instanciaId;
+      datos.horario = datos.horarioSeleccionado.texto || datos.horario;
+      
+      console.log("Datos extraídos de horarioSeleccionado:", {
+        instanciaId: datos.instanciaId,
+        horario: datos.horario
+      });
+    }
+    
+    // Asegurar que totalPasajeros sea un número
+    if (datos.totalPasajeros === undefined || datos.totalPasajeros === null) {
+      // Calcular el total de pasajeros si no está definido
+      let totalCalculado = 0;
+      
+      // Sumar pasajeros de pasajes individuales
+      if (datos.seleccionPasajes) {
+        Object.values(datos.seleccionPasajes).forEach(cantidad => {
+          totalCalculado += Number(cantidad) || 0;
+        });
+      }
+      
+      // Sumar pasajeros de paquetes (estimación)
+      if (datos.seleccionPaquetes) {
+        Object.entries(datos.seleccionPaquetes).forEach(([idPaquete, cantidad]) => {
+          // Asumimos un promedio de 2 pasajeros por paquete si no tenemos el dato exacto
+          totalCalculado += (Number(cantidad) || 0) * 2;
+        });
+      }
+      
+      datos.totalPasajeros = totalCalculado > 0 ? totalCalculado : 1;
+      console.log("Total de pasajeros calculado:", datos.totalPasajeros);
+    }
+    
+    return datos;
+  }, [datosReservaRaw]);
   
   // Estados para el flujo de pago
   const [cargandoPago, setCargandoPago] = useState(false);
@@ -1611,6 +1670,44 @@ const PaginaProcesoPago = () => {
   const [estadoPagoVerificado, setEstadoPagoVerificado] = useState(false);
   const [pagoIniciado, setPagoIniciado] = useState(false);
   const maxIntentosVerificacion = 10; // Máximo número de intentos de verificación
+  
+  // Verificar datos recibidos de FormularioReservacion
+  useEffect(() => {
+    console.log("Validando datos de reserva recibidos...");
+    
+    const validarDatos = () => {
+      // Verificar ID de instancia
+      if (!datosReserva.instanciaId) {
+        console.warn("ADVERTENCIA: No se encontró ID de instancia válido");
+        setError("Error en los datos de reserva: Falta ID de instancia. Por favor, vuelve atrás y reintenta.");
+        return false;
+      }
+      
+      // Verificar fecha y horario
+      if (!datosReserva.fecha || !datosReserva.horario) {
+        console.warn("ADVERTENCIA: Faltan datos de fecha u horario");
+        setError("Error en los datos de reserva: Faltan datos de fecha u horario. Por favor, vuelve atrás y reintenta.");
+        return false;
+      }
+      
+      // Verificar selección de pasajes o paquetes
+      const hayPasajes = datosReserva.seleccionPasajes && 
+                         Object.values(datosReserva.seleccionPasajes).some(v => Number(v) > 0);
+                         
+      const hayPaquetes = datosReserva.seleccionPaquetes && 
+                          Object.values(datosReserva.seleccionPaquetes).some(v => Number(v) > 0);
+      
+      if (!hayPasajes && !hayPaquetes) {
+        console.warn("ADVERTENCIA: No hay pasajes ni paquetes seleccionados");
+        setError("Error en los datos de reserva: No hay pasajes seleccionados. Por favor, vuelve atrás y reintenta.");
+        return false;
+      }
+      
+      return true;
+    };
+    
+    validarDatos();
+  }, [datosReserva]);
   
   // Estados para datos de usuario
   const [editandoUsuario, setEditandoUsuario] = useState(false);
@@ -1657,11 +1754,14 @@ const PaginaProcesoPago = () => {
     }
     sessionStorage.removeItem('pagoIniciado');
     sessionStorage.removeItem('reservaEnProceso');
+    sessionStorage.removeItem('datosReservaPendiente');
   }, [datosReserva.instanciaId]);
 
   // Obtener la clave pública desde el backend
   const obtenerClavePublica = useCallback(async () => {
     try {
+      console.log("Obteniendo clave pública de MercadoPago...");
+      
       // Verificar si tenemos la clave en cache
       const cachedKey = localStorage.getItem('mp_public_key');
       const cachedTimestamp = localStorage.getItem('mp_public_key_timestamp');
@@ -1670,14 +1770,17 @@ const PaginaProcesoPago = () => {
       if (cachedKey && cachedTimestamp) {
         const timestamp = parseInt(cachedTimestamp);
         if (Date.now() - timestamp < CACHE_DURATION_MS) {
-          console.log("Usando clave pública desde cache");
+          console.log("Usando clave pública desde cache:", cachedKey);
           setPublicKey(cachedKey);
           return cachedKey;
         }
       }
       
       // Si no hay cache válido, solicitar al backend
+      console.log("Solicitando clave pública al backend...");
       const response = await clienteAxios.get(endpoints.mercadoPago.publicKey);
+      console.log("Respuesta del servidor (clave pública):", response.data);
+      
       if (response.data && response.data.public_key) {
         const newKey = response.data.public_key;
         
@@ -1685,9 +1788,12 @@ const PaginaProcesoPago = () => {
         localStorage.setItem('mp_public_key', newKey);
         localStorage.setItem('mp_public_key_timestamp', Date.now().toString());
         
+        console.log("Clave pública obtenida:", newKey);
         setPublicKey(newKey);
         return newKey;
       }
+      
+      console.error("No se encontró clave pública en la respuesta del servidor:", response.data);
       throw new Error('No se pudo obtener la clave pública de Mercado Pago');
     } catch (error) {
       console.error('Error al obtener clave pública:', error);
@@ -1764,7 +1870,7 @@ const PaginaProcesoPago = () => {
     }
   }, [navigate, datosReserva, total, limpiarDatosReservaEnProgreso]);
 
-  // NUEVO: Función para verificar y confirmar reserva después del pago
+  // FUNCIÓN: Verificar y confirmar reserva después del pago
   const verificarYConfirmarReserva = useCallback(async (idReserva: number, status: string, paymentId?: string) => {
     try {
       console.log(`Verificando y confirmando reserva ID=${idReserva}, status=${status}, paymentId=${paymentId || 'no disponible'}`);
@@ -1773,6 +1879,8 @@ const PaginaProcesoPago = () => {
       let url = `/api/v1/reservas/verificar-confirmar-pago?id_reserva=${idReserva}`;
       if (status) url += `&status=${status}`;
       if (paymentId) url += `&payment_id=${paymentId}`;
+      
+      console.log("URL de verificación-confirmación:", url);
       
       // Verificar la reserva con el backend
       const response = await clienteAxios.get(url);
@@ -1875,20 +1983,13 @@ const PaginaProcesoPago = () => {
           throw new Error("No se encontró ID de instancia");
         }
         
-        // AQUÍ ESTÁ EL CAMBIO PRINCIPAL: ADAPTACIÓN A LA NUEVA ESTRUCTURA DE DATOS
+        // PREPARACIÓN DE DATOS MEJORADA PARA EL NUEVO FORMATO
         // Preparar los datos de pasajes en el formato correcto
         let pasajes: Pasaje[] = [];
         
         // Tratar seleccionPasajes como un objeto donde las claves son los ID de tipo de pasaje
         // y los valores son las cantidades
         if (datosReserva.seleccionPasajes) {
-          // Precios por tipo de pasaje (en producción, estos deberían venir del backend)
-          const precios: Record<string, number> = {
-            "1": 120, // Adulto
-            "2": 80,  // Niño
-            "3": 100  // Estudiante
-          };
-          
           // Convertir el objeto de seleccionPasajes a un array de objetos Pasaje
           pasajes = Object.entries(datosReserva.seleccionPasajes)
             .filter(([_, cantidadValue]) => {
@@ -1899,7 +2000,7 @@ const PaginaProcesoPago = () => {
             .map(([tipoId, cantidadValue]) => {
               // Convertir explícitamente a número
               const cantidad = Number(cantidadValue);
-              const precio = precios[tipoId] || 100;
+              const precio = PRECIOS_PASAJE_DEFAULT[tipoId] || 100;
               
               return {
                 id_tipo_pasaje: parseInt(tipoId),
@@ -1952,13 +2053,13 @@ const PaginaProcesoPago = () => {
           idInstancia = datosReserva.horarioSeleccionado.id;
         } else if (datosReserva.instanciaId) {
           // Si tenemos directamente el ID de instancia
-          idInstancia = datosReserva.instanciaId;
+          idInstancia = Number(datosReserva.instanciaId);
         }
         
         // Datos para enviar al backend - ADAPTADO A LA NUEVA ESTRUCTURA
         const datosParaEnviar = {
-          id_instancia: Number(idInstancia),
-          id_tour_programado: Number(idInstancia),
+          id_instancia: idInstancia,
+          id_tour_programado: idInstancia, // Usamos el mismo ID por ahora
           id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0,
           cantidad_pasajes: pasajes,
           paquetes: paquetes,
@@ -2045,9 +2146,9 @@ const PaginaProcesoPago = () => {
             
             // Intentar extraer un mensaje más específico
             const mensajeError = error.response.data?.error || 
-                               error.response.data?.message || 
-                               error.response.data?.details || 
-                               "Error desconocido";
+                              error.response.data?.message || 
+                              error.response.data?.details || 
+                              "Error desconocido";
             
             throw new Error(`Error del servidor (${error.response.status}): ${mensajeError}`);
           } else if (error.request) {
@@ -2744,7 +2845,7 @@ const PaginaProcesoPago = () => {
                   <h2 className="text-xl font-semibold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
+                                          </svg>
                     Datos del cliente
                   </h2>
                   
@@ -2846,7 +2947,7 @@ const PaginaProcesoPago = () => {
                 
                 {editandoUsuario && (
                   <div className="mt-4 flex justify-end">
-                                        <button
+                    <button
                       type="button"
                       onClick={guardarCambiosUsuario}
                       className="px-4 py-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-md hover:from-blue-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
