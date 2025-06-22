@@ -1,5 +1,5 @@
- /*
-   import { useState, useEffect, useRef, useMemo } from 'react';
+ 
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -525,7 +525,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   // Contenido principal del formulario
   return (
     <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-cyan-200 overflow-hidden">
-      {/* Encabezado *//*}
+      {/* Encabezado */}
       <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-5 text-white">
         <h3 className="text-xl font-bold flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -542,7 +542,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         )}
       </div>
       
-      {/* Pasos de la reserva *//*}
+      {/* Pasos de la reserva */}
       <div className="bg-gradient-to-b from-blue-50 via-sky-50 to-cyan-50 border-b border-cyan-200">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -569,9 +569,9 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
       </div>
       
-      {/* Cuerpo del formulario *//*}
+      {/* Cuerpo del formulario */}
       <div className="p-6 bg-gradient-to-b from-white to-sky-50">
-        {/* Alerta personalizada *//*}
+        {/* Alerta personalizada */}
         {alerta.mostrar && (
           <Alerta 
             tipo={alerta.tipo} 
@@ -580,7 +580,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
           />
         )}
         
-        {/* Aviso de 24 horas *//*}
+        {/* Aviso de 24 horas */}
         <div className="mb-5 bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 text-blue-800 text-sm flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -591,7 +591,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
         
         <div className="space-y-6">
-          {/* PASO 1: Selección de fecha y hora *//*}
+          {/* PASO 1: Selección de fecha y hora */}
           {pasoActual === 1 && (
             <div className="space-y-6 animate__animated animate__fadeIn">
               <h4 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">Selecciona fecha y horario</h4>
@@ -612,7 +612,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                     className="w-full px-4 py-2.5 border border-cyan-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 bg-white shadow-sm transition-colors"
                   />
                   
-                  {/* Mensaje de ayuda para fechas disponibles *//*}
+                  {/* Mensaje de ayuda para fechas disponibles */}
                   {cargandoInstancias ? (
                     <p className="text-xs text-blue-500 mt-1">
                       {t('tour.cargandoFechas')}
@@ -675,7 +675,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               </div>
               
-              {/* Botón para continuar *//*}
+              {/* Botón para continuar */}
               {fecha && horario && (
                 <div className="mt-6 flex justify-end">
                   <button
@@ -691,7 +691,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               )}
               
-              {/* Mostrar fecha y hora seleccionadas *//*}
+              {/* Mostrar fecha y hora seleccionadas */}
               {fecha && horario && (
                 <div className="mt-4 p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
                   <h5 className="font-medium text-blue-800 mb-1">Selección actual:</h5>
@@ -710,12 +710,12 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
             </div>
           )}
           
-          {/* PASO 2: Selección de pasajeros *//*}
+          {/* PASO 2: Selección de pasajeros */}
           {pasoActual === 2 && (
             <div className="space-y-6 animate__animated animate__fadeIn">
               <h4 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">Selecciona tus pasajes</h4>
               
-              {/* Paquetes de pasajes *//*}
+              {/* Paquetes de pasajes */}
               {paquetesPasajesDelTour.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center mb-3">
@@ -748,7 +748,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               )}
               
-              {/* Selector de pasajes individuales *//*}
+              {/* Selector de pasajes individuales */}
               <div className="space-y-4">
                 <div className="flex items-center mb-3">
                   <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-full flex items-center justify-center mr-2 shadow-sm">
@@ -784,7 +784,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 )}
               </div>
               
-              {/* Total seleccionado *//*}
+              {/* Total seleccionado */}
               <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border border-cyan-200 mt-4 shadow-sm">
                 <div className="flex justify-between text-sm font-medium">
                   <span>Total pasajeros:</span>
@@ -796,7 +796,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               </div>
               
-              {/* Botones de navegación *//*}
+              {/* Botones de navegación */}
               <div className="flex justify-between mt-6">
                 <button
                   type="button"
@@ -836,7 +836,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </button>
               </div>
               
-              {/* Información de métodos de pago con logos actualizados *//*}
+              {/* Información de métodos de pago con logos actualizados */}
               <div className="mt-6 pt-4 border-t border-cyan-200">
                 <div className="flex items-center mb-3">
                   <svg className="h-6 w-6 text-cyan-600 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -878,7 +878,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
           )}
         </div>
         
-        {/* Notas importantes *//*}
+        {/* Notas importantes */}
         <div className="mt-5 text-xs text-gray-500 space-y-1 bg-white/70 p-3 rounded-lg border border-gray-200">
           <p>• El pago se realiza por el monto total de la reserva.</p>
           <p>• Las reservas requieren un mínimo de 24 horas de anticipación.</p>
@@ -887,7 +887,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
       </div>
       
-      {/* Footer con información de contacto *//*}
+      {/* Footer con información de contacto */}
       <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 border-t border-cyan-200 text-xs text-gray-600 flex flex-wrap justify-between">
         <div>
           <span className="font-medium text-blue-700">Atención:</span> +51 987 654 321
@@ -903,9 +903,9 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   );
 };
 
-export default FormularioReservacion;*/
+export default FormularioReservacion;
 
-
+/*
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -1490,7 +1490,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   // Contenido principal del formulario
   return (
     <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-cyan-200 overflow-hidden">
-      {/* Encabezado */}
+      {/* Encabezado *//*}
       <div className="bg-gradient-to-r from-blue-600 to-teal-500 p-5 text-white">
         <h3 className="text-xl font-bold flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1507,7 +1507,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         )}
       </div>
       
-      {/* Pasos de la reserva */}
+      {/* Pasos de la reserva *//*}
       <div className="bg-gradient-to-b from-blue-50 via-sky-50 to-cyan-50 border-b border-cyan-200">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -1534,9 +1534,9 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
       </div>
       
-      {/* Cuerpo del formulario */}
+      {/* Cuerpo del formulario *//*}
       <div className="p-6 bg-gradient-to-b from-white to-sky-50">
-        {/* Alerta personalizada */}
+        {/* Alerta personalizada *//*}
         {alerta.mostrar && (
           <Alerta 
             tipo={alerta.tipo} 
@@ -1545,7 +1545,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
           />
         )}
         
-        {/* Aviso de 24 horas */}
+        {/* Aviso de 24 horas *//*}
         <div className="mb-5 bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 text-blue-800 text-sm flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -1556,7 +1556,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
         
         <div className="space-y-6">
-          {/* PASO 1: Selección de fecha y hora */}
+          {/* PASO 1: Selección de fecha y hora *//*}
           {pasoActual === 1 && (
             <div className="space-y-6 animate__animated animate__fadeIn">
               <h4 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">Selecciona fecha y horario</h4>
@@ -1576,7 +1576,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                   className="w-full px-4 py-2.5 border border-cyan-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 bg-white shadow-sm transition-colors"
                 />
                 
-                {/* Mensaje de ayuda para fechas disponibles */}
+                {/* Mensaje de ayuda para fechas disponibles *//*}
                 {cargandoInstancias ? (
                   <p className="text-xs text-blue-500 mt-1">
                     {t('tour.cargandoFechas')}
@@ -1593,7 +1593,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 )}
               </div>
               
-              {/* Selector de horarios mejorado */}
+              {/* Selector de horarios mejorado *//*}
               {fecha && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1623,7 +1623,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               )}
               
-              {/* Botón para continuar */}
+              {/* Botón para continuar *//*}
               {fecha && horarioSeleccionado && (
                 <div className="mt-6 flex justify-end">
                   <button
@@ -1639,7 +1639,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               )}
               
-              {/* Mostrar fecha y hora seleccionadas */}
+              {/* Mostrar fecha y hora seleccionadas *//*}
               {fecha && horarioSeleccionado && (
                 <div className="mt-4 p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
                   <h5 className="font-medium text-blue-800 mb-1">Selección actual:</h5>
@@ -1662,12 +1662,12 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
             </div>
           )}
           
-          {/* PASO 2: Selección de pasajeros */}
+          {/* PASO 2: Selección de pasajeros *//*}
           {pasoActual === 2 && (
             <div className="space-y-6 animate__animated animate__fadeIn">
               <h4 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">Selecciona tus pasajes</h4>
               
-              {/* Paquetes de pasajes */}
+              {/* Paquetes de pasajes *//*}
               {paquetesPasajesDelTour.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center mb-3">
@@ -1700,7 +1700,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               )}
               
-              {/* Selector de pasajes individuales */}
+              {/* Selector de pasajes individuales *//*}
               <div className="space-y-4">
                 <div className="flex items-center mb-3">
                   <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-full flex items-center justify-center mr-2 shadow-sm">
@@ -1736,7 +1736,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 )}
               </div>
               
-              {/* Total seleccionado */}
+              {/* Total seleccionado *//*
               <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border border-cyan-200 mt-4 shadow-sm">
                 <div className="flex justify-between text-sm font-medium">
                   <span>Total pasajeros:</span>
@@ -1748,7 +1748,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </div>
               </div>
               
-              {/* Botones de navegación */}
+              {/* Botones de navegación *//*}
               <div className="flex justify-between mt-6">
                 <button
                   type="button"
@@ -1788,7 +1788,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
                 </button>
               </div>
               
-              {/* Información de métodos de pago con logos actualizados */}
+              {/* Información de métodos de pago con logos actualizados *//*}
               <div className="mt-6 pt-4 border-t border-cyan-200">
                 <div className="flex items-center mb-3">
                   <svg className="h-6 w-6 text-cyan-600 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1830,7 +1830,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
           )}
         </div>
         
-        {/* Notas importantes */}
+        {/* Notas importantes *//*}
         <div className="mt-5 text-xs text-gray-500 space-y-1 bg-white/70 p-3 rounded-lg border border-gray-200">
           <p>• El pago se realiza por el monto total de la reserva.</p>
           <p>• Las reservas requieren un mínimo de 24 horas de anticipación.</p>
@@ -1839,7 +1839,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         </div>
       </div>
       
-      {/* Footer con información de contacto */}
+      {/* Footer con información de contacto *//*}
       <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 border-t border-cyan-200 text-xs text-gray-600 flex flex-wrap justify-between">
         <div>
           <span className="font-medium text-blue-700">Atención:</span> +51 987 654 321
@@ -1855,4 +1855,4 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   );
 };
 
-export default FormularioReservacion;
+export default FormularioReservacion;*/
