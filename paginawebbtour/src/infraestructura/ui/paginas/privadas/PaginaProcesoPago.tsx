@@ -1524,8 +1524,8 @@ const PaginaProcesoPago = () => {
 };
 
 export default PaginaProcesoPago;*/
- 
-import { useState, useEffect, useRef, useCallback } from 'react';
+  
+ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1647,7 +1647,7 @@ const PaginaProcesoPago = () => {
     sessionStorage.removeItem('reservaEnProceso');
   }, [datosReserva.instanciaId]);
 
-  // NUEVO: Función para analizar errores de MercadoPago
+  // Función para analizar errores de MercadoPago
   const analizarErrorMercadoPago = useCallback((error: any) => {
     let mensajeUsuario = "Ocurrió un error al procesar el pago. Por favor, intenta nuevamente.";
     
@@ -1731,7 +1731,7 @@ const PaginaProcesoPago = () => {
     return preferencia;
   }, []);
 
-  // FUNCIÓN: Navegar según el estado del pago - Definida ANTES de verificarEstadoPago
+  // Navegar según el estado del pago
   const navegarSegunEstadoPago = useCallback((estado: string, paymentId: string | null, reservationId: number | null) => {
     // Datos base para cualquier estado
     const datosBase = {
@@ -1786,7 +1786,7 @@ const PaginaProcesoPago = () => {
     }
   }, [navigate, datosReserva, total, limpiarDatosReservaEnProgreso]);
 
-  // NUEVO: Función para verificar y confirmar reserva después del pago
+  // Verificar y confirmar reserva después del pago
   const verificarYConfirmarReserva = useCallback(async (idReserva: number, status: string, paymentId?: string) => {
     try {
       console.log(`Verificando y confirmando reserva ID=${idReserva}, status=${status}, paymentId=${paymentId || 'no disponible'}`);
@@ -1837,7 +1837,7 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // NUEVO: Función unificada para verificar el pago
+  // Función unificada para verificar el pago
   const verificarPagoUnificado = useCallback(async (idReserva: number, preferenceId: string, paymentId?: string) => {
     try {
       console.log(`Verificando pago de forma unificada: reserva=${idReserva}, preferencia=${preferenceId}, pago=${paymentId || 'no disponible'}`);
@@ -1920,7 +1920,7 @@ const PaginaProcesoPago = () => {
     }
   }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago]);
 
-  // MEJORADO: Crear preferencia real usando el backend
+  // Crear preferencia real usando el backend
   const crearPreferenciaReal = useCallback(async () => {
     try {
       // Verificar si ya existe una preferencia para evitar duplicados
@@ -2187,7 +2187,7 @@ const PaginaProcesoPago = () => {
     }
   }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago]);
   
-  // MEJORADO: Obtener o crear preferencia
+  // Obtener o crear preferencia
   const obtenerOCrearPreferencia = useCallback(async () => {
     // Si ya tenemos una preferencia válida, la usamos
     if (preferencia && preferencia.id) {
@@ -2215,7 +2215,7 @@ const PaginaProcesoPago = () => {
     return await crearPreferenciaReal();
   }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal]);
   
-  // MEJORADO: Cargar el SDK de Mercado Pago
+  // Cargar el SDK de Mercado Pago
   const cargarMercadoPagoSDK = useCallback(() => {
     if (window.MercadoPago) {
       console.log("SDK de MercadoPago ya está cargado");
@@ -2232,28 +2232,27 @@ const PaginaProcesoPago = () => {
         console.log("SDK de MercadoPago cargado correctamente");
         setSdkCargado(true);
         
-        // NUEVO: Agregar listener para ignorar errores específicos de MercadoPago
-        // CORRECCIÓN: Manejo de errores específicos de MercadoPago
-window.addEventListener('error', function(event) {
-  // Verificar si el target es un HTMLElement y tiene una propiedad src
-  const target = event.target as HTMLElement;
-  
-  // Verificar si es un elemento con src (como un script o imagen)
-  if (target && 'src' in target) {
-    const src = (target as HTMLImageElement | HTMLScriptElement).src;
-    
-    // Ignorar errores específicos de MercadoPago que no afectan la funcionalidad
-    if (src && 
-        typeof src === 'string' && 
-        src.includes('mercadopago.com') && 
-        src.includes('jms/lgz/background/session/')) {
-      // Estos errores 404 son normales en el entorno de sandbox y no afectan la funcionalidad
-      console.log("Ignorando error conocido de MercadoPago:", src);
-      event.preventDefault();
-      return false;
-    }
-  }
-}, true);
+        // Agregar listener para ignorar errores específicos de MercadoPago
+        window.addEventListener('error', function(event) {
+          // Verificar si el target es un HTMLElement y tiene una propiedad src
+          const target = event.target as HTMLElement;
+          
+          // Verificar si es un elemento con src (como un script o imagen)
+          if (target && 'src' in target) {
+            const src = (target as HTMLImageElement | HTMLScriptElement).src;
+            
+            // Ignorar errores específicos de MercadoPago que no afectan la funcionalidad
+            if (src && 
+                typeof src === 'string' && 
+                src.includes('mercadopago.com') && 
+                src.includes('jms/lgz/background/session/')) {
+              // Estos errores 404 son normales en el entorno de sandbox y no afectan la funcionalidad
+              console.log("Ignorando error conocido de MercadoPago:", src);
+              event.preventDefault();
+              return false;
+            }
+          }
+        }, true);
         
         resolve();
       };
@@ -2268,7 +2267,7 @@ window.addEventListener('error', function(event) {
     });
   }, []);
 
-  // MEJORADO: Renderizar el botón de Mercado Pago
+  // CORREGIDO: Renderizar el botón de Mercado Pago con correcciones para asegurar compatibilidad y todos los métodos de pago
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
       console.log("No hay preferencia para renderizar el botón");
@@ -2301,51 +2300,61 @@ window.addEventListener('error', function(event) {
       
       console.log("Renderizando botón con preferenceId:", preferenceId);
       
-      // Inicializar MercadoPago
-      const mp = new window.MercadoPago(publicKey, {
-        locale: 'es-PE'
-      });
-      
-      // Limpiar el contenedor
-      if (mercadoPagoButtonRef.current.innerHTML.trim() !== '') {
-        console.log("El botón ya está renderizado, no se volverá a renderizar");
-        return;
+      // Limpiar el contenedor antes de renderizar para evitar duplicados
+      if (mercadoPagoButtonRef.current) {
+        mercadoPagoButtonRef.current.innerHTML = '';
       }
       
-      // MEJORADO: Renderizar el botón con más opciones
-      mp.checkout({
-        preference: {
-          id: preferenceId
-        },
-        render: {
-          container: '.mercado-pago-button',
-          label: 'Pagar con Mercado Pago',
-        },
-        theme: {
-          elementsColor: '#0062cc',
-          headerColor: '#0062cc'
-        },
-        autoOpen: false, // No abrir automáticamente, esperar a que el usuario haga clic
-        callbacks: {
-          onError: (error: any) => {
-            console.error("Error en MercadoPago Checkout:", error);
-            setError(`Error en el procesamiento del pago: ${error.message || 'Error desconocido'}`);
-          },
-          onReady: () => {
-            console.log("MercadoPago Checkout listo");
-            setCargandoMercadoPago(false);
+      // Inicializar MercadoPago con opciones mejoradas
+      const mp = new window.MercadoPago(publicKey, {
+        locale: 'es-PE', 
+        advancedOptions: {
+          checkoutPro: {
+            displayMode: 'redirect'  // Usar 'redirect' en lugar de modal para mayor compatibilidad
           }
         }
       });
       
-      console.log("Botón de MercadoPago renderizado correctamente");
+      // Verificar que el contenedor esté limpio antes de renderizar
+      if (mercadoPagoButtonRef.current && mercadoPagoButtonRef.current.childElementCount === 0) {
+        // NUEVO: Renderizar el botón con opciones más completas
+        mp.checkout({
+          preference: {
+            id: preferenceId
+          },
+          render: {
+            container: '.mercado-pago-button',
+            label: 'Pagar', // Etiqueta más simple
+            type: 'wallet', // Tipo wallet para mostrar más opciones de pago
+          },
+          theme: {
+            elementsColor: '#0062cc',
+            headerColor: '#0062cc'
+          },
+          autoOpen: false, // No abrir automáticamente
+          callbacks: {
+            onError: (error: any) => {
+              console.error("Error en MercadoPago Checkout:", error);
+              setError(`Error en el procesamiento del pago: ${error.message || 'Error desconocido'}`);
+            },
+            onReady: () => {
+              console.log("MercadoPago Checkout listo");
+              setCargandoMercadoPago(false);
+            }
+          }
+        });
+        
+        console.log("Botón de MercadoPago renderizado correctamente con configuración mejorada");
+      } else {
+        console.log("El contenedor ya tiene elementos, no se renderizará nuevamente");
+      }
     } catch (error) {
       console.error("Error al renderizar el botón de MercadoPago:", error);
       setError("Error al inicializar el botón de pago. Por favor, actualiza la página.");
     }
   }, [preferencia, publicKey]);
 
-  // MEJORADO: Iniciar el proceso de pago
+  // Iniciar el proceso de pago
   const iniciarProcesoPago = useCallback(async () => {
     try {
       setCargandoMercadoPago(true);
@@ -2388,7 +2397,7 @@ window.addEventListener('error', function(event) {
     }
   }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, usarModoSimulado, preferencia, analizarErrorMercadoPago]);
 
-  // MEJORADO: Procesar pago directo
+  // Procesar pago directo
   const procesarPagoDirecto = async () => {
     if (cargandoPago) return;
     
@@ -2548,7 +2557,7 @@ window.addEventListener('error', function(event) {
     }
   }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago]);
   
-  // MEJORADO: Verificar periódicamente el estado del pago en modo sandbox
+  // Verificar periódicamente el estado del pago en modo sandbox
   useEffect(() => {
     // Solo activar en modo sandbox y cuando tenemos una preferencia Y después de un intento de pago
     if (IS_SANDBOX && preferencia && preferencia.id && !estadoPagoVerificado && pagoIniciado) {
@@ -2584,7 +2593,7 @@ window.addEventListener('error', function(event) {
     }
   }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva]);
   
-  // MEJORADO: Verificar si estamos regresando de un pago en Mercado Pago
+  // Verificar si estamos regresando de un pago en Mercado Pago
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
@@ -2824,7 +2833,7 @@ window.addEventListener('error', function(event) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
                     <input 
-                      type="text" 
+                                        type="text" 
                       name="apellidos"
                       value={datosUsuario.apellidos}
                       onChange={handleUsuarioChange}
@@ -2839,7 +2848,7 @@ window.addEventListener('error', function(event) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input 
-                                          type="email" 
+                      type="email" 
                       name="correo"
                       value={datosUsuario.correo}
                       onChange={handleUsuarioChange}
@@ -2939,7 +2948,7 @@ window.addEventListener('error', function(event) {
                 </div>
               )}
               
-              {/* NUEVO: Simulador de resultados de pago */}
+              {/* Simulador de resultados de pago */}
               {process.env.NODE_ENV === 'development' && usarModoSimulado && (
                 <div className="mb-4 p-3 bg-purple-50 border rounded border-purple-200 text-sm">
                   <div className="font-medium text-purple-800 mb-2">Simular resultado del pago:</div>
@@ -3020,7 +3029,7 @@ window.addEventListener('error', function(event) {
                   </div>
                 ) : (
                   <>
-                    {/* Contenedor para el botón de Mercado Pago */}
+                    {/* Contenedor para el botón de Mercado Pago - MEJORADO */}
                     <div 
                       className="mercado-pago-button w-full min-h-[60px] bg-blue-50 rounded-lg border border-blue-200 mb-4 flex items-center justify-center"
                       ref={mercadoPagoButtonRef}
@@ -3052,7 +3061,7 @@ window.addEventListener('error', function(event) {
                       )}
                     </button>
                     
-                    {/* NUEVO: Indicador de verificación */}
+                    {/* Indicador de verificación */}
                     {intentosVerificacion > 0 && !estadoPagoVerificado && (
                       <div className="mt-2 text-xs text-center text-blue-500">
                         <div className="flex items-center justify-center">
