@@ -225,7 +225,7 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 }
 
 // CheckStatus verifica si el usuario tiene una sesión válida
-func (c *AuthController) CheckStatus(ctx *gin.Context) {
+/*func (c *AuthController) CheckStatus(ctx *gin.Context) {
 	// Logs para depuración
 	fmt.Println("Ejecutando CheckStatus")
 
@@ -244,6 +244,56 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 		fmt.Printf("CheckStatus: Error al obtener usuario: %v\n", err)
 		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no encontrado", err))
 		return
+	}
+
+	// Para administradores, no incluir sede en la respuesta a menos que tenga una sede seleccionada temporalmente
+	// Para otros roles, incluir la sede asignada
+	var sede *entidades.Sede = nil
+
+	// Verificar si hay una sede seleccionada en la sesión (para administradores)
+	sedeID, sedeExists := ctx.Get("sedeID")
+	if usuario.Rol == "ADMIN" && sedeExists && sedeID.(int) > 0 {
+		sede, _ = c.authService.GetSedeByID(sedeID.(int))
+	} else if usuario.Rol != "ADMIN" && usuario.IdSede != nil {
+		sede, _ = c.authService.GetSedeByID(*usuario.IdSede)
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Usuario autenticado", gin.H{
+		"usuario": usuario,
+		"sede":    sede,
+	}))
+}
+*/
+// CheckStatus verifica si el usuario tiene una sesión válida
+func (c *AuthController) CheckStatus(ctx *gin.Context) {
+	// Logs para depuración
+	fmt.Println("Ejecutando CheckStatus")
+
+	// Obtener usuario y rol del contexto (puesto por el middleware de autenticación)
+	userID, exists := ctx.Get("userID")
+	userRole, roleExists := ctx.Get("userRole")
+	fmt.Printf("CheckStatus: userID en contexto = %v (exists: %v)\n", userID, exists)
+	fmt.Printf("CheckStatus: userRole en contexto = %v (exists: %v)\n", userRole, roleExists)
+
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no autenticado", nil))
+		return
+	}
+
+	// Obtener datos básicos del usuario desde la BD
+	usuario, err := c.authService.GetUserByID(userID.(int))
+	if err != nil {
+		fmt.Printf("CheckStatus: Error al obtener usuario: %v\n", err)
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no encontrado", err))
+		return
+	}
+
+	// IMPORTANTE: Usar el rol del token JWT, no el de la base de datos
+	if roleExists {
+		rolOriginal := usuario.Rol
+		usuario.Rol = userRole.(string)
+		fmt.Printf("CheckStatus: Sobreescribiendo rol de BD (%s) con rol del token: %s\n",
+			rolOriginal, userRole.(string))
 	}
 
 	// Para administradores, no incluir sede en la respuesta a menos que tenga una sede seleccionada temporalmente
