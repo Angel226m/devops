@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Seccion from '../../componentes/layout/Seccion';
@@ -41,6 +41,7 @@ const PaginaConservacion = () => {
   const { t } = useTranslation();
   const [tabActivo, setTabActivo] = useState<EspecieKey>('pinguinos');
   const [scrollY, setScrollY] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   
   // Referencias para animaciones basadas en scroll
   const headerRef = useRef<HTMLDivElement>(null);
@@ -65,28 +66,67 @@ const PaginaConservacion = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Efecto para pre-cargar imágenes
+  useEffect(() => {
+    // Guardar imágenes en localStorage para evitar cargar de nuevo
+    const checkCachedImages = () => {
+      const cachedImages = localStorage.getItem('conservacionImagesCached');
+      if (cachedImages) {
+        setImagesLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (!checkCachedImages()) {
+      const imageUrls = [
+        'https://www.conaf.cl/wp-content/uploads/2024/04/RN-Pinguino-de-Humboldt-Pinguino-de-Humboldt-8.jpg',
+        'https://images.unsplash.com/photo-1557127275-f8b5ba93e24e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+        'https://cdn.sanity.io/images/xhhnkk4g/production/c47f6d94ef07862864922d17dec79ddb119cf694-1080x720.webp?w=3840&q=65&fit=clip&auto=format',
+        'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/63/19/7d/caption.jpg?w=500&h=400&s=1',
+      ];
+
+      let loadedCount = 0;
+      imageUrls.forEach(src => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === imageUrls.length) {
+            setImagesLoaded(true);
+            localStorage.setItem('conservacionImagesCached', 'true');
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          if (loadedCount === imageUrls.length) {
+            setImagesLoaded(true);
+          }
+        };
+      });
+    }
+  }, []);
+
   // Iconos para especies
   const iconos = {
     pinguino: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M15.75 8.25a.75.75 0 01.75.75c0 1.12-.492 2.126-1.27 2.812a.75.75 0 11-.992-1.124A2.243 2.243 0 0015 9a.75.75 0 01.75-.75z" />
-        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM4.575 15.6a8.25 8.25 0 009.348 4.425 1.966 1.966 0 00-1.84-1.275.983.983 0 01-.97-.822l-.073-.437c-.094-.565.25-1.11.8-1.267l.99-.282c.427-.123.783-.418.982-.816l.036-.073a1.453 1.453 0 012.328-.377L16.5 15h.628a2.25 2.25 0 011.983 1.186 8.25 8.25 0 00-6.345-12.4c.044.262.18.503.389.676l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.575 15.6z" clipRule="evenodd" />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.115 5.19l.319 1.913A6 6 0 008.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 002.288-4.042 1.087 1.087 0 00-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 01-.98-.314l-.295-.295a1.125 1.125 0 010-1.591l.13-.132a1.125 1.125 0 011.3-.21l.603.302a.809.809 0 001.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 001.528-1.732l.146-.292" />
       </svg>
     ),
     lobo: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
-        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clipRule="evenodd" />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
       </svg>
     ),
     ballena: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path fillRule="evenodd" d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" clipRule="evenodd" />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0112 12.75zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 01-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 002.248-2.354M12 12.75a2.25 2.25 0 01-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 00-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 01.4-2.253M12 8.25a2.25 2.25 0 00-2.248 2.146M12 8.25a2.25 2.25 0 012.248 2.146M8.683 5a6.032 6.032 0 01-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0115.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 00-.575-1.752M4.921 6a24.048 24.048 0 00-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 01-5.223 1.082" />
       </svg>
     ),
     ave: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path fillRule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z" clipRule="evenodd" />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
       </svg>
     )
   };
@@ -95,7 +135,7 @@ const PaginaConservacion = () => {
   const especiesData: Record<EspecieKey, EspecieData> = {
     pinguinos: {
       titulo: 'Pingüinos de Humboldt',
-      imagen: 'https://image.salmonexpert.cl/1190519.webp?imageId=1190519&width=960&height=622&format=jpg',
+      imagen: 'https://www.conaf.cl/wp-content/uploads/2024/04/RN-Pinguino-de-Humboldt-Pinguino-de-Humboldt-8.jpg',
       descripcion: 'El pingüino de Humboldt (Spheniscus humboldti) es una especie vulnerable que habita en las costas de Perú y Chile. En la Reserva Nacional de Paracas, alberga importantes colonias de anidación que protegemos rigurosamente siguiendo los lineamientos de SERNANP.',
       protocolos: [
         'Mantenemos distancias respetuosas de las colonias según estándares de SERNANP',
@@ -109,7 +149,7 @@ const PaginaConservacion = () => {
     },
     lobos: {
       titulo: 'Lobos Marinos Sudamericanos',
-      imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwoS23r4tbuQz-72p9xHjvUjr2cuJnPxywvQ&s',
+      imagen: 'https://images.unsplash.com/photo-1557127275-f8b5ba93e24e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
       descripcion: 'Los lobos marinos (Otaria flavescens) forman grandes colonias en las Islas Ballestas. Estas colonias son vitales para el ecosistema marino y constituyen uno de los principales atractivos de la reserva protegida por SERNANP.',
       protocolos: [
         'Mantenemos distancias adecuadas de las colonias según normativa vigente',
@@ -123,7 +163,7 @@ const PaginaConservacion = () => {
     },
     ballenas: {
       titulo: 'Ballenas y Cetáceos',
-      imagen: 'https://www.tvperu.gob.pe/sites/default/files/styles/note/public/notas_-_tvperu_-_2024-07-02t150728.634.jpg?itok=MBEpqoZi',
+      imagen: 'https://cdn.sanity.io/images/xhhnkk4g/production/c47f6d94ef07862864922d17dec79ddb119cf694-1080x720.webp?w=3840&q=65&fit=clip&auto=format',
       descripcion: 'Varias especies de cetáceos, incluyendo la ballena jorobada (Megaptera novaeangliae) y el delfín nariz de botella (Tursiops truncatus), habitan temporalmente las aguas de la Reserva Nacional de Paracas durante sus migraciones anuales.',
       protocolos: [
         'Nunca perseguimos a los cetáceos, permitiendo que ellos decidan el nivel de interacción',
@@ -137,7 +177,7 @@ const PaginaConservacion = () => {
     },
     aves: {
       titulo: 'Aves Marinas',
-      imagen: 'https://images.unsplash.com/photo-1621856342476-d7ac978acb63?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+      imagen: 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/63/19/7d/caption.jpg?w=500&h=400&s=1',
       descripcion: 'Las Islas Ballestas albergan una increíble diversidad de aves marinas, incluyendo pelícanos peruanos, cormoranes, piqueros, gaviotas y el famoso guanay. Estas aves son fundamentales para el ecosistema y la producción de guano.',
       protocolos: [
         'Mantenemos motores en neutro cuando estamos cerca de aves que pescan o descansan',
@@ -151,14 +191,14 @@ const PaginaConservacion = () => {
     }
   };
 
-  // Protocolos generales de conservación
+  // Protocolos generales de conservación con iconos más relacionados
   const protocolos: ProtocoloData[] = [
     {
       titulo: 'Horarios Regulados',
       descripcion: 'Respetamos estrictamente los horarios establecidos por SERNANP, diseñados para minimizar el impacto en los ciclos naturales de alimentación y descanso de la fauna marina.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       color: 'from-blue-500 to-blue-700'
@@ -167,8 +207,8 @@ const PaginaConservacion = () => {
       titulo: 'Control de Aforo',
       descripcion: 'Cumplimos con los límites de capacidad de carga establecidos por SERNANP para la Reserva Nacional de Paracas, evitando la saturación del ecosistema.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M4.5 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM14.25 8.625a3.375 3.375 0 116.75 0 3.375 3.375 0 01-6.75 0zM1.5 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM17.25 19.128l-.001.144a2.25 2.25 0 01-.233.96 10.088 10.088 0 005.06-1.01.75.75 0 00.42-.643 4.875 4.875 0 00-6.957-4.611 8.586 8.586 0 011.71 5.157v.003z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
       color: 'from-teal-500 to-teal-700'
@@ -177,8 +217,8 @@ const PaginaConservacion = () => {
       titulo: 'Zonas Restringidas',
       descripcion: 'Respetamos las zonas de exclusión y amortiguamiento establecidas por SERNANP, especialmente durante temporadas críticas de reproducción y anidación.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
         </svg>
       ),
       color: 'from-red-500 to-red-700'
@@ -187,10 +227,8 @@ const PaginaConservacion = () => {
       titulo: 'Navegación Responsable',
       descripcion: 'Nuestras embarcaciones siguen rutas predefinidas aprobadas por SERNANP, controlando la velocidad para reducir el impacto acústico y la contaminación.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 116 0h3a.75.75 0 00.75-.75V15z" />
-          <path d="M8.25 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0zM15.75 6.75a.75.75 0 00-.75.75v11.25c0 .087.015.17.042.248a3 3 0 015.958.464c.853-.175 1.522-.935 1.464-1.883a18.659 18.659 0 00-3.732-10.104 1.837 1.837 0 00-1.47-.725H15.75z" />
-          <path d="M19.5 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       ),
       color: 'from-indigo-500 to-indigo-700'
@@ -199,8 +237,8 @@ const PaginaConservacion = () => {
       titulo: 'Guías Certificados',
       descripcion: 'Nuestros guías están capacitados y certificados por SERNANP para garantizar prácticas responsables de observación de fauna marina.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       ),
       color: 'from-green-500 to-green-700'
@@ -209,22 +247,22 @@ const PaginaConservacion = () => {
       titulo: 'Cero Residuos',
       descripcion: 'Implementamos una política estricta de "no dejar rastro" en todas nuestras embarcaciones, en cumplimiento con las normativas ambientales de SERNANP.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       ),
       color: 'from-purple-500 to-purple-700'
     }
   ];
 
-  // Tecnologías para conservación
+  // Tecnologías para conservación con iconos más adecuados
   const tecnologias: TecnologiaData[] = [
     {
       titulo: 'GPS y Seguimiento de Rutas',
       descripcion: 'Todas nuestras embarcaciones están equipadas con GPS que monitorean la velocidad y aseguran que se respeten las rutas establecidas por SERNANP.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
         </svg>
       ),
       color: 'from-blue-600 to-indigo-800'
@@ -233,9 +271,8 @@ const PaginaConservacion = () => {
       titulo: 'Sensores Acústicos',
       descripcion: 'Monitoreamos los niveles de ruido de nuestras embarcaciones para garantizar que se mantengan por debajo de los umbrales que podrían afectar a la fauna.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-          <path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m0 0l-2.828 2.828a1 1 0 01-1.414 0 1 1 0 010-1.414L5.586 15.536z" />
         </svg>
       ),
       color: 'from-teal-600 to-green-800'
@@ -244,8 +281,8 @@ const PaginaConservacion = () => {
       titulo: 'Motores de Bajo Impacto',
       descripcion: 'Nuestras embarcaciones utilizan motores de última generación con tecnología de reducción de emisiones y baja huella acústica.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12.378 1.602a.75.75 0 00-.756 0L3 6.632l9 5.25 9-5.25-8.622-5.03zM21.75 7.93l-9 5.25v9l8.628-5.032a.75.75 0 00.372-.648V7.93zM11.25 22.18v-9l-9-5.25v8.57a.75.75 0 00.372.648l8.628 5.033z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
       color: 'from-amber-600 to-orange-800'
@@ -254,23 +291,22 @@ const PaginaConservacion = () => {
       titulo: 'Sistema de Registro Digital',
       descripcion: 'Documentamos cada avistamiento para contribuir a la base de datos científica de SERNANP sobre poblaciones y comportamiento de la fauna marina.',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M7.502 6h7.128A3.375 3.375 0 0118 9.375v9.375a3 3 0 003-3V6.108c0-1.505-1.125-2.811-2.664-2.94a48.972 48.972 0 00-.673-.05A3 3 0 0015 1.5h-1.5a3 3 0 00-2.663 1.618c-.225.015-.45.032-.673.05C8.662 3.295 7.554 4.542 7.502 6zM13.5 3A1.5 1.5 0 0012 4.5h4.5A1.5 1.5 0 0015 3h-1.5z" clipRule="evenodd" />
-          <path fillRule="evenodd" d="M3 9.375C3 8.339 3.84 7.5 4.875 7.5h9.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 013 20.625V9.375zM6 12a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V12zm2.25 0a.75.75 0 01.75-.75h3.75a.75.75 0 010 1.5H9a.75.75 0 01-.75-.75zM6 15a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V15zm2.25 0a.75.75 0 01.75-.75h3.75a.75.75 0 010 1.5H9a.75.75 0 01-.75-.75zM6 18a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H6.75a.75.75 0 01-.75-.75V18zm2.25 0a.75.75 0 01.75-.75h3.75a.75.75 0 010 1.5H9a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
       color: 'from-purple-600 to-pink-800'
     }
   ];
 
-  // Resultados tangibles
+  // Resultados tangibles con iconos más apropiados
   const resultados: ResultadoData[] = [
     {
       cifra: '+5.000',
       descripcion: 'Kg de residuos plásticos evitados en el ecosistema marino',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       ),
       color: 'from-emerald-400 to-emerald-600'
@@ -279,8 +315,8 @@ const PaginaConservacion = () => {
       cifra: '15%',
       descripcion: 'Reducción en el número de embarcaciones en zonas sensibles',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 116 0h3a.75.75 0 00.75-.75V15z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
         </svg>
       ),
       color: 'from-sky-400 to-sky-600'
@@ -289,9 +325,8 @@ const PaginaConservacion = () => {
       cifra: '+20%',
       descripcion: 'Aumento en la población de pingüinos de Humboldt',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M1.5 9.832v1.793c0 1.036.84 1.875 1.875 1.875h17.25c1.035 0 1.875-.84 1.875-1.875V9.832a3 3 0 00-.722-1.952l-3.285-3.832A3 3 0 0016.215 3h-8.43a3 3 0 00-2.278 1.048L2.222 7.88A3 3 0 001.5 9.832zM7.785 4.5a1.5 1.5 0 00-1.139.524L3.881 8.25h3.165a3 3 0 012.496 1.336l.164.246a1.5 1.5 0 001.248.668h2.092a1.5 1.5 0 001.248-.668l.164-.246a3 3 0 012.496-1.336h3.165l-2.765-3.226a1.5 1.5 0 00-1.139-.524h-8.43z" clipRule="evenodd" />
-          <path d="M2.813 15c-.725 0-1.313.588-1.313 1.313V18a3 3 0 003 3h15a3 3 0 003-3v-1.688c0-.724-.588-1.312-1.313-1.312h-4.233a3 3 0 00-2.496 1.336l-.164.246a1.5 1.5 0 01-1.248.668h-2.092a1.5 1.5 0 01-1.248-.668l-.164-.246A3 3 0 007.046 15H2.812z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       ),
       color: 'from-indigo-400 to-indigo-600'
@@ -300,15 +335,15 @@ const PaginaConservacion = () => {
       cifra: '0',
       descripcion: 'Incidentes de perturbación significativa en los últimos 3 años',
       icono: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
-          <path fillRule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 00-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       ),
       color: 'from-rose-400 to-rose-600'
     }
   ];
 
-  // Animaciones (versión simplificada y compatible)
+  // Animaciones optimizadas
   const tabVariants = {
     hidden: { opacity: 0, x: 10 },
     visible: { 
@@ -350,85 +385,95 @@ const PaginaConservacion = () => {
     }
   };
   
-  const scaleIn = {
-    hidden: { scale: 0.8, opacity: 0 },
-    visible: { 
-      scale: 1, 
-      opacity: 1,
-      transition: {
-        duration: 0.6
-      }
-    }
-  };
+  // Loader para mostrar mientras cargan las imágenes
+  if (!imagesLoaded) {
+    return (
+      <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div className="text-center">
+          <svg className="animate-spin -ml-1 mr-3 h-12 w-12 text-blue-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-lg text-gray-600 mt-4">Cargando recursos para una mejor experiencia...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white overflow-hidden">
-      {/* Cabecera */}
+      {/* Cabecera con video de fondo */}
       <div 
         ref={headerRef}
         className="relative h-screen overflow-hidden flex items-center justify-center"
       >
-        {/* Fondo paralaje */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: "url('https://images.unsplash.com/photo-1583212292454-1fe6229603b7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&q=80')",
-            transform: `translateY(${scrollY * 0.4}px)`,
-            opacity: 0.6
-          }}
-        />
+        {/* Fondo con efecto de profundidad */}
+        <div className="absolute inset-0 z-0">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: "url('https://images.unsplash.com/photo-1583212292454-1fe6229603b7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&q=80')",
+              transform: `translateY(${scrollY * 0.4}px)`,
+              opacity: 0.7
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 via-teal-800/60 to-transparent backdrop-blur-[1px]" />
+        </div>
         
-        {/* Gradiente de fondo */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-teal-800/50 to-transparent backdrop-blur-[2px]" />
+        {/* Elementos flotantes decorativos animados */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Burbuja animada 1 */}
+          <motion.div 
+            animate={{ 
+              y: [0, -150, 0],
+              x: [0, 50, 0],
+              scale: [1, 1.1, 1],
+              rotate: [0, 10, 0]
+            }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: 25,
+              ease: "linear" 
+            }}
+            className="absolute left-[15%] top-[60%] w-32 h-32 rounded-full bg-gradient-to-r from-blue-400 to-cyan-300 opacity-20 blur-xl"
+          />
+          
+          {/* Burbuja animada 2 */}
+          <motion.div 
+            animate={{ 
+              y: [0, -100, 0],
+              x: [0, -30, 0],
+              scale: [1, 1.2, 1],
+              rotate: [0, -5, 0]
+            }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: 20,
+              ease: "linear",
+              delay: 2
+            }}
+            className="absolute right-[20%] top-[70%] w-24 h-24 rounded-full bg-gradient-to-r from-teal-400 to-green-300 opacity-20 blur-xl"
+          />
+          
+          {/* Burbuja animada 3 */}
+          <motion.div 
+            animate={{ 
+              y: [0, -120, 0],
+              x: [0, 20, 0],
+              scale: [1, 1.15, 1],
+              rotate: [0, 7, 0]
+            }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: 22,
+              ease: "linear",
+              delay: 5
+            }}
+            className="absolute left-[40%] top-[80%] w-28 h-28 rounded-full bg-gradient-to-r from-indigo-400 to-purple-300 opacity-20 blur-xl"
+          />
+        </div>
         
-        {/* Elementos flotantes decorativos */}
-        <motion.div 
-          animate={{ 
-            y: [0, -15, 0],
-            rotate: [0, 5, 0, -5, 0],
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 20,
-            ease: "linear" 
-          }}
-          className="absolute right-[20%] top-[30%] opacity-30"
-        >
-          <svg width="120" height="120" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M48.1 35.8C56.9 16.4 80.6 10.2 98 21.5C112.4 30.9 133.5 22.8 150.2 28.5C173.8 36.7 187.6 65.9 180.2 90.2C173 114 141.5 122.1 124.5 139.2C108.1 155.7 97.4 183.6 72.2 186.8C47.4 190 22.7 167.1 10.5 143.6C-1.3 120.9 2.6 92.9 17.5 72.5C26.2 60.7 41.5 50.1 48.1 35.8Z" fill="url(#paint0_linear)" />
-            <defs>
-              <linearGradient id="paint0_linear" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#60A5FA" />
-                <stop offset="1" stopColor="#34D399" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </motion.div>
-        
-        <motion.div 
-          animate={{ 
-            y: [0, 20, 0],
-            rotate: [0, -10, 0, 10, 0],
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 25,
-            ease: "linear" 
-          }}
-          className="absolute left-[15%] bottom-[25%] opacity-20"
-        >
-          <svg width="160" height="160" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M143.033 13.2918C171.535 29.9806 200.243 65.0771 196.519 97.6C192.796 130.123 156.64 159.991 123.25 169.398C89.8594 178.806 59.2357 167.751 35.0617 149.15C10.8878 130.55 -6.83675 104.401 3.47987 76.5191C13.7965 48.6376 52.1503 18.9235 88.7409 6.83682C125.332 -5.24985 160.159 0.0967097 172.018 5.4433C183.877 10.7899 174.766 16.1365 165.655 21.4831C156.544 26.8297 147.434 32.1763 138.323 37.5229C129.212 42.8695 120.101 48.2161 110.99 53.5627C101.879 58.9093 92.7686 64.2559 83.6578 69.6025C74.5471 74.9491 65.4363 80.2957 60.0617 88.1525C54.687 96.0094 53.0485 106.376 57.4503 117.259C61.852 128.142 72.294 139.54 85.2962 143.287C98.2984 147.033 113.861 143.127 127.083 131.868C140.305 120.609 151.187 101.998 157.417 85.5124C163.646 69.0264 165.222 54.6659 153.778 45.3801C142.333 36.0943 117.869 31.8833 106.933 22.7472C95.9976 13.6111 98.5909 -0.425039 107.251 0.0225023C115.911 0.470044 130.639 15.429 143.033 13.2918Z" fill="url(#paint0_linear)" />
-            <defs>
-              <linearGradient id="paint0_linear" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#0EA5E9" />
-                <stop offset="1" stopColor="#7C3AED" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </motion.div>
-        
-        {/* Contenido del header */}
+        {/* Contenido principal del header */}
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -439,7 +484,7 @@ const PaginaConservacion = () => {
             }}
             className="mb-8"
           >
-            <span className="bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text text-xl font-semibold uppercase tracking-wider">
+            <span className="inline-block py-2 px-6 bg-white/10 backdrop-blur-md rounded-full text-xl font-semibold uppercase tracking-wider text-cyan-100 shadow-lg">
               Ocean Tours Paracas
             </span>
           </motion.div>
@@ -454,7 +499,7 @@ const PaginaConservacion = () => {
             }}
             className="text-5xl md:text-7xl font-bold mb-6 text-white drop-shadow-xl"
           >
-            <span className="bg-gradient-to-r from-white to-blue-200 text-transparent bg-clip-text">
+            <span className="inline-block bg-gradient-to-r from-white to-blue-200 text-transparent bg-clip-text">
               {t('conservacion.titulo', 'Conservación Marina')}
             </span>
           </motion.h1>
@@ -484,31 +529,25 @@ const PaginaConservacion = () => {
           >
             <a 
               href="#especies"
-              className="px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 inline-flex items-center gap-2 group"
+              className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden font-medium text-indigo-600 transition-all duration-300 ease-out border-2 border-blue-100/80 rounded-full shadow-md bg-white/10 backdrop-blur-md"
             >
-              <span>Descubrir Nuestros Protocolos</span>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" 
-                viewBox="0 0 20 20" 
-                fill="currentColor"
-              >
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+              <span className="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 translate-y-full bg-gradient-to-r from-blue-600 to-teal-600 group-hover:translate-y-0 ease"></span>
+              <span className="absolute flex items-center justify-center w-full h-full text-blue-100 transition-all duration-300 transform group-hover:translate-y-full ease">Descubrir Nuestros Protocolos</span>
+              <span className="relative invisible">Descubrir Nuestros Protocolos</span>
             </a>
           </motion.div>
         </div>
         
-        {/* Onda decorativa en la parte inferior */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full h-auto">
-            <path fill="#ffffff" fillOpacity="1" d="M0,224L60,213.3C120,203,240,181,360,181.3C480,181,600,203,720,213.3C840,224,960,224,1080,208C1200,192,1320,160,1380,144L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+        {/* Efecto de ondas en la parte inferior */}
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full h-auto translate-y-0.5">
+            <path fill="#ffffff" fillOpacity="1" d="M0,128L40,138.7C80,149,160,171,240,176C320,181,400,171,480,149.3C560,128,640,96,720,90.7C800,85,880,107,960,138.7C1040,171,1120,213,1200,213.3C1280,213,1360,171,1400,149.3L1440,128L1440,320L1400,320C1360,320,1280,320,1200,320C1120,320,1040,320,960,320C880,320,800,320,720,320C640,320,560,320,480,320C400,320,320,320,240,320C160,320,80,320,40,320L0,320Z"></path>
           </svg>
         </div>
       </div>
       
-      {/* Introducción con efectos 3D */}
-      <div className="py-20 px-4">
+      {/* Sección de introducción con efecto 3D */}
+      <div className="py-20 px-4 bg-white relative">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
@@ -518,8 +557,11 @@ const PaginaConservacion = () => {
               transition={{ duration: 0.8 }}
               className="mb-6"
             >
-              <span className="bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
-                Nuestro Compromiso
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-teal-400 to-blue-500 transform -skew-x-12 opacity-20 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
+                  Nuestro Compromiso
+                </span>
               </span>
             </motion.div>
             
@@ -531,8 +573,11 @@ const PaginaConservacion = () => {
               className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight"
             >
               Protegiendo el{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text">
-                Ecosistema Marino
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-teal-400 transform rotate-1 opacity-10 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text">
+                  Ecosistema Marino
+                </span>
               </span>{' '}
               de Paracas
             </motion.h2>
@@ -548,10 +593,14 @@ const PaginaConservacion = () => {
             </motion.p>
           </div>
         </div>
+        
+        {/* Elementos decorativos */}
+        <div className="absolute -top-10 -right-20 w-64 h-64 bg-gradient-to-br from-blue-200 to-teal-200 rounded-full opacity-20 blur-3xl"></div>
+        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-gradient-to-br from-purple-200 to-indigo-200 rounded-full opacity-20 blur-3xl"></div>
       </div>
       
-      {/* Sección de especies protegidas */}
-      <div id="especies" ref={especiesRef} className="py-16 px-4 bg-gradient-to-b from-white to-blue-50">
+      {/* Sección de especies protegidas con tabs mejorados */}
+      <div id="especies" ref={especiesRef} className="py-16 px-4 bg-gradient-to-b from-white to-blue-50 relative">
         <div className="container mx-auto">
           <motion.div
             variants={staggerContainer}
@@ -560,8 +609,11 @@ const PaginaConservacion = () => {
             className="text-center mb-16"
           >
             <motion.div variants={fadeInUp} className="mb-4">
-              <span className="bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
-                Fauna Marina Protegida
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-teal-400 transform -skew-x-12 opacity-20 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
+                  Fauna Marina Protegida
+                </span>
               </span>
             </motion.div>
             
@@ -574,8 +626,8 @@ const PaginaConservacion = () => {
             </motion.p>
           </motion.div>
 
-          {/* Tabs de selección de especies */}
-          <div className="mb-8 flex flex-wrap justify-center gap-4">
+          {/* Tabs de selección de especies con efecto de hover mejorado */}
+          <div className="mb-12 flex flex-wrap justify-center gap-6">
             {(Object.keys(especiesData) as EspecieKey[]).map((key) => (
               <motion.button
                 key={key}
@@ -584,19 +636,22 @@ const PaginaConservacion = () => {
                 whileTap={{ scale: 0.95 }}
                 className="relative overflow-hidden group"
               >
-                <div className={`px-8 py-4 rounded-full font-medium transition-all duration-300 shadow-md flex items-center gap-3 ${
+                <div className={`px-8 py-4 rounded-full font-medium transition-all duration-300 shadow-lg flex items-center gap-3 ${
                   tabActivo === key 
-                    ? `text-white ${especiesData[key].color}`
-                    : 'bg-white text-gray-700 hover:text-blue-600 border border-gray-200'
+                    ? `text-white ${especiesData[key].color} shadow-xl`
+                    : 'bg-white text-gray-700 hover:text-blue-600 border border-gray-200 hover:border-blue-200 hover:shadow-blue-100'
                 }`}
                 >
-                  <span className={`${tabActivo === key ? 'text-white' : 'text-blue-600'}`}>
+                  <span className={`${tabActivo === key ? 'text-white' : 'text-blue-600'} transition-all duration-300`}>
                     {especiesData[key].icono}
                   </span>
                   <span className="font-medium text-lg">{especiesData[key].titulo}</span>
+                  
+                  {/* Efecto de brillo al pasar el cursor */}
+                  <span className="absolute inset-0 w-full h-full bg-white/30 translate-x-full transform skew-x-12 group-hover:translate-x-[-180%] transition-all duration-700"></span>
                 </div>
                 
-                {/* Efecto de ondulación al hacer clic */}
+                {/* Efecto de selección */}
                 {tabActivo === key && (
                   <motion.div 
                     layoutId="activeTab"
@@ -607,7 +662,7 @@ const PaginaConservacion = () => {
             ))}
           </div>
 
-          {/* Contenido de cada tab */}
+          {/* Contenido de cada tab con animación mejorada */}
           <AnimatePresence mode="wait">
             <motion.div
               key={tabActivo}
@@ -622,8 +677,8 @@ const PaginaConservacion = () => {
             >
               <div className="grid grid-cols-1 lg:grid-cols-2">
                 <div className="p-10 md:p-12">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3 bg-white/20 rounded-xl text-white">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl text-white">
                       {especiesData[tabActivo].icono}
                     </div>
                     <h3 className="text-3xl md:text-4xl font-bold text-white">
@@ -634,10 +689,10 @@ const PaginaConservacion = () => {
                   <div className="text-white/90 space-y-6">
                     <p className="text-xl leading-relaxed">{especiesData[tabActivo].descripcion}</p>
                     
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mt-8">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mt-8 border border-white/20">
                       <h4 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                          <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                         {t('conservacion.protocolosTitulo', 'Protocolos de Protección')}
                       </h4>
@@ -648,21 +703,21 @@ const PaginaConservacion = () => {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 + 0.2 }}
-                            className="flex items-start gap-4"
+                            className="flex items-start gap-4 group"
                           >
-                            <div className="mt-1 bg-white/20 p-1 rounded-full">
+                            <div className="mt-1 bg-white/20 p-1 rounded-full group-hover:bg-white/40 transition-all duration-300">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </div>
-                            <span className="text-white/95 text-lg">{protocolo}</span>
+                            <span className="text-white/95 text-lg group-hover:text-white transition-all duration-300">{protocolo}</span>
                           </motion.li>
                         ))}
                       </ul>
                     </div>
                   </div>
                 </div>
-                <div className="h-80 lg:h-auto overflow-hidden">
+                <div className="relative h-80 lg:h-auto overflow-hidden">
                   <motion.div
                     initial={{ scale: 1.2, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
@@ -674,19 +729,30 @@ const PaginaConservacion = () => {
                       alt={especiesData[tabActivo].titulo} 
                       className="w-full h-full object-cover"
                     />
+                    
+                    {/* Overlay con efecto de viñeta para mejorar la visibilidad */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                    
+                    {/* Indicador de crédito de la imagen */}
+                    <div className="absolute bottom-4 right-4 text-white/80 text-xs backdrop-blur-sm bg-black/30 px-2 py-1 rounded-md">
+                      Foto: SERNANP
+                    </div>
                   </motion.div>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
+        
+        {/* Elemento decorativo */}
+        <div className="absolute -bottom-40 right-0 w-80 h-80 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-full opacity-20 blur-3xl"></div>
       </div>
       
-      {/* Protocolos de conservación */}
-          <div 
+      {/* Protocolos de conservación con tarjetas más atractivas */}
+      <div 
         ref={protocolosRef}
         id="protocolos"
-        className="py-20 px-4 bg-gradient-to-b from-blue-50 to-white"
+        className="py-20 px-4 bg-gradient-to-b from-blue-50 to-white relative"
       >
         <div className="container mx-auto">
           <motion.div 
@@ -696,8 +762,11 @@ const PaginaConservacion = () => {
             className="text-center mb-16"
           >
             <motion.div variants={fadeInUp} className="mb-4">
-              <span className="bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
-                Normativas SERNANP
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-teal-400 to-blue-400 transform -skew-x-12 opacity-20 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
+                  Normativas SERNANP
+                </span>
               </span>
             </motion.div>
             
@@ -726,11 +795,11 @@ const PaginaConservacion = () => {
                   y: -10,
                   transition: { duration: 0.3 }
                 }}
-                className="bg-white rounded-2xl shadow-xl overflow-hidden group"
+                className="group bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:border-blue-100 transition-all duration-500"
               >
-                <div className={`h-2 bg-gradient-to-r ${protocolo.color}`}></div>
+                <div className={`h-2 bg-gradient-to-r ${protocolo.color} transform origin-left transition-all duration-500 group-hover:h-3`}></div>
                 <div className="p-8">
-                  <div className="rounded-xl p-4 bg-gradient-to-r from-gray-50 to-blue-50 mb-6 w-16 h-16 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                  <div className="rounded-xl p-4 bg-gradient-to-r from-gray-50 to-blue-50 mb-6 w-16 h-16 flex items-center justify-center text-blue-600 group-hover:scale-110 group-hover:bg-gradient-to-r group-hover:from-blue-50 group-hover:to-cyan-50 transition-all duration-500">
                     {protocolo.icono}
                   </div>
                   
@@ -738,7 +807,7 @@ const PaginaConservacion = () => {
                     {protocolo.titulo}
                   </h4>
                   
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-gray-600 text-lg group-hover:text-gray-700 transition-colors duration-300">
                     {protocolo.descripcion}
                   </p>
                 </div>
@@ -746,12 +815,15 @@ const PaginaConservacion = () => {
             ))}
           </div>
         </div>
+        
+        {/* Elemento decorativo */}
+        <div className="absolute -top-40 -left-20 w-72 h-72 bg-gradient-to-br from-teal-200 to-green-200 rounded-full opacity-20 blur-3xl"></div>
       </div>
       
-      {/* Resultados tangibles */}
+      {/* Resultados tangibles con contador animado */}
       <div 
         ref={resultadosRef}
-        className="py-20 px-4 bg-gradient-to-b from-white to-blue-50"
+        className="py-20 px-4 bg-gradient-to-b from-white to-blue-50 relative"
       >
         <div className="container mx-auto">
           <motion.div 
@@ -761,8 +833,11 @@ const PaginaConservacion = () => {
             className="text-center mb-16"
           >
             <motion.div variants={fadeInUp} className="mb-4">
-              <span className="bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
-                Impacto Medible
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-teal-400 transform -skew-x-12 opacity-20 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
+                  Impacto Medible
+                </span>
               </span>
             </motion.div>
             
@@ -794,12 +869,12 @@ const PaginaConservacion = () => {
                     }
                   }
                 }}
-                className="relative bg-white rounded-2xl shadow-xl overflow-hidden"
+                className="group bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:border-blue-100 transition-all duration-500"
               >
-                <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${resultado.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                <div className={`h-2 bg-gradient-to-r ${resultado.color} transform origin-left transition-all duration-500 group-hover:h-3`}></div>
                 
                 <div className="p-8 relative z-10 flex flex-col items-center">
-                  <div className={`bg-gradient-to-br ${resultado.color} text-white w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg`}>
+                  <div className={`bg-gradient-to-br ${resultado.color} text-white w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     {resultado.icono}
                   </div>
                   
@@ -815,12 +890,12 @@ const PaginaConservacion = () => {
                     }}
                     className="relative flex justify-center mb-4"
                   >
-                    <h3 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text">
+                    <h3 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text group-hover:from-blue-700 group-hover:to-teal-700 transition-all duration-300">
                       {resultado.cifra}
                     </h3>
                   </motion.div>
                   
-                  <p className="text-gray-700 text-lg text-center">
+                  <p className="text-gray-700 text-lg text-center group-hover:text-gray-900 transition-colors duration-300">
                     {resultado.descripcion}
                   </p>
                 </div>
@@ -828,12 +903,15 @@ const PaginaConservacion = () => {
             ))}
           </div>
         </div>
+        
+        {/* Elemento decorativo */}
+        <div className="absolute -bottom-40 -left-20 w-80 h-80 bg-gradient-to-br from-purple-200 to-indigo-200 rounded-full opacity-20 blur-3xl"></div>
       </div>
       
-      {/* Tecnología para conservación */}
+      {/* Tecnología para conservación con efecto de profundidad */}
       <div 
-        ref={tecnologiaRef}
-        className="py-20 px-4 bg-gradient-to-b from-blue-50 to-white"
+              ref={tecnologiaRef}
+        className="py-20 px-4 bg-gradient-to-b from-blue-50 to-white relative"
       >
         <div className="container mx-auto">
           <motion.div 
@@ -843,8 +921,11 @@ const PaginaConservacion = () => {
             className="text-center mb-16"
           >
             <motion.div variants={fadeInUp} className="mb-4">
-              <span className="bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
-                Innovación
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-teal-400 to-blue-400 transform -skew-x-12 opacity-20 rounded-lg"></span>
+                <span className="relative bg-gradient-to-r from-teal-600 to-blue-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider">
+                  Innovación
+                </span>
               </span>
             </motion.div>
             
@@ -865,15 +946,33 @@ const PaginaConservacion = () => {
               transition={{ duration: 0.8 }}
               className="relative"
             >
-              <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl">
+              <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500 relative">
                 <img 
                   src="https://images.unsplash.com/photo-1587930508275-3a869c8f0ac3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
                   alt="Tecnología de conservación" 
                   className="w-full h-full object-cover"
                 />
+                
+                {/* Overlay para mejorar la visibilidad */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-blue-900/30"></div>
+                
+                {/* Decoración tipo HUD en la imagen */}
+                <div className="absolute top-4 left-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-white text-sm">
+                  Sistema GPS Activo
+                </div>
+                
+                <div className="absolute bottom-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-white text-sm">
+                  Monitoreo SERNANP
+                </div>
+                
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 border-2 border-white/20 rounded-full flex items-center justify-center">
+                    <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full"></div>
+                  </div>
+                </div>
               </div>
               
-              {/* Elemento decorativo */}
+              {/* Elementos decorativos de profundidad */}
               <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-br from-blue-500 to-teal-500 rounded-full opacity-20 blur-3xl"></div>
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full opacity-20 blur-3xl"></div>
             </motion.div>
@@ -890,18 +989,18 @@ const PaginaConservacion = () => {
                     delay: index * 0.15,
                     ease: "easeOut"
                   }}
-                  className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-blue-600"
+                  className="group bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100 hover:border-blue-100"
                 >
                   <div className="flex gap-5">
-                    <div className={`flex-shrink-0 p-4 bg-gradient-to-br ${tecnologia.color} text-white rounded-xl`}>
+                    <div className={`flex-shrink-0 p-4 bg-gradient-to-br ${tecnologia.color} text-white rounded-xl transform group-hover:scale-110 transition-transform duration-300`}>
                       {tecnologia.icono}
                     </div>
                     
                     <div>
-                      <h4 className="text-xl font-bold text-gray-800 mb-2">
+                      <h4 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors duration-300">
                         {tecnologia.titulo}
                       </h4>
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
                         {tecnologia.descripcion}
                       </p>
                     </div>
@@ -913,9 +1012,13 @@ const PaginaConservacion = () => {
         </div>
       </div>
       
-      {/* Sección de certificaciones */}
-      <div className="py-20 px-4 bg-blue-50">
-        <div className="container mx-auto">
+      {/* Sección de certificaciones con efecto de glassmorphism */}
+      <div className="py-20 px-4 bg-blue-50 relative overflow-hidden">
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute -top-60 -right-40 w-96 h-96 bg-gradient-to-br from-blue-300 to-teal-300 rounded-full opacity-20 blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-300 rounded-full opacity-20 blur-3xl"></div>
+        
+        <div className="container mx-auto relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -923,8 +1026,11 @@ const PaginaConservacion = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <span className="bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider mb-4 inline-block">
-              Reconocimiento
+            <span className="relative inline-block">
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-teal-400 transform -skew-x-12 opacity-20 rounded-lg"></span>
+              <span className="relative bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text text-lg font-semibold uppercase tracking-wider mb-4 inline-block">
+                Reconocimiento
+              </span>
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Certificaciones y Reconocimientos
@@ -954,29 +1060,45 @@ const PaginaConservacion = () => {
                   scale: 1.1,
                   rotate: [0, -2, 0, 2, 0]
                 }}
-                className="bg-white p-6 rounded-2xl shadow-lg"
+                className="group bg-white/70 backdrop-blur-lg p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/80"
               >
                 <img 
                   src={`https://via.placeholder.com/150x50?text=${logo}`} 
                   alt={`${logo} de Turismo Sostenible`} 
-                  className="h-16 grayscale hover:grayscale-0 transition-all duration-300" 
+                  className="h-16 grayscale group-hover:grayscale-0 transition-all duration-500" 
                 />
+                
+                {/* Elemento de brillo */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </div>
       
-      {/* Llamado a la acción */}
-      <div className="py-20 px-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
-        <div className="container mx-auto">
+      {/* Llamado a la acción con efecto de paralaje */}
+      <div className="relative py-20 px-4 overflow-hidden">
+        {/* Fondo con paralaje */}
+        <div className="absolute inset-0 z-0">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: "url('https://images.unsplash.com/photo-1540968221243-29f5d70540bf?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&q=80')",
+              transform: `translateY(${scrollY * 0.2}px)`,
+              opacity: 0.5
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-700/90 to-teal-700/90"></div>
+        </div>
+        
+        <div className="container mx-auto relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="text-4xl md:text-5xl font-bold mb-6"
+              className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-md"
             >
               Explora la Reserva de manera responsable
             </motion.h2>
@@ -986,7 +1108,7 @@ const PaginaConservacion = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl text-blue-100 mb-10"
+              className="text-xl text-blue-100 mb-10 drop-shadow-sm"
             >
               Descubre la belleza natural de las Islas Ballestas con un operador comprometido con la conservación y autorizado por SERNANP
             </motion.p>
@@ -999,9 +1121,11 @@ const PaginaConservacion = () => {
             >
               <a 
                 href="/tours" 
-                className="inline-block px-8 py-4 bg-white text-blue-600 font-medium rounded-full text-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300"
+                className="group relative inline-flex items-center justify-center px-10 py-5 overflow-hidden font-medium text-blue-600 transition-all duration-300 ease-out rounded-full shadow-2xl bg-white"
               >
-                Reservar un Tour Sostenible
+                <span className="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-gradient-to-r from-blue-600 to-teal-600 group-hover:translate-x-0 ease"></span>
+                <span className="absolute flex items-center justify-center w-full h-full text-blue-600 transition-all duration-300 transform group-hover:translate-x-full ease">Reservar un Tour Sostenible</span>
+                <span className="relative invisible">Reservar un Tour Sostenible</span>
               </a>
             </motion.div>
           </div>
