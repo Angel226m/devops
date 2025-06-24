@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Seccion from '../../componentes/layout/Seccion';
 
@@ -308,7 +308,7 @@ const PaginaConservacion = () => {
     }
   ];
 
-  // Animaciones avanzadas
+  // Animaciones (versión simplificada y compatible)
   const tabVariants = {
     hidden: { opacity: 0, x: 10 },
     visible: { 
@@ -316,7 +316,7 @@ const PaginaConservacion = () => {
       x: 0,
       transition: {
         duration: 0.5,
-        ease: [0.6, 0.05, -0.01, 0.9]
+        ease: "easeOut"
       }
     },
     exit: { 
@@ -345,7 +345,7 @@ const PaginaConservacion = () => {
       opacity: 1,
       transition: {
         duration: 0.8,
-        ease: [0.6, 0.05, -0.01, 0.9]
+        ease: "easeOut"
       }
     }
   };
@@ -363,7 +363,7 @@ const PaginaConservacion = () => {
 
   return (
     <div className="bg-white overflow-hidden">
-      {/* Cabecera con paralaje */}
+      {/* Cabecera */}
       <div 
         ref={headerRef}
         className="relative h-screen overflow-hidden flex items-center justify-center"
@@ -390,7 +390,7 @@ const PaginaConservacion = () => {
           transition={{ 
             repeat: Infinity, 
             duration: 20,
-            ease: "easeInOut" 
+            ease: "linear" 
           }}
           className="absolute right-[20%] top-[30%] opacity-30"
         >
@@ -413,7 +413,7 @@ const PaginaConservacion = () => {
           transition={{ 
             repeat: Infinity, 
             duration: 25,
-            ease: "easeInOut" 
+            ease: "linear" 
           }}
           className="absolute left-[15%] bottom-[25%] opacity-20"
         >
@@ -435,7 +435,7 @@ const PaginaConservacion = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
               duration: 1,
-              ease: [0.6, 0.05, -0.01, 0.9]
+              ease: "easeOut"
             }}
             className="mb-8"
           >
@@ -450,7 +450,7 @@ const PaginaConservacion = () => {
             transition={{ 
               duration: 1,
               delay: 0.2,
-              ease: [0.6, 0.05, -0.01, 0.9]
+              ease: "easeOut"
             }}
             className="text-5xl md:text-7xl font-bold mb-6 text-white drop-shadow-xl"
           >
@@ -465,7 +465,7 @@ const PaginaConservacion = () => {
             transition={{ 
               duration: 1,
               delay: 0.4,
-              ease: [0.6, 0.05, -0.01, 0.9]
+              ease: "easeOut"
             }}
             className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto leading-relaxed font-light drop-shadow-md"
           >
@@ -478,7 +478,7 @@ const PaginaConservacion = () => {
             transition={{ 
               duration: 1,
               delay: 0.6,
-              ease: [0.6, 0.05, -0.01, 0.9]
+              ease: "easeOut"
             }}
             className="mt-10"
           >
@@ -666,7 +666,7 @@ const PaginaConservacion = () => {
                   <motion.div
                     initial={{ scale: 1.2, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
-                    transition={{ duration: 1.2, ease: [0.6, 0.05, -0.01, 0.9] }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
                     className="h-full"
                   >
                     <img 
@@ -678,12 +678,12 @@ const PaginaConservacion = () => {
                 </div>
               </div>
             </motion.div>
-                  </AnimatePresence>
+          </AnimatePresence>
         </div>
       </div>
       
       {/* Protocolos de conservación */}
-      <div 
+          <div 
         ref={protocolosRef}
         id="protocolos"
         className="py-20 px-4 bg-gradient-to-b from-blue-50 to-white"
@@ -720,7 +720,7 @@ const PaginaConservacion = () => {
                 transition={{ 
                   duration: 0.7, 
                   delay: index * 0.1,
-                  ease: [0.6, 0.05, -0.01, 0.9]
+                  ease: "easeOut"
                 }}
                 whileHover={{ 
                   y: -10,
@@ -790,7 +790,7 @@ const PaginaConservacion = () => {
                     transition: {
                       duration: 0.8,
                       delay: index * 0.2,
-                      ease: [0.6, 0.05, -0.01, 0.9]
+                      ease: "easeOut"
                     }
                   }
                 }}
@@ -888,7 +888,7 @@ const PaginaConservacion = () => {
                   transition={{ 
                     duration: 0.8,
                     delay: index * 0.15,
-                    ease: [0.6, 0.05, -0.01, 0.9]
+                    ease: "easeOut"
                   }}
                   className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-blue-600"
                 >
@@ -952,15 +952,7 @@ const PaginaConservacion = () => {
                 }}
                 whileHover={{ 
                   scale: 1.1,
-                  filter: "grayscale(0)",
-                  rotate: [0, -2, 0, 2, 0],
-                  transition: { 
-                    duration: 0.5,
-                    rotate: {
-                      duration: 0.5,
-                      repeat: 0
-                    }
-                  }
+                  rotate: [0, -2, 0, 2, 0]
                 }}
                 className="bg-white p-6 rounded-2xl shadow-lg"
               >
