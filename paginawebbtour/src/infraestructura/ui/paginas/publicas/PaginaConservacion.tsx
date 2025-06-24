@@ -112,29 +112,27 @@ const PaginaConservacion = () => {
     }
   }, []);
 
-  // Iconos para especies - mejorados para coincidor mejor con animales
+  // Iconos para especies
   const iconos = {
     pinguino: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .342.03.502.09l1.245.39 7.252 2.268c.347.11.595.445.595.84 0 .38-.257.718-.62.833l-7.27 2.279-1.215.394c-.145.048-.302.079-.465.095l-.195.016H2.25a.75.75 0 000 1.5H3.8l.184-.013c.25-.02.493-.066.734-.142l1.21-.392 7.242-2.273c1.065-.336 1.826-1.374 1.826-2.557 0-1.174-.744-2.203-1.796-2.55L5.835 2.602l-1.208-.38a2.85 2.85 0 00-.84-.16H2.25a.75.75 0 000 1.5h1.386a.35.35 0 01.11.02l1.235.39-1.235.394a.35.35 0 01-.11.019H2.25a.75.75 0 000 1.5h1.386c.17 0 .342.03.502.09l1.245.39 7.252 2.268c.347.11.595.445.595.84 0 .38-.257.718-.62.833l-7.27 2.279-1.215.394c-.145.048-.302.079-.465.095l-.195.016H2.25a.75.75 0 000 1.5H3.8l.184-.013c.25-.02.493-.066.734-.142l1.21-.392 7.242-2.273c1.065-.336 1.826-1.374 1.826-2.557 0-1.174-.744-2.203-1.796-2.55L5.835 2.602l-1.208-.38a2.85 2.85 0 00-.84-.16H2.25a.75.75 0 000 1.5h1.386a.35.35 0 01.11.02l1.235.39-1.235.394a.35.35 0 01-.11.019H2.25a.75.75 0 000 1.5" />
+        <path d="M11.25 5.337c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.036 1.007-1.875 2.25-1.875S15 2.34 15 3.375c0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959 0 .332.278.598.61.578 1.91-.114 3.79-.342 5.632-.676a.75.75 0 01.878.645 49.17 49.17 0 01.376 5.452.657.657 0 01-.66.664c-.354 0-.675-.186-.958-.401a1.647 1.647 0 00-1.003-.349c-1.035 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401.31 0 .557.262.534.571a48.774 48.774 0 01-.595 4.845.75.75 0 01-.61.61c-1.82.317-3.673.533-5.555.642a.58.58 0 01-.611-.581c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.035-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959a.641.641 0 01-.658.643 49.118 49.118 0 01-4.708-.36.75.75 0 01-.645-.878c.293-1.614.504-3.257.629-4.924A.53.53 0 005.337 15c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.036 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.369 0 .713.128 1.003.349.283.215.604.401.959.401a.656.656 0 00.659-.663 47.703 47.703 0 00-.31-4.82.75.75 0 01.83-.832c1.343.155 2.703.254 4.077.294a.64.64 0 00.657-.642z" />
       </svg>
     ),
     lobo: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M19.006 3.705a.75.75 0 00-.512-1.41L6 6.838V3a.75.75 0 00-.75-.75h-1.5A.75.75 0 003 3v4.93l-1.006.365a.75.75 0 00.512 1.41l16.5-6z" />
-        <path fillRule="evenodd" d="M3.019 11.115L18 5.667V9.09l4.006 1.456a.75.75 0 11-.512 1.41l-.494-.18v8.475h.75a.75.75 0 010 1.5H2.25a.75.75 0 010-1.5H3v-9.129l.019-.006zM18 20.25v-9.565l1.5.545v9.02H18zm-9-6a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75h3a.75.75 0 00.75-.75V15a.75.75 0 00-.75-.75H9z" clipRule="evenodd" />
+        <path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
+        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clipRule="evenodd" />
       </svg>
     ),
     ballena: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 116 0h3a.75.75 0 00.75-.75V15z" />
-        <path d="M8.25 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0zM15.75 6.75a.75.75 0 00-.75.75v11.25c0 .087.015.17.042.248a3 3 0 005.958.464c.853-.175 1.522-.935 1.464-1.883a18.659 18.659 0 00-3.732-10.104 1.837 1.837 0 00-1.47-.725H15.75z" />
-        <path d="M19.5 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
+        <path d="M7.493 18.75c-.425 0-.82-.236-.975-.632A7.48 7.48 0 016 15.375c0-1.75.599-3.358 1.602-4.634.151-.192.373-.309.6-.397.473-.183.89-.514 1.212-.924a9.042 9.042 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75 2.25 2.25 0 012.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23h-.777zM2.331 10.977a11.969 11.969 0 00-.831 4.398 12 12 0 00.52 3.507c.26.85 1.084 1.368 1.973 1.368H4.9c.445 0 .72-.498.523-.898a8.963 8.963 0 01-.924-3.977c0-1.708.476-3.305 1.302-4.666.245-.403-.028-.959-.5-.959H4.25c-.832 0-1.612.453-1.918 1.227z" />
       </svg>
     ),
     ave: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path fillRule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z" clipRule="evenodd" />
+        <path d="M11.25 5.337c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.036 1.007-1.875 2.25-1.875S15 2.34 15 3.375c0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959 0 .332.278.598.61.578 1.91-.114 3.79-.342 5.632-.676a.75.75 0 01.878.645 49.17 49.17 0 01.376 5.452.657.657 0 01-.66.664c-.354 0-.675-.186-.958-.401a1.647 1.647 0 00-1.003-.349c-1.035 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401.31 0 .557.262.534.571a48.774 48.774 0 01-.595 4.845.75.75 0 01-.61.61c-1.82.317-3.673.533-5.555.642a.58.58 0 01-.611-.581c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.035-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959a.641.641 0 01-.658.643 49.118 49.118 0 01-4.708-.36.75.75 0 01-.645-.878c.293-1.614.504-3.257.629-4.924A.53.53 0 005.337 15c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.036 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.369 0 .713.128 1.003.349.283.215.604.401.959.401a.656.656 0 00.659-.663 47.703 47.703 0 00-.31-4.82.75.75 0 01.83-.832c1.343.155 2.703.254 4.077.294a.64.64 0 00.657-.642z" />
       </svg>
     )
   };
@@ -199,7 +197,7 @@ const PaginaConservacion = () => {
     }
   };
 
-  // Protocolos generales de conservación con iconos más relacionados
+  // Protocolos generales de conservación
   const protocolos: ProtocoloData[] = [
     {
       titulo: 'Horarios Regulados',
@@ -276,8 +274,8 @@ const PaginaConservacion = () => {
       color: 'from-blue-600 to-indigo-800'
     },
     {
-      titulo: 'Desarrollo Económico',
-      descripcion: 'Fortalecemos la economía local a través de alianzas con proveedores de la zona, incluyendo restaurantes, hoteles y artesanos que forman parte de la experiencia turística.',
+      titulo: 'Alianzas con Comercios Locales',
+      descripcion: 'Colaboramos con restaurantes, hospedajes y artesanos de Paracas para ofrecer a nuestros visitantes una experiencia turística completa que beneficia directamente a la economía local.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
@@ -296,8 +294,8 @@ const PaginaConservacion = () => {
       color: 'from-amber-600 to-orange-800'
     },
     {
-      titulo: 'Programas Comunitarios',
-      descripcion: 'Destinamos parte de nuestros ingresos a proyectos comunitarios de limpieza de playas, mejora de infraestructura local y programas educativos sobre conservación marina.',
+      titulo: 'Apoyo a Comerciantes Locales',
+      descripcion: 'Promovemos la venta de artesanías y productos locales como parte de la experiencia turística, generando ingresos directos para artesanos y pequeños comerciantes de la región.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
@@ -464,7 +462,7 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Sección de introducción */}
-      <div className="py-12 px-4">
+      <div className="py-8 px-4">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
@@ -474,10 +472,7 @@ const PaginaConservacion = () => {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight"
             >
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-teal-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Protegiendo el Ecosistema Marino de Paracas</span>
-              </span>
+              Protegiendo el Ecosistema Marino de Paracas
             </motion.h2>
             
             <motion.p
@@ -494,19 +489,16 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Sección de especies protegidas */}
-      <div id="especies" ref={especiesRef} className="py-12 px-4 bg-gradient-to-b from-white to-blue-50">
+      <div id="especies" ref={especiesRef} className="py-8 px-4 bg-gradient-to-b from-white to-blue-50">
         <div className="container mx-auto">
           <motion.div
             variants={staggerContainer}
             initial="hidden"
             animate={isEspeciesInView ? "visible" : "hidden"}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-teal-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Protocolos Específicos por Especie</span>
-              </span>
+              Protocolos Específicos por Especie
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -555,37 +547,37 @@ const PaginaConservacion = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`bg-gradient-to-br ${especiesData[tabActivo].gradient} rounded-3xl overflow-hidden shadow-xl mb-12`}
+              className={`bg-gradient-to-br ${especiesData[tabActivo].gradient} rounded-3xl overflow-hidden shadow-xl mb-8`}
             >
               <div className="grid grid-cols-1 lg:grid-cols-2">
-                <div className="p-8 md:p-10">
+                <div className="p-6 md:p-8">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 bg-white/20 rounded-xl text-white">
                       {especiesData[tabActivo].icono}
                     </div>
-                    <h3 className="text-3xl font-bold text-white">
+                    <h3 className="text-2xl md:text-3xl font-bold text-white">
                       {especiesData[tabActivo].titulo}
                     </h3>
                   </div>
                   
-                  <div className="text-white space-y-6">
+                  <div className="text-white space-y-4">
                     <p className="text-xl leading-relaxed">{especiesData[tabActivo].descripcion}</p>
                     
-                    <div className="bg-white/10 rounded-2xl p-8 mt-6 border border-white/20">
-                      <h4 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
+                    <div className="bg-white/10 rounded-2xl p-6 mt-4 border border-white/20">
+                      <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                         {t('conservacion.protocolosTitulo', 'Protocolos de Protección')}
                       </h4>
-                      <ul className="space-y-4">
+                      <ul className="space-y-3">
                         {especiesData[tabActivo].protocolos.map((protocolo, index) => (
                           <motion.li 
                             key={index}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 + 0.2 }}
-                            className="flex items-start gap-4"
+                            className="flex items-start gap-3"
                           >
                             <div className="mt-1 bg-white/20 p-1 rounded-full">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
@@ -599,7 +591,7 @@ const PaginaConservacion = () => {
                     </div>
                   </div>
                 </div>
-                <div className="h-80 lg:h-auto overflow-hidden">
+                <div className="h-72 lg:h-auto overflow-hidden">
                   <img 
                     src={especiesData[tabActivo].imagen} 
                     alt={especiesData[tabActivo].titulo} 
@@ -616,20 +608,17 @@ const PaginaConservacion = () => {
       <div 
         ref={protocolosRef}
         id="protocolos"
-        className="py-12 px-4 bg-white"
+        className="py-8 px-4 bg-white"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isProtocolosInView ? "visible" : "hidden"}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-green-200 to-blue-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Control de Visitas y Protección del Ecosistema</span>
-              </span>
+              Control de Visitas y Protección del Ecosistema
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -671,20 +660,17 @@ const PaginaConservacion = () => {
       {/* Resultados tangibles */}
       <div 
         ref={resultadosRef}
-        className="py-12 px-4 bg-blue-50"
+        className="py-8 px-4 bg-blue-50"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isResultadosInView ? "visible" : "hidden"}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Resultados de Nuestras Medidas de Protección</span>
-              </span>
+              Resultados de Nuestras Medidas de Protección
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -726,20 +712,17 @@ const PaginaConservacion = () => {
       {/* Beneficios para la comunidad */}
       <div 
         ref={beneficiosRef}
-        className="py-12 px-4 bg-white"
+        className="py-8 px-4 bg-white"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isBeneficiosInView ? "visible" : "hidden"}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-amber-200 to-orange-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Beneficios para la Comunidad Local</span>
-              </span>
+              Beneficios para la Comunidad Local
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -747,9 +730,9 @@ const PaginaConservacion = () => {
             </motion.p>
           </motion.div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {beneficios.map((beneficio, index) => (
-                           <motion.div 
+              <motion.div 
                 key={index}
                 initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -763,7 +746,7 @@ const PaginaConservacion = () => {
                   </div>
                   
                   <div>
-                    <h4 className="text-xl font-bold text-gray-800 mb-2">
+                                     <h4 className="text-xl font-bold text-gray-800 mb-2">
                       {beneficio.titulo}
                     </h4>
                     <p className="text-gray-600">
@@ -778,20 +761,17 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Certificaciones y reconocimientos */}
-      <div className="py-12 px-4 bg-blue-50">
+      <div className="py-8 px-4 bg-blue-50">
         <div className="container mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-indigo-200 to-blue-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
-                <span className="relative">Certificaciones y Alianzas</span>
-              </span>
+              Certificaciones y Alianzas
             </h2>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto">
               Trabajamos en colaboración con entidades comprometidas con la conservación del medio ambiente y el desarrollo sostenible de la región.
@@ -879,7 +859,7 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Llamado a la acción */}
-      <div className="py-16 px-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
+      <div className="py-12 px-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
@@ -910,7 +890,7 @@ const PaginaConservacion = () => {
             >
               <a 
                 href="/tours" 
-                className="inline-block px-8 py-4 bg-white text-blue-600 font-medium rounded-full text-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300"
+                className="inline-block px-8 py-4 bg-white text-blue-600 font-medium rounded-full text-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300 hover:-translate-y-1"
               >
                 Reservar un Tour Sostenible
               </a>
