@@ -176,7 +176,53 @@ contacto: {
   masPreguntas: '¿Tienes más preguntas?',
   verMasPreguntas: 'Ver todas las preguntas frecuentes'
 },
+ 
   
+  conservacion: {
+    titulo: 'Conservación y Responsabilidad Social',
+    subtitulo: 'En Ocean Tours, creemos que el turismo responsable debe contribuir a la preservación de los ecosistemas marinos y el bienestar de las comunidades locales.',
+    
+    proteccionTitulo: 'Protección de Especies Marinas',
+    proteccionDescripcion: 'Nuestros tours están diseñados para observar la vida marina sin perturbar su hábitat natural',
+    
+    iniciativasTitulo: 'Nuestras Iniciativas de Conservación',
+    iniciativa1Titulo: 'Programa de Limpieza de Playas',
+    iniciativa1Descripcion: 'Organizamos limpiezas mensuales de playas con la participación de voluntarios y nuestro personal, recolectando residuos plásticos y otros desechos.',
+    iniciativa2Titulo: 'Educación Ambiental',
+    iniciativa2Descripcion: 'Durante nuestros tours, educamos a los visitantes sobre la importancia de la conservación marina y cómo pueden contribuir a proteger estos ecosistemas frágiles.',
+    iniciativa3Titulo: 'Apoyo a Investigaciones',
+    iniciativa3Descripcion: 'Colaboramos con instituciones locales en estudios de monitoreo de poblaciones de aves marinas y mamíferos marinos como lobos marinos y delfines.',
+    saberMas: 'Saber más sobre nuestras iniciativas',
+    
+    impactoTitulo: 'Impacto Social',
+    impactoSubtitulo: 'Trabajamos estrechamente con las comunidades locales para asegurar que el turismo beneficie directamente a los habitantes de Paracas.',
+    
+    empleoTitulo: 'Empleo Local',
+    empleoDescripcion: 'El 90% de nuestro personal son residentes locales. Brindamos capacitación constante y oportunidades de desarrollo profesional.',
+    
+    educacionTitulo: 'Educación Comunitaria',
+    educacionDescripcion: 'Ofrecemos programas educativos gratuitos para niños locales sobre conservación marina y turismo sostenible.',
+    
+    artesanosTitulo: 'Apoyo a Artesanos',
+    artesanosDescripcion: 'Promovemos el trabajo de artesanos locales, vendiendo sus productos en nuestras tiendas y brindando espacios para mostrar su arte.',
+    
+    especiesTitulo: 'Especies que Protegemos',
+    pingüinos: 'Pingüinos de Humboldt',
+    pingüinosDesc: 'Especie vulnerable que habita en la Reserva Nacional de Paracas',
+    lobos: 'Lobos Marinos',
+    lobosDesc: 'Colonias importantes en las Islas Ballestas que monitoreamos constantemente',
+    delfines: 'Delfines y Ballenas',
+    delfinesDesc: 'Respetamos estrictas normas de observación para no perturbar su comportamiento natural',
+    
+    uneteTitulo: 'Únete a Nuestros Esfuerzos de Conservación',
+    uneteDescripcion: 'Al elegir Ocean Tours, estás contribuyendo directamente a nuestras iniciativas de conservación. También puedes participar activamente en nuestros programas de voluntariado.',
+    contactar: 'Contactar para Voluntariado',
+    explorarTours: 'Explorar Tours Sostenibles',
+    
+    certificacionesTitulo: 'Nuestras Certificaciones y Alianzas'
+  },
+  
+ 
 
 };
 

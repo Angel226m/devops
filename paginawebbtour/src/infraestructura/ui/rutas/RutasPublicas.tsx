@@ -64,7 +64,7 @@ export default RutasPublicas;*/
 import { Routes, Route } from 'react-router-dom';
 import { lazy } from 'react';
 import RutasPrivadas from './RutasPrivadas';
-
+const PaginaConservacion = lazy(() => import('../paginas/publicas/PaginaConservacion'));
 // Importaciones lazy loading para páginas públicas
 const PaginaInicio = lazy(() => import('../paginas/publicas/PaginaInicio'));
 const PaginaTours = lazy(() => import('../paginas/publicas/PaginaTours'));
@@ -99,6 +99,8 @@ const RutasPublicas = () => {
       <Route path="sobre-nosotros" element={<PaginaSobreNosotros />} />
       <Route path="contacto" element={<PaginaContacto />} />
       <Route path="preguntas-frecuentes" element={<PaginaPreguntas />} />
+       <Route path="/conservacion" element={<PaginaConservacion />} />
+
       <Route path="ingresar" element={<PaginaIngreso />} />
       <Route path="registrarse" element={<PaginaRegistro />} />
       <Route path="recuperar-contrasena" element={<PaginaRecuperacion />} />

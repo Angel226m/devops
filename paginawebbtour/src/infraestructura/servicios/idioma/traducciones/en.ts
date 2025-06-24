@@ -176,7 +176,49 @@ contacto: {
   masPreguntas: 'Do you have more questions?',
   verMasPreguntas: 'View all frequently asked questions'
 },
-
+ conservacion: {
+    titulo: 'Conservation and Social Responsibility',
+    subtitulo: 'At Ocean Tours, we believe that responsible tourism should contribute to the preservation of marine ecosystems and the well-being of local communities.',
+    
+    proteccionTitulo: 'Protection of Marine Species',
+    proteccionDescripcion: 'Our tours are designed to observe marine life without disturbing their natural habitat',
+    
+    iniciativasTitulo: 'Our Conservation Initiatives',
+    iniciativa1Titulo: 'Beach Cleanup Program',
+    iniciativa1Descripcion: 'We organize monthly beach cleanups with the participation of volunteers and our staff, collecting plastic waste and other debris.',
+    iniciativa2Titulo: 'Environmental Education',
+    iniciativa2Descripcion: 'During our tours, we educate visitors about the importance of marine conservation and how they can contribute to protecting these fragile ecosystems.',
+    iniciativa3Titulo: 'Research Support',
+    iniciativa3Descripcion: 'We collaborate with local institutions in monitoring studies of seabird populations and marine mammals such as sea lions and dolphins.',
+    saberMas: 'Learn more about our initiatives',
+    
+    impactoTitulo: 'Social Impact',
+    impactoSubtitulo: 'We work closely with local communities to ensure that tourism directly benefits the residents of Paracas.',
+    
+    empleoTitulo: 'Local Employment',
+    empleoDescripcion: '90% of our staff are local residents. We provide ongoing training and professional development opportunities.',
+    
+    educacionTitulo: 'Community Education',
+    educacionDescripcion: 'We offer free educational programs for local children on marine conservation and sustainable tourism.',
+    
+    artesanosTitulo: 'Support for Artisans',
+    artesanosDescripcion: 'We promote the work of local artisans, selling their products in our stores and providing spaces to showcase their art.',
+    
+    especiesTitulo: 'Species We Protect',
+    pingüinos: 'Humboldt Penguins',
+    pingüinosDesc: 'Vulnerable species that inhabits the Paracas National Reserve',
+    lobos: 'Sea Lions',
+    lobosDesc: 'Important colonies in the Ballestas Islands that we constantly monitor',
+    delfines: 'Dolphins and Whales',
+    delfinesDesc: 'We respect strict observation guidelines to not disturb their natural behavior',
+    
+    uneteTitulo: 'Join Our Conservation Efforts',
+    uneteDescripcion: 'By choosing Ocean Tours, you are directly contributing to our conservation initiatives. You can also actively participate in our volunteer programs.',
+    contactar: 'Contact for Volunteering',
+    explorarTours: 'Explore Sustainable Tours',
+    
+    certificacionesTitulo: 'Our Certifications and Partnerships'
+  },
 };
 
 export default en;
