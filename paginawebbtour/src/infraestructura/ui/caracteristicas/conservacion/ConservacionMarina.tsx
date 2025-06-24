@@ -38,155 +38,159 @@ const ConservacionMarina: React.FC = () => {
           className="text-center mb-12"
         >
           <motion.h2 variants={itemVariants} className="text-3xl md:text-4xl font-bold text-ocean-600 dark:text-ocean-300 mb-4">
-            {t('conservacion.titulo', 'Conservación y Responsabilidad Marina')}
+            {t('conservacion.titulo', 'Conservación y Protección Marina')}
           </motion.h2>
           <motion.p variants={itemVariants} className="text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            {t('conservacion.subtitulo', 'En Ocean Tours, implementamos medidas estrictas para proteger el ecosistema marino de Paracas y las Islas Ballestas, garantizando que el turismo sea sostenible y respetuoso con la naturaleza.')}
+            {t('conservacion.subtitulo', 'En Ocean Tours, implementamos protocolos rigurosos para preservar el ecosistema marino de Paracas y las Islas Ballestas, controlando el impacto de nuestras visitas y protegiendo la fauna local.')}
           </motion.p>
         </motion.div>
 
-        {/* Sección de control de aforo y preservación */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-          <motion.div 
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="relative"
-          >
-            <div className="rounded-2xl overflow-hidden shadow-xl h-full">
-              <img 
-                src="https://images.unsplash.com/photo-1582967788606-a171c1080cb0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
-                alt="Conservación marina" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col justify-end p-6 text-white">
-                <h3 className="text-2xl font-bold mb-2">{t('conservacion.proteccionTitulo', 'Control de Aforo y Visitas')}</h3>
-                <p className="text-white/90">{t('conservacion.proteccionDescripcion', 'Limitamos el número de embarcaciones y visitantes diarios a las Islas Ballestas para minimizar el impacto en el ecosistema y la fauna marina.')}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="bg-white dark:bg-blue-800 rounded-2xl shadow-xl p-8 h-full flex flex-col">
-              <h3 className="text-2xl font-bold text-ocean-600 dark:text-ocean-300 mb-4">
-                {t('conservacion.iniciativasTitulo', 'Nuestras Medidas de Conservación')}
-              </h3>
-              
-              <div className="space-y-4 flex-grow">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">{t('conservacion.iniciativa1Titulo', 'Control Estricto de Embarcaciones')}</h4>
-                    <p className="text-gray-600 dark:text-gray-300">{t('conservacion.iniciativa1Descripcion', 'Operamos con un número limitado de embarcaciones por día y con horarios escalonados para reducir la presencia humana simultánea en áreas sensibles del ecosistema marino.')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">{t('conservacion.iniciativa2Titulo', 'Navegación Responsable')}</h4>
-                    <p className="text-gray-600 dark:text-gray-300">{t('conservacion.iniciativa2Descripcion', 'Nuestras embarcaciones utilizan motores de baja emisión y siguen rutas preestablecidas para minimizar la perturbación de hábitats marinos y el ruido que puede afectar a la fauna local.')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">{t('conservacion.iniciativa3Titulo', 'Cero Residuos')}</h4>
-                    <p className="text-gray-600 dark:text-gray-300">{t('conservacion.iniciativa3Descripcion', 'Implementamos una política estricta de "no dejar rastro" en todas nuestras embarcaciones, con sistemas de gestión de residuos que garantizan que nada se arroje al mar durante los recorridos.')}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <a href="#protocolos" className="inline-flex items-center text-ocean-600 dark:text-ocean-300 hover:text-ocean-700 dark:hover:text-ocean-200 font-medium">
-                  {t('conservacion.saberMas', 'Conocer más sobre nuestros protocolos de conservación')}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Sección de especies protegidas - MEJORADA */}
+        {/* Sección de especies protegidas - DESTACADA */}
         <motion.div 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="bg-ocean-600 dark:bg-ocean-800 rounded-2xl overflow-hidden shadow-2xl mb-16"
+          className="mb-16"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            <div className="p-8 lg:p-12 flex flex-col justify-center">
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
-                {t('conservacion.especiesTitulo', 'Protegiendo la Fauna Marina')}
-              </h3>
-              <div className="space-y-6 text-white">
-                <div className="flex items-start">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-cyan-200">{t('conservacion.pingüinos', 'Pingüinos de Humboldt')}</h4>
-                    <p className="text-white/90">{t('conservacion.pingüinosDesc', 'Mantenemos una distancia mínima de 50 metros de las colonias de pingüinos para no alterar sus patrones de alimentación y reproducción. Nuestras embarcaciones reducen la velocidad al aproximarse a sus zonas de anidación.')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-cyan-200">{t('conservacion.lobos', 'Lobos Marinos Sudamericanos')}</h4>
-                    <p className="text-white/90">{t('conservacion.lobosDesc', 'Evitamos acercarnos a menos de 30 metros de las colonias de lobos marinos y regulamos el tiempo de observación a máximo 15 minutos por grupo para minimizar el estrés. Prohibimos cualquier intento de alimentación o interacción directa con estos animales.')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-cyan-200">{t('conservacion.delfines', 'Delfines y Aves Marinas')}</h4>
-                    <p className="text-white/90">{t('conservacion.delfinesDesc', 'Nunca perseguimos a los delfines cuando aparecen cerca de nuestras embarcaciones, permitiendo que sean ellos quienes decidan el nivel de interacción. Mantenemos motores en neutro cuando estamos en presencia de aves marinas que están pescando o descansando en el agua.')}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <motion.div 
+              initial={{ x: -50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="bg-gradient-to-br from-blue-600 to-ocean-600 dark:from-blue-800 dark:to-ocean-800 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-10">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                  {t('conservacion.pingüinosTitulo', 'Pingüinos de Humboldt')}
+                </h3>
+                <div className="text-white/90 space-y-4">
+                  <p>{t('conservacion.pingüinosDesc1', 'El pingüino de Humboldt (Spheniscus humboldti) es una especie vulnerable que habita en las costas de Perú y Chile. En la Reserva Nacional de Paracas, alberga importantes colonias de anidación que protegemos rigurosamente.')}</p>
+                  
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <h4 className="text-xl font-semibold text-cyan-200 mb-2">{t('conservacion.pingüinosProtocoloTitulo', 'Protocolos de Protección:')}</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>{t('conservacion.pingüinosProtocolo1', 'Mantenemos una distancia mínima de 50 metros de las colonias')}</li>
+                      <li>{t('conservacion.pingüinosProtocolo2', 'Reducimos la velocidad y el ruido de motores al acercarnos a sus zonas')}</li>
+                      <li>{t('conservacion.pingüinosProtocolo3', 'Evitamos visitas durante períodos críticos de reproducción')}</li>
+                      <li>{t('conservacion.pingüinosProtocolo4', 'Monitoreamos constantemente las poblaciones para detectar cambios')}</li>
+                    </ul>
                   </div>
                 </div>
               </div>
-            </div>
+              <div className="h-64 md:h-80">
+                <img 
+                  src="https://images.unsplash.com/photo-1563515020427-bd3037558d99?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
+                  alt="Pingüinos de Humboldt" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
             
-            <div className="lg:h-auto">
-              <img 
-                src="https://images.unsplash.com/photo-1564452217659-5ea8fc34fe9b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
-                alt="Fauna marina protegida" 
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <motion.div 
+              initial={{ x: 50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="bg-gradient-to-br from-ocean-600 to-cyan-600 dark:from-ocean-800 dark:to-cyan-800 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-10">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                  {t('conservacion.lobosTitulo', 'Lobos Marinos Sudamericanos')}
+                </h3>
+                <div className="text-white/90 space-y-4">
+                  <p>{t('conservacion.lobosDesc1', 'Los lobos marinos (Otaria flavescens) forman grandes colonias en las Islas Ballestas. Estas colonias son vitales para el ecosistema marino y constituyen uno de los principales atractivos de la reserva.')}</p>
+                  
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <h4 className="text-xl font-semibold text-cyan-200 mb-2">{t('conservacion.lobosProtocoloTitulo', 'Protocolos de Protección:')}</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>{t('conservacion.lobosProtocolo1', 'Mantenemos una distancia mínima de 30 metros de las colonias')}</li>
+                      <li>{t('conservacion.lobosProtocolo2', 'Limitamos el tiempo de observación a un máximo de 15 minutos por grupo')}</li>
+                      <li>{t('conservacion.lobosProtocolo3', 'Prohibimos cualquier intento de alimentación o interacción directa')}</li>
+                      <li>{t('conservacion.lobosProtocolo4', 'Evitamos interrumpir sus comportamientos naturales de reproducción y descanso')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="h-64 md:h-80">
+                <img 
+                  src="https://images.unsplash.com/photo-1557127275-f8b5ba93e24e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
+                  alt="Lobos Marinos Sudamericanos" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
+            <motion.div 
+              initial={{ x: -50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="bg-gradient-to-br from-cyan-600 to-teal-600 dark:from-cyan-800 dark:to-teal-800 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-10">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                  {t('conservacion.delfinesTitulo', 'Delfines y Cetáceos')}
+                </h3>
+                <div className="text-white/90 space-y-4">
+                  <p>{t('conservacion.delfinesDesc1', 'Varias especies de delfines, incluyendo el delfín nariz de botella (Tursiops truncatus) y el delfín oscuro (Lagenorhynchus obscurus), habitan las aguas de la Reserva Nacional de Paracas, así como ballenas en temporadas migratorias.')}</p>
+                  
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <h4 className="text-xl font-semibold text-cyan-200 mb-2">{t('conservacion.delfinesProtocoloTitulo', 'Protocolos de Protección:')}</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>{t('conservacion.delfinesProtocolo1', 'Nunca perseguimos a los delfines, permitiendo que ellos decidan el nivel de interacción')}</li>
+                      <li>{t('conservacion.delfinesProtocolo2', 'Mantenemos velocidad constante y predecible al avistarlos')}</li>
+                      <li>{t('conservacion.delfinesProtocolo3', 'Limitamos el tiempo de observación a 20 minutos por grupo')}</li>
+                      <li>{t('conservacion.delfinesProtocolo4', 'Evitamos acercarnos a madres con crías y grupos en alimentación')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="h-64 md:h-80">
+                <img 
+                  src="https://images.unsplash.com/photo-1607153333879-c174d265f1d2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
+                  alt="Delfines" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ x: 50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="bg-gradient-to-br from-teal-600 to-green-600 dark:from-teal-800 dark:to-green-800 rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-10">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                  {t('conservacion.avesTitulo', 'Aves Marinas')}
+                </h3>
+                <div className="text-white/90 space-y-4">
+                  <p>{t('conservacion.avesDesc1', 'Las Islas Ballestas albergan una increíble diversidad de aves marinas, incluyendo pelícanos peruanos, cormoranes, piqueros, gaviotas y el famoso guanay. Estas aves son fundamentales para el ecosistema y la producción de guano.')}</p>
+                  
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <h4 className="text-xl font-semibold text-cyan-200 mb-2">{t('conservacion.avesProtocoloTitulo', 'Protocolos de Protección:')}</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>{t('conservacion.avesProtocolo1', 'Mantenemos motores en neutro cuando estamos cerca de aves que pescan o descansan')}</li>
+                      <li>{t('conservacion.avesProtocolo2', 'Evitamos acercarnos a acantilados de anidación durante la temporada reproductiva')}</li>
+                      <li>{t('conservacion.avesProtocolo3', 'Prohibimos cualquier ruido fuerte que pueda causar abandono de nidos')}</li>
+                      <li>{t('conservacion.avesProtocolo4', 'Nunca circunnavegamos completamente las islas para evitar ahuyentar a las aves')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="h-64 md:h-80">
+                <img 
+                  src="https://images.unsplash.com/photo-1621856342476-d7ac978acb63?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
+                  alt="Aves Marinas" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </motion.div>
           </div>
         </motion.div>
 
@@ -201,10 +205,10 @@ const ConservacionMarina: React.FC = () => {
         >
           <div className="text-center mb-10">
             <h3 className="text-2xl md:text-3xl font-bold text-ocean-600 dark:text-ocean-300 mb-4">
-              {t('conservacion.protocolosTitulo', 'Protocolos Estrictos de Conservación')}
+              {t('conservacion.protocolosTitulo', 'Control de Visitas y Protección del Ecosistema')}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              {t('conservacion.protocolosDesc', 'Implementamos reglas claras y estrictas para todas nuestras operaciones con el fin de proteger el ecosistema marino.')}
+              {t('conservacion.protocolosDesc', 'Implementamos estrictas medidas para regular el acceso a zonas sensibles y minimizar nuestro impacto en el ecosistema marino de Paracas.')}
             </p>
           </div>
           
@@ -222,10 +226,10 @@ const ConservacionMarina: React.FC = () => {
                 </svg>
               </div>
               <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('conservacion.protocolo1Titulo', 'Horarios Limitados')}
+                {t('conservacion.protocolo1Titulo', 'Horarios Controlados')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo1Desc', 'Solo operamos tours en horarios específicos (7:00-10:00 AM y 2:00-4:00 PM) para minimizar la perturbación a los ciclos naturales de alimentación y descanso de la fauna marina.')}
+                {t('conservacion.protocolo1Desc', 'Operamos exclusivamente en horarios específicos (7:00-10:00 AM y 2:00-4:00 PM) respetando los ciclos naturales de alimentación y descanso de la fauna. Esto reduce la presión sobre el ecosistema al limitar la presencia humana a periodos determinados.')}
               </p>
             </motion.div>
             
@@ -242,10 +246,10 @@ const ConservacionMarina: React.FC = () => {
                 </svg>
               </div>
               <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('conservacion.protocolo2Titulo', 'Límite de Visitantes')}
+                {t('conservacion.protocolo2Titulo', 'Control de Aforo')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo2Desc', 'Cada embarcación tiene un límite máximo de 25 pasajeros, y controlamos el número total de visitantes diarios a las islas para evitar la saturación del ecosistema.')}
+                {t('conservacion.protocolo2Desc', 'Limitamos cada embarcación a un máximo de 25 visitantes y controlamos el número total de embarcaciones diarias para evitar la saturación. Este sistema de cuotas permite que el ecosistema se recupere entre visitas y reduce el estrés sobre la fauna.')}
               </p>
             </motion.div>
             
@@ -266,7 +270,7 @@ const ConservacionMarina: React.FC = () => {
                 {t('conservacion.protocolo3Titulo', 'Zonas Restringidas')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo3Desc', 'Respetamos estrictamente las zonas de exclusión establecidas por las autoridades ambientales, especialmente durante las temporadas de reproducción de pingüinos y lobos marinos.')}
+                {t('conservacion.protocolo3Desc', 'Respetamos las zonas de exclusión establecidas por las autoridades ambientales y creamos perímetros adicionales durante temporadas críticas. Las zonas sensibles como áreas de reproducción y anidación están completamente vetadas para las embarcaciones turísticas.')}
               </p>
             </motion.div>
             
@@ -283,10 +287,10 @@ const ConservacionMarina: React.FC = () => {
                 </svg>
               </div>
               <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('conservacion.protocolo4Titulo', 'Capacitación Obligatoria')}
+                {t('conservacion.protocolo4Titulo', 'Navegación Controlada')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo4Desc', 'Todos nuestros capitanes y tripulación reciben capacitación obligatoria en protocolos de conservación marina y técnicas de navegación de bajo impacto antes de operar nuestras embarcaciones.')}
+                {t('conservacion.protocolo4Desc', 'Nuestras embarcaciones siguen rutas predefinidas con velocidad controlada y limitada. Utilizamos motores de baja emisión sonora y mantenemos una velocidad máxima de 8 nudos en la reserva para minimizar el impacto acústico y la contaminación.')}
               </p>
             </motion.div>
             
@@ -303,10 +307,10 @@ const ConservacionMarina: React.FC = () => {
                 </svg>
               </div>
               <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('conservacion.protocolo5Titulo', 'Grupos Pequeños')}
+                {t('conservacion.protocolo5Titulo', 'Visitantes por Guía')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo5Desc', 'Organizamos grupos pequeños con un máximo de 12 visitantes por guía para garantizar un mejor control y minimizar el impacto acústico y visual sobre la fauna.')}
+                {t('conservacion.protocolo5Desc', 'Mantenemos un máximo de 12 visitantes por guía para garantizar mejor control y monitoreo. Esta proporción permite asegurar que todos los visitantes respeten las normas de observación y distancias mínimas, reduciendo el riesgo de comportamientos inapropiados.')}
               </p>
             </motion.div>
             
@@ -323,10 +327,10 @@ const ConservacionMarina: React.FC = () => {
                 </svg>
               </div>
               <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('conservacion.protocolo6Titulo', 'Monitoreo Constante')}
+                {t('conservacion.protocolo6Titulo', 'Cero Residuos')}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {t('conservacion.protocolo6Desc', 'Registramos diariamente las condiciones del ecosistema y el comportamiento de la fauna para detectar cualquier cambio que pudiera indicar un impacto negativo del turismo y ajustar nuestras prácticas en consecuencia.')}
+                {t('conservacion.protocolo6Desc', 'Implementamos una política estricta de "no dejar rastro" en todas nuestras embarcaciones. Está absolutamente prohibido arrojar cualquier tipo de residuo al mar, y disponemos de sistemas de contención y recolección para todos los desechos generados durante el recorrido.')}
               </p>
             </motion.div>
           </div>
@@ -343,10 +347,10 @@ const ConservacionMarina: React.FC = () => {
           <div className="p-8 md:p-12">
             <div className="text-center mb-10">
               <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                {t('conservacion.resultadosTitulo', 'Impacto de Nuestras Medidas de Conservación')}
+                {t('conservacion.resultadosTitulo', 'Resultados de Nuestras Medidas de Protección')}
               </h3>
               <p className="text-blue-100 max-w-3xl mx-auto">
-                {t('conservacion.resultadosSubtitulo', 'Nuestros esfuerzos por controlar el aforo y preservar el ecosistema marino han generado resultados medibles y positivos.')}
+                {t('conservacion.resultadosSubtitulo', 'El control de aforo y nuestros protocolos de navegación han generado resultados medibles en la conservación del ecosistema marino.')}
               </p>
             </div>
             
@@ -406,7 +410,7 @@ const ConservacionMarina: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Impacto en la comunidad local */}
+        {/* Tecnología para conservación */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -414,66 +418,58 @@ const ConservacionMarina: React.FC = () => {
           transition={{ duration: 0.8 }}
           className="bg-white dark:bg-blue-800 rounded-xl shadow-lg overflow-hidden mb-16"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            <div className="p-8 md:p-12">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
+            <div className="lg:col-span-3 p-8 md:p-12">
               <h3 className="text-2xl md:text-3xl font-bold text-ocean-600 dark:text-ocean-300 mb-6">
-                {t('conservacion.comunidadTitulo', 'Beneficios para la Comunidad Local')}
+                {t('conservacion.tecnologiaTitulo', 'Tecnología al Servicio de la Conservación')}
               </h3>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                {t('conservacion.comunidadDesc', 'Nuestro modelo de turismo sostenible beneficia directamente a los habitantes de Paracas, creando un incentivo económico para la conservación del ecosistema marino.')}
+                {t('conservacion.tecnologiaDesc', 'Utilizamos tecnología avanzada para monitorear el ecosistema y garantizar el cumplimiento de nuestros protocolos de protección:')}
               </p>
               
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t('conservacion.comunidad1', 'El 85% de nuestro personal son residentes locales, incluidos capitanes, guías y personal administrativo.')}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-ocean-50 dark:bg-blue-700 rounded-xl p-5">
+                  <h4 className="font-bold text-ocean-600 dark:text-ocean-300 mb-2">
+                    {t('conservacion.tecnologia1Titulo', 'GPS y Seguimiento de Rutas')}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {t('conservacion.tecnologia1Desc', 'Todas nuestras embarcaciones están equipadas con GPS que monitorean la velocidad y aseguran que se respeten las rutas establecidas y las zonas de exclusión.')}
                   </p>
                 </div>
                 
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t('conservacion.comunidad2', 'Compramos productos y servicios a proveedores locales, fortaleciendo la economía de Paracas.')}
+                <div className="bg-ocean-50 dark:bg-blue-700 rounded-xl p-5">
+                  <h4 className="font-bold text-ocean-600 dark:text-ocean-300 mb-2">
+                    {t('conservacion.tecnologia2Titulo', 'Sensores Acústicos')}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {t('conservacion.tecnologia2Desc', 'Monitoreamos los niveles de ruido de nuestras embarcaciones para garantizar que se mantengan por debajo de los umbrales que podrían afectar a la fauna marina.')}
                   </p>
                 </div>
                 
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t('conservacion.comunidad3', 'Nuestros visitantes gastan en hospedaje, alimentación y otros servicios locales, generando ingresos para toda la comunidad.')}
+                <div className="bg-ocean-50 dark:bg-blue-700 rounded-xl p-5">
+                  <h4 className="font-bold text-ocean-600 dark:text-ocean-300 mb-2">
+                    {t('conservacion.tecnologia3Titulo', 'Motores de Bajo Impacto')}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {t('conservacion.tecnologia3Desc', 'Nuestras embarcaciones utilizan motores de última generación con tecnología de reducción de emisiones y baja huella acústica.')}
                   </p>
                 </div>
                 
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 bg-ocean-100 dark:bg-ocean-700 rounded-full p-2 mr-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-ocean-600 dark:text-ocean-300" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t('conservacion.comunidad4', 'Capacitamos constantemente a nuestro personal local, mejorando sus habilidades y oportunidades laborales.')}
+                <div className="bg-ocean-50 dark:bg-blue-700 rounded-xl p-5">
+                  <h4 className="font-bold text-ocean-600 dark:text-ocean-300 mb-2">
+                    {t('conservacion.tecnologia4Titulo', 'Sistema de Registro Digital')}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {t('conservacion.tecnologia4Desc', 'Documentamos cada avistamiento de especies importantes para contribuir a la base de datos científica sobre poblaciones y comportamiento de la fauna marina.')}
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="h-full">
+            <div className="lg:col-span-2 h-full">
               <img 
-                src="https://images.unsplash.com/photo-1596662977545-627c4a975d3a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
-                alt="Comunidad local" 
+                src="https://images.unsplash.com/photo-1587930508275-3a869c8f0ac3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
+                alt="Tecnología de conservación" 
                 className="w-full h-full object-cover"
               />
             </div>
