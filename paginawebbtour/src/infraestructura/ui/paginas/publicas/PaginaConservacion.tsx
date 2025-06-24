@@ -23,7 +23,7 @@ interface ProtocoloData {
   color: string;
 }
 
-interface TecnologiaData {
+interface BeneficioData {
   titulo: string;
   descripcion: string;
   icono: JSX.Element;
@@ -48,13 +48,13 @@ const PaginaConservacion = () => {
   const especiesRef = useRef<HTMLDivElement>(null);
   const protocolosRef = useRef<HTMLDivElement>(null);
   const resultadosRef = useRef<HTMLDivElement>(null);
-  const tecnologiaRef = useRef<HTMLDivElement>(null);
+  const beneficiosRef = useRef<HTMLDivElement>(null);
   
   // Estado para animaciones en scroll
   const isEspeciesInView = useInView(especiesRef, { once: false, amount: 0.2 });
   const isProtocolosInView = useInView(protocolosRef, { once: false, amount: 0.2 });
   const isResultadosInView = useInView(resultadosRef, { once: false, amount: 0.2 });
-  const isTecnologiaInView = useInView(tecnologiaRef, { once: false, amount: 0.2 });
+  const isBeneficiosInView = useInView(beneficiosRef, { once: false, amount: 0.2 });
   
   // Efecto para animación de paralaje en scroll
   useEffect(() => {
@@ -112,28 +112,29 @@ const PaginaConservacion = () => {
     }
   }, []);
 
-  // Iconos para especies
+  // Iconos para especies - mejorados para coincidor mejor con animales
   const iconos = {
     pinguino: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M10.5 18.75a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" />
-        <path fillRule="evenodd" d="M8.625.75A3.375 3.375 0 005.25 4.125v15.75a3.375 3.375 0 003.375 3.375h6.75a3.375 3.375 0 003.375-3.375V4.125A3.375 3.375 0 0015.375.75h-6.75zM7.5 4.125C7.5 3.504 8.004 3 8.625 3H9.75v.375c0 .621.504 1.125 1.125 1.125h2.25c.621 0 1.125-.504 1.125-1.125V3h1.125c.621 0 1.125.504 1.125 1.125v15.75c0 .621-.504 1.125-1.125 1.125h-6.75A1.125 1.125 0 017.5 19.875V4.125z" clipRule="evenodd" />
+        <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .342.03.502.09l1.245.39 7.252 2.268c.347.11.595.445.595.84 0 .38-.257.718-.62.833l-7.27 2.279-1.215.394c-.145.048-.302.079-.465.095l-.195.016H2.25a.75.75 0 000 1.5H3.8l.184-.013c.25-.02.493-.066.734-.142l1.21-.392 7.242-2.273c1.065-.336 1.826-1.374 1.826-2.557 0-1.174-.744-2.203-1.796-2.55L5.835 2.602l-1.208-.38a2.85 2.85 0 00-.84-.16H2.25a.75.75 0 000 1.5h1.386a.35.35 0 01.11.02l1.235.39-1.235.394a.35.35 0 01-.11.019H2.25a.75.75 0 000 1.5h1.386c.17 0 .342.03.502.09l1.245.39 7.252 2.268c.347.11.595.445.595.84 0 .38-.257.718-.62.833l-7.27 2.279-1.215.394c-.145.048-.302.079-.465.095l-.195.016H2.25a.75.75 0 000 1.5H3.8l.184-.013c.25-.02.493-.066.734-.142l1.21-.392 7.242-2.273c1.065-.336 1.826-1.374 1.826-2.557 0-1.174-.744-2.203-1.796-2.55L5.835 2.602l-1.208-.38a2.85 2.85 0 00-.84-.16H2.25a.75.75 0 000 1.5h1.386a.35.35 0 01.11.02l1.235.39-1.235.394a.35.35 0 01-.11.019H2.25a.75.75 0 000 1.5" />
       </svg>
     ),
     lobo: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
+        <path d="M19.006 3.705a.75.75 0 00-.512-1.41L6 6.838V3a.75.75 0 00-.75-.75h-1.5A.75.75 0 003 3v4.93l-1.006.365a.75.75 0 00.512 1.41l16.5-6z" />
+        <path fillRule="evenodd" d="M3.019 11.115L18 5.667V9.09l4.006 1.456a.75.75 0 11-.512 1.41l-.494-.18v8.475h.75a.75.75 0 010 1.5H2.25a.75.75 0 010-1.5H3v-9.129l.019-.006zM18 20.25v-9.565l1.5.545v9.02H18zm-9-6a.75.75 0 00-.75.75v4.5c0 .414.336.75.75.75h3a.75.75 0 00.75-.75V15a.75.75 0 00-.75-.75H9z" clipRule="evenodd" />
       </svg>
     ),
     ballena: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
+        <path d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25zM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 116 0h3a.75.75 0 00.75-.75V15z" />
+        <path d="M8.25 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0zM15.75 6.75a.75.75 0 00-.75.75v11.25c0 .087.015.17.042.248a3 3 0 005.958.464c.853-.175 1.522-.935 1.464-1.883a18.659 18.659 0 00-3.732-10.104 1.837 1.837 0 00-1.47-.725H15.75z" />
+        <path d="M19.5 19.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
       </svg>
     ),
     ave: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M8.25 10.875a2.625 2.625 0 1 1 5.25 0 2.625 2.625 0 0 1-5.25 0Z" />
-        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.125 4.5a4.125 4.125 0 1 0 2.338 7.524l2.007 2.006a.75.75 0 1 0 1.06-1.06l-2.006-2.007a4.125 4.125 0 0 0-3.399-6.463Z" clipRule="evenodd" />
+        <path fillRule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z" clipRule="evenodd" />
       </svg>
     )
   };
@@ -262,45 +263,44 @@ const PaginaConservacion = () => {
     }
   ];
 
-  // Tecnologías para conservación
-  const tecnologias: TecnologiaData[] = [
+  // Beneficios para la comunidad
+  const beneficios: BeneficioData[] = [
     {
-      titulo: 'GPS y Seguimiento de Rutas',
-      descripcion: 'Todas nuestras embarcaciones están equipadas con GPS que monitorean la velocidad y aseguran que se respeten las rutas establecidas por SERNANP.',
+      titulo: 'Creación de Empleo Local',
+      descripcion: 'Generamos más de 50 puestos de trabajo directos para la comunidad de Paracas, priorizando la contratación de guías, tripulantes y personal administrativo de la zona.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" />
         </svg>
       ),
       color: 'from-blue-600 to-indigo-800'
     },
     {
-      titulo: 'Sensores Acústicos',
-      descripcion: 'Monitoreamos los niveles de ruido de nuestras embarcaciones para garantizar que se mantengan por debajo de los umbrales que podrían afectar a la fauna.',
+      titulo: 'Desarrollo Económico',
+      descripcion: 'Fortalecemos la economía local a través de alianzas con proveedores de la zona, incluyendo restaurantes, hoteles y artesanos que forman parte de la experiencia turística.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
         </svg>
       ),
       color: 'from-teal-600 to-green-800'
     },
     {
-      titulo: 'Motores de Bajo Impacto',
-      descripcion: 'Nuestras embarcaciones utilizan motores de última generación con tecnología de reducción de emisiones y baja huella acústica.',
+      titulo: 'Capacitación y Educación',
+      descripcion: 'Implementamos programas de capacitación para jóvenes locales en guiado turístico y conservación ambiental, contribuyendo al desarrollo profesional de la comunidad.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
         </svg>
       ),
       color: 'from-amber-600 to-orange-800'
     },
     {
-      titulo: 'Sistema de Registro Digital',
-      descripcion: 'Documentamos cada avistamiento para contribuir a la base de datos científica de SERNANP sobre poblaciones y comportamiento de la fauna marina.',
+      titulo: 'Programas Comunitarios',
+      descripcion: 'Destinamos parte de nuestros ingresos a proyectos comunitarios de limpieza de playas, mejora de infraestructura local y programas educativos sobre conservación marina.',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
         </svg>
       ),
       color: 'from-purple-600 to-pink-800'
@@ -311,7 +311,7 @@ const PaginaConservacion = () => {
   const resultados: ResultadoData[] = [
     {
       cifra: '+5.000',
-      descripcion: 'Kg de residuos plásticos evitados en el ecosistema marino',
+      descripcion: 'Kg de residuos plásticos evitados en el ecosistema marino anualmente',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
           <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -331,20 +331,20 @@ const PaginaConservacion = () => {
     },
     {
       cifra: '+20%',
-      descripcion: 'Aumento en la población de pingüinos de Humboldt',
+      descripcion: 'Aumento en la población de pingüinos de Humboldt en los últimos 5 años',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
         </svg>
       ),
       color: 'from-indigo-400 to-indigo-600'
     },
     {
-      cifra: '0',
-      descripcion: 'Incidentes de perturbación significativa en los últimos 3 años',
+      cifra: '+50',
+      descripcion: 'Empleos locales generados gracias al turismo sostenible',
       icono: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
         </svg>
       ),
       color: 'from-rose-400 to-rose-600'
@@ -474,11 +474,10 @@ const PaginaConservacion = () => {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight"
             >
-              Protegiendo el{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text">
-                Ecosistema Marino
-              </span>{' '}
-              de Paracas
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-teal-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Protegiendo el Ecosistema Marino de Paracas</span>
+              </span>
             </motion.h2>
             
             <motion.p
@@ -503,8 +502,11 @@ const PaginaConservacion = () => {
             animate={isEspeciesInView ? "visible" : "hidden"}
             className="text-center mb-12"
           >
-            <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Protocolos Específicos por Especie
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-teal-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Protocolos Específicos por Especie</span>
+              </span>
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -623,8 +625,11 @@ const PaginaConservacion = () => {
             animate={isProtocolosInView ? "visible" : "hidden"}
             className="text-center mb-12"
           >
-            <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Control de Visitas y Protección del Ecosistema
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-green-200 to-blue-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Control de Visitas y Protección del Ecosistema</span>
+              </span>
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -675,8 +680,11 @@ const PaginaConservacion = () => {
             animate={isResultadosInView ? "visible" : "hidden"}
             className="text-center mb-12"
           >
-            <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Resultados de Nuestras Medidas de Protección
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Resultados de Nuestras Medidas de Protección</span>
+              </span>
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
@@ -701,7 +709,7 @@ const PaginaConservacion = () => {
                     {resultado.icono}
                   </div>
                   
-                  <h3 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text mb-3">
+                  <h3 className="text-4xl font-bold text-gray-800 mb-3">
                     {resultado.cifra}
                   </h3>
                   
@@ -715,75 +723,61 @@ const PaginaConservacion = () => {
         </div>
       </div>
       
-      {/* Tecnología para conservación */}
+      {/* Beneficios para la comunidad */}
       <div 
-        ref={tecnologiaRef}
+        ref={beneficiosRef}
         className="py-12 px-4 bg-white"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
-            animate={isTecnologiaInView ? "visible" : "hidden"}
+            animate={isBeneficiosInView ? "visible" : "hidden"}
             className="text-center mb-12"
           >
-            <motion.h2 variants={fadeInUp} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Tecnología al Servicio de la Conservación
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-amber-200 to-orange-200 transform skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Beneficios para la Comunidad Local</span>
+              </span>
             </motion.h2>
             
             <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Utilizamos tecnología avanzada para monitorear el ecosistema y garantizar el cumplimiento de los protocolos establecidos por SERNANP.
+              Nuestro compromiso va más allá de la conservación ambiental. Buscamos generar un impacto positivo en la comunidad de Paracas a través del turismo sostenible.
             </motion.p>
           </motion.div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="aspect-square rounded-3xl overflow-hidden shadow-xl">
-                <img 
-                  src="https://images.unsplash.com/photo-1587930508275-3a869c8f0ac3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80" 
-                  alt="Tecnología de conservación" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </motion.div>
-            
-            <div className="space-y-6">
-              {tecnologias.map((tecnologia, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
-                >
-                  <div className="flex gap-5">
-                    <div className={`flex-shrink-0 p-4 bg-gradient-to-br ${tecnologia.color} text-white rounded-xl`}>
-                      {tecnologia.icono}
-                    </div>
-                    
-                    <div>
-                      <h4 className="text-xl font-bold text-gray-800 mb-2">
-                        {tecnologia.titulo}
-                      </h4>
-                      <p className="text-gray-600">
-                        {tecnologia.descripcion}
-                      </p>
-                    </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+            {beneficios.map((beneficio, index) => (
+                           <motion.div 
+                key={index}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
+              >
+                <div className="flex gap-5">
+                  <div className={`flex-shrink-0 p-4 bg-gradient-to-br ${beneficio.color} text-white rounded-xl`}>
+                    {beneficio.icono}
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                  
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-800 mb-2">
+                      {beneficio.titulo}
+                    </h4>
+                    <p className="text-gray-600">
+                      {beneficio.descripcion}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
       
-      {/* Certificaciones */}
+      {/* Certificaciones y reconocimientos */}
       <div className="py-12 px-4 bg-blue-50">
         <div className="container mx-auto">
           <motion.div 
@@ -793,36 +787,94 @@ const PaginaConservacion = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-12"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Certificaciones y Reconocimientos
+            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-gradient-to-r from-indigo-200 to-blue-200 transform -skew-x-6 opacity-30 rounded-lg h-full"></span>
+                <span className="relative">Certificaciones y Alianzas</span>
+              </span>
             </h2>
+            <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              Trabajamos en colaboración con entidades comprometidas con la conservación del medio ambiente y el desarrollo sostenible de la región.
+            </p>
           </motion.div>
           
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex flex-wrap justify-center items-center gap-8"
-          >
-            {['SERNANP', 'Reserva', 'WWF', 'Ministerio'].map((logo, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.1 }}
-                className="bg-white p-6 rounded-xl shadow-lg"
-              >
-                <img 
-                  src={`https://via.placeholder.com/150x50?text=${logo}`} 
-                  alt={`${logo} de Turismo Sostenible`} 
-                  className="h-16 grayscale hover:grayscale-0 transition-all duration-300" 
-                />
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white p-6 rounded-xl shadow-lg text-center"
+            >
+              <img 
+                src="https://via.placeholder.com/150x50?text=SERNANP" 
+                alt="SERNANP" 
+                className="h-16 mb-4 mx-auto" 
+              />
+              <h3 className="text-lg font-bold text-gray-800 mb-2">SERNANP</h3>
+              <p className="text-gray-600">
+                Operador autorizado por el Servicio Nacional de Áreas Naturales Protegidas, cumpliendo con todas las normativas para la conservación de la Reserva Nacional de Paracas.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white p-6 rounded-xl shadow-lg text-center"
+            >
+              <img 
+                src="https://via.placeholder.com/150x50?text=Reserva" 
+                alt="Reserva Nacional de Paracas" 
+                className="h-16 mb-4 mx-auto" 
+              />
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Reserva Nacional de Paracas</h3>
+              <p className="text-gray-600">
+                Comprometidos con la protección y conservación de esta importante área natural protegida, hogar de diversas especies de fauna marina.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white p-6 rounded-xl shadow-lg text-center"
+            >
+              <img 
+                src="https://via.placeholder.com/150x50?text=WWF" 
+                alt="WWF" 
+                className="h-16 mb-4 mx-auto" 
+              />
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Alianza WWF</h3>
+              <p className="text-gray-600">
+                Colaboramos en proyectos de conservación marina y educación ambiental junto a World Wildlife Fund para promover prácticas sostenibles de turismo.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ scale: 1.05 }}
+              className="bg-white p-6 rounded-xl shadow-lg text-center"
+            >
+              <img 
+                src="https://via.placeholder.com/150x50?text=Ministerio" 
+                alt="Ministerio" 
+                className="h-16 mb-4 mx-auto" 
+              />
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Ministerio de Comercio Exterior y Turismo</h3>
+              <p className="text-gray-600">
+                Reconocidos por implementar buenas prácticas en turismo sostenible, contribuyendo al desarrollo económico y social de la región.
+              </p>
+            </motion.div>
+          </div>
         </div>
       </div>
       
@@ -832,7 +884,7 @@ const PaginaConservacion = () => {
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
               className="text-4xl md:text-5xl font-bold mb-6"
