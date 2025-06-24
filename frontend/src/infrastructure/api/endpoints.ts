@@ -8,6 +8,10 @@ export const endpoints = {
     status: '/auth/status',
     userSedes: '/auth/sedes',
     selectSede: '/auth/select-sede',
+     solicitarRecuperacion: '/admin/recuperar-contrasena', // Para usuarios administrativos
+    solicitarRecuperacionCliente: '/clientes/recuperar-contrasena', // Para clientes
+    validarToken: '/auth/validar-token',
+    cambiarContrasena: '/auth/cambiar-contrasena',
   },
   sede: {
     base: '/sedes',

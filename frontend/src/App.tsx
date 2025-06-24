@@ -66,7 +66,8 @@ import ToursProgramadosPage from './infrastructure/ui/pages/ToursProgramadosPage
 import TourProgramadoList from './infrastructure/ui/features/tourProgramado/TourProgramadoList';
 import TourProgramadoForm from './infrastructure/ui/features/tourProgramado/TourProgramadoForm';
 import TourProgramadoDetail from './infrastructure/ui/features/tourProgramado/TourProgramadoDetail';
-
+import RecuperarContrasenaPage from './infrastructure/ui/pages/RecuperarContrasenaPage';
+import CambiarContrasenaPage from './infrastructure/ui/pages/CambiarContrasenaPage';
 // Componente para rutas protegidas con verificación de sesión mejorada
 const ProtectedRoute: React.FC<{ 
   children: React.ReactElement, 
@@ -193,7 +194,9 @@ const App: React.FC = () => {
       <Routes>
         {/* Rutas públicas */}
         <Route path={ROUTES.AUTH.LOGIN} element={<LoginPage />} />
-        
+         {/* Nuevas rutas para recuperación de contraseña */}
+    <Route path="/recuperar-contrasena" element={<RecuperarContrasenaPage />} />
+    <Route path="/cambiar-contrasena" element={<CambiarContrasenaPage />} />
         {/* Ruta de selección de sede (protegida para admins) */}
         <Route path={ROUTES.AUTH.SELECT_SEDE} element={
           <ProtectedRoute allowedRoles={['ADMIN']} requireSede={false}>

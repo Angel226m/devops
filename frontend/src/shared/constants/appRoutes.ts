@@ -4,6 +4,8 @@ export const ROUTES = {
     LOGIN: '/login',
     REGISTER: '/register',
     SELECT_SEDE: '/seleccionar-sede',
+     RECUPERAR_CONTRASENA: '/recuperar-contrasena',
+    CAMBIAR_CONTRASENA: '/cambiar-contrasena',
   },
   
   ADMIN: {
