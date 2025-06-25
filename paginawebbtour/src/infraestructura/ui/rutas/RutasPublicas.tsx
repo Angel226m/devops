@@ -78,6 +78,11 @@ const PaginaRegistro = lazy(() => import('../paginas/publicas/PaginaRegistro'));
 const PaginaRecuperacion = lazy(() => import('../paginas/publicas/PaginaRecuperacion'));
 const PaginaCambioContrasena = lazy(() => import('../paginas/publicas/PaginaCambioContrasena')); // Añadida esta importación
 const PaginaNoEncontrada = lazy(() => import('../paginas/publicas/PaginaNoEncontrada'));
+// Importaciones para páginas legales
+const PaginaTerminosCondiciones = lazy(() => import('../paginas/publicas/TerminosCondiciones'));
+const PaginaPoliticaPrivacidad = lazy(() => import('../paginas/publicas/PoliticaPrivacidad'));
+const PaginaPoliticaCookies = lazy(() => import('../paginas/publicas/PoliticaCookies'));
+
 
 // Importaciones lazy loading para páginas privadas
 const PaginaProcesoPago = lazy(() => import('../paginas/privadas/PaginaProcesoPago'));
@@ -106,6 +111,10 @@ const RutasPublicas = () => {
       <Route path="recuperar-contrasena" element={<PaginaRecuperacion />} />
       <Route path="cambiar-contrasena" element={<PaginaCambioContrasena />} /> {/* Añadida esta ruta */}
       
+       {/* Rutas para páginas legales */}
+      <Route path="terminos" element={<PaginaTerminosCondiciones />} />
+      <Route path="privacidad" element={<PaginaPoliticaPrivacidad />} />
+      <Route path="cookies" element={<PaginaPoliticaCookies />} />
       {/* Rutas privadas protegidas por autenticación */}
       <Route element={<RutasPrivadas />}>
         <Route path="proceso-pago" element={<PaginaProcesoPago />} />
