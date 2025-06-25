@@ -268,6 +268,28 @@ instanciaTour: {
     publicDisponibles: '/instancias-tour/disponibles',
     publicByFecha: (fecha: string) => `/instancias-tour/fecha/${fecha}`,
   },
+  
+    cliente: {
+    // Rutas para admin
+    list: '/admin/clientes',
+    create: '/admin/clientes',
+    byId: (id: number) => `/admin/clientes/${id}`,
+    byDocumento: '/admin/clientes/documento',
+    buscarDocumento: '/admin/clientes/buscar-documento',
+    datosFacturacion: (id: number) => `/admin/clientes/${id}/datos-facturacion`,
+        datosEmpresa: (id: number) => `/admin/clientes/${id}/datos-empresa`, // Añadida esta línea
+
+    
+    // Rutas para vendedor
+    vendedorList: '/vendedor/clientes',
+    vendedorCreate: '/vendedor/clientes',
+    vendedorById: (id: number) => `/vendedor/clientes/${id}`,
+    vendedorByDocumento: '/vendedor/clientes/documento',
+    vendedorBuscarDocumento: '/vendedor/clientes/buscar-documento',
+    vendedorDatosFacturacion: (id: number) => `/vendedor/clientes/${id}/datos-facturacion`,
+        vendedorDatosEmpresa: (id: number) => `/vendedor/clientes/${id}/datos-empresa`,
+
+  },
   // ... otros endpoints
 };
 

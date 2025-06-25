@@ -1,10 +1,10 @@
 import { Cliente } from '../../../domain/entities/Cliente';
 import { ClienteRepository } from '../../ports/out/ClienteRepository';
 
-export class ObtenerClientePorId {
+export class ObtenerClientePorDocumento {
   constructor(private clienteRepository: ClienteRepository) {}
 
-  async execute(id: number): Promise<Cliente> {
-    return await this.clienteRepository.findById(id);
+  async execute(documento: string): Promise<Cliente> {
+    return await this.clienteRepository.findByDocumento(documento);
   }
 }

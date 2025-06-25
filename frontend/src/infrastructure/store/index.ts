@@ -92,7 +92,8 @@ import paquetePasajesReducer, { PaquetePasajesState } from './slices/paquetePasa
 import galeriaTourReducer, { GaleriaTourState } from './slices/galeriaTourSlice';
 import tourProgramadoReducer, { TourProgramadoState } from './slices/tourProgramadoSlice';
 import instanciaTourReducer, { InstanciaTourState } from './slices/instanciaTourSlice';
- 
+  import clienteReducer, { ClienteState } from './slices/clienteSlice';
+
 // Importar el repositorio y axios
 import { GaleriaTourRepoHttp } from '../repositories/GaleriaTourRepoHttp';
 import { TourProgramadoRepoHttp } from '../repositories/TourProgramadoRepoHttp';
@@ -114,7 +115,9 @@ export interface RootState {
   paquetePasajes: PaquetePasajesState;
   galeriaTour: GaleriaTourState;
   tourProgramado: TourProgramadoState;
-    instanciaTour: InstanciaTourState;
+    instanciaTour: InstanciaTourState;    
+      cliente: ClienteState;
+
 
   // Agrega otros reducers aquí
 }
@@ -140,6 +143,8 @@ export const store = configureStore({
     galeriaTour: galeriaTourReducer,
     tourProgramado: tourProgramadoReducer,
     instanciaTour: instanciaTourReducer,
+            cliente: clienteReducer,
+
 
     // Agrega otros reducers según sea necesario
   },
