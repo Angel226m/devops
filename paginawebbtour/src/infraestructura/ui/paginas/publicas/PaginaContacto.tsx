@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import Seccion from '../../componentes/layout/Seccion';
 
 const PaginaContacto = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nombre: '',

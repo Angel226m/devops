@@ -33,6 +33,8 @@ const PaginaCambioContrasena = () => {
   const [validandoToken, setValidandoToken] = useState(true);
 
   useEffect(() => {
+        window.scrollTo(0, 0);
+
     // Validar el token al cargar la página
     const validarToken = async () => {
       if (!token) {

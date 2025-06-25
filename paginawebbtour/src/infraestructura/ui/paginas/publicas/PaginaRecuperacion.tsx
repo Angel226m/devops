@@ -18,6 +18,8 @@ const getBaseURL = () => {
 };
 
 const PaginaRecuperacion = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   const [correo, setCorreo] = useState('');
   const [enviado, setEnviado] = useState(false);

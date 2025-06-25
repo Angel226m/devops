@@ -119,6 +119,8 @@ import FormularioIngreso from '../../caracteristicas/autenticacion/FormularioIng
 import OceanLogo from '../../componentes/layout/Logo';
 
 const PaginaIngreso = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   
   return (

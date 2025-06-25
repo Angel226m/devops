@@ -6,6 +6,8 @@ import Seccion from '../../componentes/layout/Seccion';
 import Boton from '../../componentes/comunes/Boton';
 
 const PaginaNoEncontrada = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
 
   // Animación para la ola

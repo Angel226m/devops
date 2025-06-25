@@ -281,6 +281,8 @@ interface FAQ {
 }
 
 const PaginaPreguntas = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   const [categoriaActiva, setCategoriaActiva] = useState('todos');
   const [preguntasFiltradas, setPreguntasFiltradas] = useState<FAQ[]>([]);

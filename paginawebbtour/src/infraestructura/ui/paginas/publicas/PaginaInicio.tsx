@@ -11,6 +11,8 @@ import Socios from '../../caracteristicas/inicio/Socios';
 import SuscripcionBoletin from '../../caracteristicas/inicio/SuscripcionBoletin';
 
 const PaginaInicio = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   
   // Configuración de animaciones

@@ -685,6 +685,8 @@ const PaginaDetalleTour = () => {
   
   // Cargar datos del tour y recursos relacionados
   useEffect(() => {
+        window.scrollTo(0, 0);
+
     if (!idTour || cargaIniciada.current) return;
     
     const idTipoTour = parseInt(idTour);
