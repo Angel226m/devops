@@ -96,11 +96,14 @@ export const ROUTES = {
     },
     // Otras rutas de administración...
   },
-  
   VENDEDOR: {
     DASHBOARD: '/vendedor/dashboard',
     RESERVAS: '/vendedor/reservas',
-    // Otras rutas de vendedor...
+    TOURS: '/vendedor/tours',
+       CLIENTES: '/vendedor/clientes', // Simplificado a una sola ruta base
+
+    PAGOS: '/vendedor/pagos',
+    SOPORTE: '/vendedor/soporte',
   },
   
   CHOFER: {

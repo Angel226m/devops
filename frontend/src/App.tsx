@@ -68,6 +68,16 @@ import TourProgramadoForm from './infrastructure/ui/features/tourProgramado/Tour
 import TourProgramadoDetail from './infrastructure/ui/features/tourProgramado/TourProgramadoDetail';
 import RecuperarContrasenaPage from './infrastructure/ui/pages/RecuperarContrasenaPage';
 import CambiarContrasenaPage from './infrastructure/ui/pages/CambiarContrasenaPage';
+
+
+
+// Páginas de Vendedor
+import VendedorDashboard from './infrastructure/ui/pages/VendedorDashboard';
+import ReservasVendedorPage from './infrastructure/ui/pages/ReservasVendedorPage';
+import ToursDisponiblesPage from './infrastructure/ui/pages/ToursDisponiblesPageVendedor';
+import ClientesVendedorPage from './infrastructure/ui/pages/ClientesVendedorPage';
+import PagosVendedorPage from './infrastructure/ui/pages/PagosVendedorPage';
+import SoporteVendedorPage from './infrastructure/ui/pages/SoporteVendedorPage';
 // Componente para rutas protegidas con verificación de sesión mejorada
 const ProtectedRoute: React.FC<{ 
   children: React.ReactElement, 
@@ -319,15 +329,15 @@ const App: React.FC = () => {
             <VendedorLayout />
           </ProtectedRoute>
         }>
-          <Route path="dashboard" element={<div>Dashboard de Vendedor</div>} />
-          
-          {/* Vendedores también pueden ver embarcaciones de su sede */}
-          <Route path="embarcaciones" element={<EmbarcacionList />} />
-          <Route path="embarcaciones/:id" element={<EmbarcacionDetail />} />
-          
-          {/* Vendedores pueden ver tipos de tour (solo lectura) */}
-          <Route path="tipos-tour" element={<TipoTourList />} />
-          <Route path="tipos-tour/:id" element={<TipoTourDetail />} />
+         <Route path="dashboard" element={<VendedorDashboard />} />
+  <Route path="reservas" element={<ReservasVendedorPage />} />
+  <Route path="tours" element={<ToursDisponiblesPage />} />
+  
+  {/* Rutas de clientes - AHORA usando rutas anidadas */}
+  <Route path="clientes/*" element={<ClientesVendedorPage />} />
+  
+  <Route path="pagos" element={<PagosVendedorPage />} />
+  <Route path="soporte" element={<SoporteVendedorPage />} />
           
           <Route path="" element={<Navigate to={ROUTES.VENDEDOR.DASHBOARD} replace />} />
           <Route path="*" element={<NotFoundPage />} />
