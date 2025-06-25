@@ -397,6 +397,8 @@ interface ReservaExtendida {
 }
 
 const PaginaReservasUsuario = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const { reservas: reservasOriginales, cargando, error } = useSelector((state: RootState) => state.reserva);

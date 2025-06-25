@@ -19,6 +19,8 @@ interface DatosReserva {
 }
 
 const PaginaReservaExitosa: React.FC = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();

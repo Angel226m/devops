@@ -4,6 +4,8 @@ import Seccion from '../../componentes/layout/Seccion';
 import FormularioRegistro from '../../caracteristicas/autenticacion/FormularioRegistro';
 
 const PaginaRegistro = () => {
+      window.scrollTo(0, 0);
+
   const { t } = useTranslation();
 
   return (

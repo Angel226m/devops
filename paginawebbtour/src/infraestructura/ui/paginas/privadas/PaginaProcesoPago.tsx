@@ -1567,6 +1567,7 @@ interface PaqueteDatosReserva {
   precio: number;
   seleccionado: boolean;
 }
+    window.scrollTo(0, 0);
 
 // Tipos para los estados de pago simulados
 type EstadoPagoSimulado = 'approved' | 'pending' | 'rejected';
