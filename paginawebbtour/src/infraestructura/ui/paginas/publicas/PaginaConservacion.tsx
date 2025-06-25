@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import Seccion from '../../componentes/layout/Seccion';
 
 // Definición de tipos para evitar errores de TypeScript
 type EspecieKey = 'pinguinos' | 'lobos' | 'ballenas' | 'aves';
@@ -112,27 +111,27 @@ const PaginaConservacion = () => {
     }
   }, []);
 
-  // Iconos para especies
+  // Iconos para especies - mejorados y más apropiados para cada animal
   const iconos = {
     pinguino: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M11.25 5.337c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.036 1.007-1.875 2.25-1.875S15 2.34 15 3.375c0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959 0 .332.278.598.61.578 1.91-.114 3.79-.342 5.632-.676a.75.75 0 01.878.645 49.17 49.17 0 01.376 5.452.657.657 0 01-.66.664c-.354 0-.675-.186-.958-.401a1.647 1.647 0 00-1.003-.349c-1.035 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401.31 0 .557.262.534.571a48.774 48.774 0 01-.595 4.845.75.75 0 01-.61.61c-1.82.317-3.673.533-5.555.642a.58.58 0 01-.611-.581c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.035-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959a.641.641 0 01-.658.643 49.118 49.118 0 01-4.708-.36.75.75 0 01-.645-.878c.293-1.614.504-3.257.629-4.924A.53.53 0 005.337 15c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.036 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.369 0 .713.128 1.003.349.283.215.604.401.959.401a.656.656 0 00.659-.663 47.703 47.703 0 00-.31-4.82.75.75 0 01.83-.832c1.343.155 2.703.254 4.077.294a.64.64 0 00.657-.642z" />
+        <path d="M9.375 3a1.875 1.875 0 0 0 0 3.75h1.875v4.5H3.375A1.875 1.875 0 0 1 1.5 9.375v-.75c0-1.036.84-1.875 1.875-1.875h3.193A3.75 3.75 0 0 1 12 2.753a3.75 3.75 0 0 1 5.432 3.997h3.943c1.035 0 1.875.84 1.875 1.875v.75c0 1.036-.84 1.875-1.875 1.875H12.75v-4.5h1.875a1.875 1.875 0 1 0-1.875-1.875V6.75h-1.5V4.875C11.25 3.839 10.41 3 9.375 3ZM11.25 12.75H3v6.75a2.25 2.25 0 0 0 2.25 2.25h6v-9ZM12.75 12.75v9h6.75a2.25 2.25 0 0 0 2.25-2.25v-6.75h-9Z" />
       </svg>
     ),
     lobo: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
-        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clipRule="evenodd" />
+        <path d="M21.721 12.752a9.711 9.711 0 0 0-.945-5.003 12.754 12.754 0 0 1-4.339 2.708 18.991 18.991 0 0 1-.214 4.772 17.165 17.165 0 0 0 5.498-2.477ZM14.634 15.55a17.324 17.324 0 0 0 .332-4.647c-.952.227-1.945.347-2.966.347-1.021 0-2.014-.12-2.966-.347a17.515 17.515 0 0 0 .332 4.647 17.385 17.385 0 0 0 5.268 0ZM9.772 17.119a18.963 18.963 0 0 0 4.456 0A17.182 17.182 0 0 1 12 21.724a17.18 17.18 0 0 1-2.228-4.605ZM7.777 15.23a18.87 18.87 0 0 1-.214-4.774 12.753 12.753 0 0 1-4.34-2.708 9.711 9.711 0 0 0-.944 5.004 17.165 17.165 0 0 0 5.498 2.477ZM21.356 14.752a9.765 9.765 0 0 1-7.478 6.817 18.64 18.64 0 0 0 1.988-4.718 18.627 18.627 0 0 0 5.49-2.098ZM2.644 14.752c1.682.971 3.53 1.688 5.49 2.099a18.64 18.64 0 0 0 1.988 4.718 9.765 9.765 0 0 1-7.478-6.816ZM13.878 2.43a9.755 9.755 0 0 1 6.116 3.986 11.267 11.267 0 0 1-3.746 2.504 18.63 18.63 0 0 0-2.37-6.49ZM12 2.276a17.152 17.152 0 0 1 2.805 7.121c-.897.23-1.837.353-2.805.353-.968 0-1.908-.122-2.805-.353A17.151 17.151 0 0 1 12 2.276ZM10.122 2.43a18.629 18.629 0 0 0-2.37 6.49 11.266 11.266 0 0 1-3.746-2.504 9.754 9.754 0 0 1 6.116-3.985Z" />
       </svg>
     ),
     ballena: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M7.493 18.75c-.425 0-.82-.236-.975-.632A7.48 7.48 0 016 15.375c0-1.75.599-3.358 1.602-4.634.151-.192.373-.309.6-.397.473-.183.89-.514 1.212-.924a9.042 9.042 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75 2.25 2.25 0 012.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23h-.777zM2.331 10.977a11.969 11.969 0 00-.831 4.398 12 12 0 00.52 3.507c.26.85 1.084 1.368 1.973 1.368H4.9c.445 0 .72-.498.523-.898a8.963 8.963 0 01-.924-3.977c0-1.708.476-3.305 1.302-4.666.245-.403-.028-.959-.5-.959H4.25c-.832 0-1.612.453-1.918 1.227z" />
+        <path d="M15.75 8.25a.75.75 0 0 1 .75.75c0 1.12-.492 2.126-1.27 2.812a.75.75 0 1 1-.992-1.124A2.243 2.243 0 0 0 15 9a.75.75 0 0 1 .75-.75Z" />
+        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM4.575 15.6a8.25 8.25 0 0 0 9.348 4.425 1.966 1.966 0 0 1-1.84-1.275.983.983 0 0 0-.97-.822l-.073-.437c-.094-.565.25-1.11.8-1.267l.99-.282c.427-.123.783-.418.982-.816l.036-.073a1.453 1.453 0 0 1 2.328-.377L16.5 15h.628a2.25 2.25 0 0 1 1.983 1.186 8.25 8.25 0 0 0-6.345-12.4c.044.262.18.503.389.676l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 0 1-1.161.886l-.143.048a1.107 1.107 0 0 0-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 0 1-1.652.928l-.679-.906a1.125 1.125 0 0 0-1.906.172L4.575 15.6Z" clipRule="evenodd" />
       </svg>
     ),
     ave: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-        <path d="M11.25 5.337c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.036 1.007-1.875 2.25-1.875S15 2.34 15 3.375c0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959 0 .332.278.598.61.578 1.91-.114 3.79-.342 5.632-.676a.75.75 0 01.878.645 49.17 49.17 0 01.376 5.452.657.657 0 01-.66.664c-.354 0-.675-.186-.958-.401a1.647 1.647 0 00-1.003-.349c-1.035 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401.31 0 .557.262.534.571a48.774 48.774 0 01-.595 4.845.75.75 0 01-.61.61c-1.82.317-3.673.533-5.555.642a.58.58 0 01-.611-.581c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.035-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959a.641.641 0 01-.658.643 49.118 49.118 0 01-4.708-.36.75.75 0 01-.645-.878c.293-1.614.504-3.257.629-4.924A.53.53 0 005.337 15c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.036 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.369 0 .713.128 1.003.349.283.215.604.401.959.401a.656.656 0 00.659-.663 47.703 47.703 0 00-.31-4.82.75.75 0 01.83-.832c1.343.155 2.703.254 4.077.294a.64.64 0 00.657-.642z" />
+        <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-3.22-3.22V16.5a.75.75 0 0 1-1.5 0V4.81L8.03 8.03a.75.75 0 0 1-1.06-1.06l4.5-4.5ZM3 15.75a.75.75 0 0 1 .75.75v2.25h16.5v-2.25a.75.75 0 0 1 1.5 0v3c0 .414-.336.75-.75.75H3a.75.75 0 0 1-.75-.75v-3a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
       </svg>
     )
   };
@@ -373,11 +372,11 @@ const PaginaConservacion = () => {
   };
   
   const fadeInUp = {
-    hidden: { y: 30, opacity: 0 },
+    hidden: { y: 20, opacity: 0 },
     visible: { 
       y: 0, 
       opacity: 1,
-      transition: { duration: 0.6, ease: "easeOut" }
+      transition: { duration: 0.5, ease: "easeOut" }
     }
   };
 
@@ -442,11 +441,11 @@ const PaginaConservacion = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.6 }}
-            className="mt-10"
+            className="mt-6"
           >
             <a 
               href="#especies"
-              className="inline-block px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:translate-y-[-5px]"
+              className="inline-block px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:translate-y-[-5px] animate-pulse"
             >
               <span>Descubrir Nuestros Protocolos</span>
             </a>
@@ -462,7 +461,7 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Sección de introducción */}
-      <div className="py-8 px-4">
+      <div className="py-4 px-4">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
@@ -470,7 +469,7 @@ const PaginaConservacion = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight"
+              className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight"
             >
               Protegiendo el Ecosistema Marino de Paracas
             </motion.h2>
@@ -489,25 +488,21 @@ const PaginaConservacion = () => {
       </div>
       
       {/* Sección de especies protegidas */}
-      <div id="especies" ref={especiesRef} className="py-8 px-4 bg-gradient-to-b from-white to-blue-50">
+      <div id="especies" ref={especiesRef} className="py-4 px-4 bg-gradient-to-b from-white to-blue-50">
         <div className="container mx-auto">
           <motion.div
             variants={staggerContainer}
             initial="hidden"
             animate={isEspeciesInView ? "visible" : "hidden"}
-            className="text-center mb-8"
+            className="text-center mb-4"
           >
-            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
               Protocolos Específicos por Especie
             </motion.h2>
-            
-            <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Aplicamos protocolos diseñados junto con SERNANP para cada especie, respetando sus comportamientos naturales y minimizando el impacto de nuestras visitas.
-            </motion.p>
           </motion.div>
 
           {/* Tabs de selección de especies */}
-          <div className="mb-8 flex flex-wrap justify-center gap-4">
+          <div className="mb-4 flex flex-wrap justify-center gap-3">
             {(Object.keys(especiesData) as EspecieKey[]).map((key) => (
               <motion.button
                 key={key}
@@ -547,55 +542,56 @@ const PaginaConservacion = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`bg-gradient-to-br ${especiesData[tabActivo].gradient} rounded-3xl overflow-hidden shadow-xl mb-8`}
+              className={`bg-gradient-to-br ${especiesData[tabActivo].gradient} rounded-2xl overflow-hidden shadow-xl mb-6`}
             >
               <div className="grid grid-cols-1 lg:grid-cols-2">
-                <div className="p-6 md:p-8">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3 bg-white/20 rounded-xl text-white">
+                <div className="p-5">
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 flex items-center gap-3">
+                    <span className="bg-white/20 p-2 rounded-lg">
                       {especiesData[tabActivo].icono}
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-bold text-white">
-                      {especiesData[tabActivo].titulo}
-                    </h3>
-                  </div>
+                    </span>
+                    {especiesData[tabActivo].titulo}
+                  </h3>
                   
-                  <div className="text-white space-y-4">
-                    <p className="text-xl leading-relaxed">{especiesData[tabActivo].descripcion}</p>
+                  <div className="text-white space-y-3">
+                    <p className="text-lg leading-relaxed">{especiesData[tabActivo].descripcion}</p>
                     
-                    <div className="bg-white/10 rounded-2xl p-6 mt-4 border border-white/20">
-                      <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="bg-white/10 rounded-xl p-4 mt-3">
+                      <h4 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
-                        {t('conservacion.protocolosTitulo', 'Protocolos de Protección')}
+                        Protocolos de Protección
                       </h4>
-                      <ul className="space-y-3">
+                      <ul className="space-y-2">
                         {especiesData[tabActivo].protocolos.map((protocolo, index) => (
                           <motion.li 
                             key={index}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 + 0.2 }}
-                            className="flex items-start gap-3"
+                            className="flex items-start gap-2"
                           >
                             <div className="mt-1 bg-white/20 p-1 rounded-full">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </div>
-                            <span className="text-white text-lg">{protocolo}</span>
+                            <span className="text-white">{protocolo}</span>
                           </motion.li>
                         ))}
                       </ul>
                     </div>
                   </div>
                 </div>
-                <div className="h-72 lg:h-auto overflow-hidden">
-                  <img 
+                <div className="h-64 lg:h-auto overflow-hidden">
+                  <motion.img 
                     src={especiesData[tabActivo].imagen} 
                     alt={especiesData[tabActivo].titulo} 
                     className="w-full h-full object-cover"
+                    initial={{ scale: 1.1 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 1.5 }}
                   />
                 </div>
               </div>
@@ -608,46 +604,42 @@ const PaginaConservacion = () => {
       <div 
         ref={protocolosRef}
         id="protocolos"
-        className="py-8 px-4 bg-white"
+        className="py-4 px-4 bg-white"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isProtocolosInView ? "visible" : "hidden"}
-            className="text-center mb-8"
+            className="text-center mb-4"
           >
-            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
               Control de Visitas y Protección del Ecosistema
             </motion.h2>
-            
-            <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Implementamos medidas establecidas por SERNANP para regular el acceso a zonas sensibles y minimizar nuestro impacto en el ecosistema marino de Paracas.
-            </motion.p>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {protocolos.map((protocolo, index) => (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -10 }}
+                whileHover={{ y: -5 }}
                 className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300"
               >
-                <div className={`h-2 bg-gradient-to-r ${protocolo.color}`}></div>
-                <div className="p-6">
-                  <div className="rounded-xl p-4 bg-gradient-to-r from-gray-50 to-blue-50 mb-4 w-16 h-16 flex items-center justify-center text-blue-600">
+                <div className={`h-1 bg-gradient-to-r ${protocolo.color}`}></div>
+                <div className="p-4">
+                  <div className="rounded-xl p-3 bg-gradient-to-r from-gray-50 to-blue-50 mb-3 w-14 h-14 flex items-center justify-center text-blue-600">
                     {protocolo.icono}
                   </div>
                   
-                  <h4 className="text-xl font-bold text-gray-800 mb-3">
+                  <h4 className="text-lg font-bold text-gray-800 mb-2">
                     {protocolo.titulo}
                   </h4>
                   
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-sm">
                     {protocolo.descripcion}
                   </p>
                 </div>
@@ -660,46 +652,43 @@ const PaginaConservacion = () => {
       {/* Resultados tangibles */}
       <div 
         ref={resultadosRef}
-        className="py-8 px-4 bg-blue-50"
+        className="py-4 px-4 bg-blue-50"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isResultadosInView ? "visible" : "hidden"}
-            className="text-center mb-8"
+            className="text-center mb-4"
           >
-            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
               Resultados de Nuestras Medidas de Protección
             </motion.h2>
-            
-            <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
-              El cumplimiento de los lineamientos de SERNANP y nuestros protocolos adicionales han generado resultados medibles en la conservación del ecosistema marino.
-            </motion.p>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {resultados.map((resultado, index) => (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
                 className="bg-white rounded-xl shadow-lg overflow-hidden"
               >
-                <div className={`h-2 bg-gradient-to-r ${resultado.color}`}></div>
+                <div className={`h-1 bg-gradient-to-r ${resultado.color}`}></div>
                 
-                <div className="p-6 flex flex-col items-center text-center">
-                  <div className={`bg-gradient-to-br ${resultado.color} text-white w-16 h-16 rounded-xl flex items-center justify-center mb-4 shadow-md`}>
+                <div className="p-4 flex flex-col items-center text-center">
+                  <div className={`bg-gradient-to-br ${resultado.color} text-white w-14 h-14 rounded-xl flex items-center justify-center mb-3 shadow-md`}>
                     {resultado.icono}
                   </div>
                   
-                  <h3 className="text-4xl font-bold text-gray-800 mb-3">
+                  <h3 className="text-3xl font-bold text-gray-800 mb-2">
                     {resultado.cifra}
                   </h3>
                   
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 text-sm">
                     {resultado.descripcion}
                   </p>
                 </div>
@@ -712,44 +701,41 @@ const PaginaConservacion = () => {
       {/* Beneficios para la comunidad */}
       <div 
         ref={beneficiosRef}
-        className="py-8 px-4 bg-white"
+        className="py-4 px-4 bg-white"
       >
         <div className="container mx-auto">
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
             animate={isBeneficiosInView ? "visible" : "hidden"}
-            className="text-center mb-8"
+            className="text-center mb-4"
           >
-            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
               Beneficios para la Comunidad Local
             </motion.h2>
-            
-            <motion.p variants={fadeInUp} className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Nuestro compromiso va más allá de la conservación ambiental. Buscamos generar un impacto positivo en la comunidad de Paracas a través del turismo sostenible.
-            </motion.p>
           </motion.div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {beneficios.map((beneficio, index) => (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
+                whileHover={{ y: -5 }}
+                className="bg-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
               >
-                <div className="flex gap-5">
-                  <div className={`flex-shrink-0 p-4 bg-gradient-to-br ${beneficio.color} text-white rounded-xl`}>
+                <div className="flex gap-3">
+                  <div className={`flex-shrink-0 p-3 bg-gradient-to-br ${beneficio.color} text-white rounded-xl`}>
                     {beneficio.icono}
                   </div>
                   
                   <div>
-                                     <h4 className="text-xl font-bold text-gray-800 mb-2">
+                    <h4 className="text-lg font-bold text-gray-800 mb-1">
                       {beneficio.titulo}
                     </h4>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 text-sm">
                       {beneficio.descripcion}
                     </p>
                   </div>
@@ -760,106 +746,8 @@ const PaginaConservacion = () => {
         </div>
       </div>
       
-      {/* Certificaciones y reconocimientos */}
-      <div className="py-8 px-4 bg-blue-50">
-        <div className="container mx-auto">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-              Certificaciones y Alianzas
-            </h2>
-            <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Trabajamos en colaboración con entidades comprometidas con la conservación del medio ambiente y el desarrollo sostenible de la región.
-            </p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              whileHover={{ scale: 1.05 }}
-              className="bg-white p-6 rounded-xl shadow-lg text-center"
-            >
-              <img 
-                src="https://via.placeholder.com/150x50?text=SERNANP" 
-                alt="SERNANP" 
-                className="h-16 mb-4 mx-auto" 
-              />
-              <h3 className="text-lg font-bold text-gray-800 mb-2">SERNANP</h3>
-              <p className="text-gray-600">
-                Operador autorizado por el Servicio Nacional de Áreas Naturales Protegidas, cumpliendo con todas las normativas para la conservación de la Reserva Nacional de Paracas.
-              </p>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              whileHover={{ scale: 1.05 }}
-              className="bg-white p-6 rounded-xl shadow-lg text-center"
-            >
-              <img 
-                src="https://via.placeholder.com/150x50?text=Reserva" 
-                alt="Reserva Nacional de Paracas" 
-                className="h-16 mb-4 mx-auto" 
-              />
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Reserva Nacional de Paracas</h3>
-              <p className="text-gray-600">
-                Comprometidos con la protección y conservación de esta importante área natural protegida, hogar de diversas especies de fauna marina.
-              </p>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-              className="bg-white p-6 rounded-xl shadow-lg text-center"
-            >
-              <img 
-                src="https://via.placeholder.com/150x50?text=WWF" 
-                alt="WWF" 
-                className="h-16 mb-4 mx-auto" 
-              />
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Alianza WWF</h3>
-              <p className="text-gray-600">
-                Colaboramos en proyectos de conservación marina y educación ambiental junto a World Wildlife Fund para promover prácticas sostenibles de turismo.
-              </p>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
-              whileHover={{ scale: 1.05 }}
-              className="bg-white p-6 rounded-xl shadow-lg text-center"
-            >
-              <img 
-                src="https://via.placeholder.com/150x50?text=Ministerio" 
-                alt="Ministerio" 
-                className="h-16 mb-4 mx-auto" 
-              />
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Ministerio de Comercio Exterior y Turismo</h3>
-              <p className="text-gray-600">
-                Reconocidos por implementar buenas prácticas en turismo sostenible, contribuyendo al desarrollo económico y social de la región.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-      
       {/* Llamado a la acción */}
-      <div className="py-12 px-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white">
+      <div className="py-10 px-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white mt-4">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h2
@@ -867,7 +755,7 @@ const PaginaConservacion = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="text-4xl md:text-5xl font-bold mb-6"
+              className="text-3xl md:text-4xl font-bold mb-4"
             >
               Explora la Reserva de manera responsable
             </motion.h2>
@@ -877,7 +765,7 @@ const PaginaConservacion = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl text-blue-100 mb-8"
+              className="text-xl text-blue-100 mb-6"
             >
               Descubre la belleza natural de las Islas Ballestas con un operador comprometido con la conservación y autorizado por SERNANP
             </motion.p>
@@ -887,10 +775,12 @@ const PaginaConservacion = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
+              whileHover={{ scale: 1.05 }}
+              className="animate-bounce"
             >
               <a 
                 href="/tours" 
-                className="inline-block px-8 py-4 bg-white text-blue-600 font-medium rounded-full text-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300 hover:-translate-y-1"
+                            className="inline-block px-8 py-4 bg-white text-blue-600 font-medium rounded-full text-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300"
               >
                 Reservar un Tour Sostenible
               </a>
