@@ -25,6 +25,8 @@ const PaginaSedes = () => {
   
   // Simulación de carga de datos
   useEffect(() => {
+    // Desplazar al inicio de la página
+    window.scrollTo(0, 0);
     // En un caso real, aquí se haría la petición a la API
     setTimeout(() => {
       const data = [

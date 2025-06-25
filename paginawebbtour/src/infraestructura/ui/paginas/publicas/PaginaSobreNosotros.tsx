@@ -417,6 +417,8 @@ const PaginaSobreNosotros = () => {
   
   // Animación para números crecientes
   useEffect(() => {
+    // Desplazar al inicio de la página
+    window.scrollTo(0, 0);
     if (inViewEstadisticas) {
       const duracion = 2000; // 2 segundos
       const intervalo = 20; // Actualizar cada 20ms

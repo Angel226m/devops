@@ -12,6 +12,8 @@ const PaginaTours = () => {
   
   // Simulación de carga
   useEffect(() => {
+    // Desplazar al inicio de la página
+    window.scrollTo(0, 0);
     const timer = setTimeout(() => {
       setCargando(false);
     }, 1500);

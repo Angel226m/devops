@@ -57,6 +57,8 @@ const PaginaConservacion = () => {
   
   // Efecto para animación de paralaje en scroll
   useEffect(() => {
+    // Desplazar al inicio de la página
+    window.scrollTo(0, 0);
     const handleScroll = () => {
       setScrollY(window.scrollY);
     };
