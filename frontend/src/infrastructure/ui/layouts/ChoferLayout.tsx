@@ -83,7 +83,7 @@ const VendedorLayout: React.FC = () => {
         <div className="p-4 border-b border-green-700 flex items-center space-x-2">
           <FaShip className="text-white text-xl" />
           <div>
-            <h2 className="text-lg font-bold">Tours Náuticos</h2>
+            <h2 className="text-lg font-bold">OceanTours  </h2>
             <p className="text-xs text-green-200">Panel de Ventas</p>
           </div>
         </div>
