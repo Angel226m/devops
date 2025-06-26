@@ -155,6 +155,7 @@ const ToursDisponiblesPage: React.FC = () => {
   };
   
   const currentDate = getCurrentDate();
+  const currentDateTime = "2025-06-26 05:56:26";
   const currentUser = "Angel226m";
   
   const [loading, setLoading] = useState(true);
@@ -890,7 +891,7 @@ const ToursDisponiblesPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">🏖 Tours Disponibles</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">🏖️ Tours Disponibles</h1>
               <p className="text-gray-600 flex items-center">
                 <FaCalendarAlt className="mr-2 text-blue-500" />
                 <span className="font-medium">{formatearFecha(selectedDate)}</span>
@@ -1222,8 +1223,7 @@ const ToursDisponiblesPage: React.FC = () => {
             ))
           )}
         </div>
-        
-               {/* Cargando global - visible cuando está cargando */}
+                {/* Cargando global - visible cuando está cargando */}
         {loading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
             <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4 border border-gray-200">
@@ -1236,6 +1236,32 @@ const ToursDisponiblesPage: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* Footer con información adicional */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mt-8">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+            <div className="flex items-center text-gray-600">
+              <div className="bg-blue-100 p-2 rounded-full mr-3">
+                <FaInfoCircle className="text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">Sistema de Reservas</p>
+                <p className="text-sm">Gestión de tours y embarcaciones</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                <span>Sistema activo</span>
+              </div>
+              <div className="flex items-center">
+                <FaCalendarAlt className="mr-2" />
+                <span>2025-06-26 06:00:51 • Angel226m</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
