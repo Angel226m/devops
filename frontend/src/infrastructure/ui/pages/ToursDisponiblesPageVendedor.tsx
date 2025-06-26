@@ -13,7 +13,6 @@ import {
   FiAlertCircle,
   FiRefreshCw, 
   FiInfo, 
-  FiFilter,
   FiChevronRight,
   FiImage
 } from 'react-icons/fi';
@@ -175,7 +174,7 @@ const ToursDisponiblesPage: React.FC = () => {
   const { selectedSede, isAuthenticated } = useSelector((state: RootState) => state.auth);
   
   // Valores actuales con fecha actualizada
-  const currentDateTime = "2025-06-26 05:30:31";
+  const currentDateTime = "2025-06-26 05:39:32";
   const currentUser = "Angel226m";
   
   // Estado
@@ -546,19 +545,20 @@ const ToursDisponiblesPage: React.FC = () => {
     navigate(`/vendedor/reservas/nueva?instanciaId=${instancia.id_instancia}`);
   };
   
+  // Función mejorada para formatear la hora
   const formatearHora = (hora: string): string => {
     if (!hora) return '-';
     
     try {
-      // Formato correcto para las horas en formato ISO
+      // Si es formato ISO con T
       if (hora.includes('T')) {
-        const date = parseISO(hora);
+        const date = new Date(hora);
         if (isValid(date)) {
           return format(date, 'hh:mm a', { locale: es });
         }
       }
       
-      // Formato tradicional HH:mm:ss
+      // Si es formato HH:mm:ss
       const parsedHora = parse(hora, 'HH:mm:ss', new Date());
       if (isValid(parsedHora)) {
         return format(parsedHora, 'hh:mm a', { locale: es });
@@ -578,7 +578,9 @@ const ToursDisponiblesPage: React.FC = () => {
     return safeFormatDate(fecha, 'EEE dd MMM');
   };
   
+  // Función mejorada para calcular la duración
   const calcularDuracion = (instancia: InstanciaTour): string => {
+    // Primero intentar con la duración del tipo de tour
     const duracionMinutos = instancia.tour_programado?.tipo_tour?.duracion_minutos;
     
     if (duracionMinutos) {
@@ -591,28 +593,35 @@ const ToursDisponiblesPage: React.FC = () => {
       }
     }
     
+    // Si no hay duración en tipo_tour, calcular de las horas
     if (instancia.hora_inicio && instancia.hora_fin) {
       try {
-        let inicio, fin;
-        
-        // Manejo para formato ISO
-        if (instancia.hora_inicio.includes('T')) {
-          inicio = parseISO(instancia.hora_inicio);
-        } else {
-          inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
+        // Intentar como formato ISO
+        if (instancia.hora_inicio.includes('T') && instancia.hora_fin.includes('T')) {
+          const inicio = new Date(instancia.hora_inicio);
+          const fin = new Date(instancia.hora_fin);
+          
+          if (isValid(inicio) && isValid(fin)) {
+            let minutes = differenceInMinutes(fin, inicio);
+            if (minutes < 0) minutes += 24 * 60;
+            
+            if (minutes >= 60) {
+              const horas = Math.floor(minutes / 60);
+              const minutos = minutes % 60;
+              return `${horas}h ${minutos > 0 ? `${minutos}min` : ''}`;
+            } else {
+              return `${minutes} minutos`;
+            }
+          }
         }
         
-        if (instancia.hora_fin.includes('T')) {
-          fin = parseISO(instancia.hora_fin);
-        } else {
-          fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
-        }
+        // Intentar como formato HH:mm:ss
+        const inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
+        const fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
         
         if (isValid(inicio) && isValid(fin)) {
           let minutes = differenceInMinutes(fin, inicio);
-          if (minutes < 0) {
-            minutes += 24 * 60;
-          }
+          if (minutes < 0) minutes += 24 * 60;
           
           if (minutes >= 60) {
             const horas = Math.floor(minutes / 60);
@@ -1248,34 +1257,6 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             ))
           )}
-        </div>
-        
-        {/* Información adicional */}
-        {!loading && filteredInstancias.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <FiInfo className="mr-2 text-blue-500" />
-              Información adicional
-            </h3>
-            <div className="text-gray-700 space-y-3">
-              <p>
-                <span className="font-medium">🔍 Selección de tours:</span> Explore nuestra selección de tours disponibles para el {formatearFecha(selectedDate)}.
-              </p>
-              <p>
-                <span className="font-medium">🎟️ Reservas:</span> Haga clic en "Ver Detalles" para obtener más información sobre cada tour.
-              </p>
-              <p>
-                <span className="font-medium">📅 Cambiar fecha:</span> Utilice el selector de fechas para ver tours en otros días.
-              </p>
-            </div>
-          </div>
-        )}
-        
-        {/* Footer */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mt-8 text-right">
-          <div className="text-sm text-gray-500">
-            {currentDateTime} • {currentUser}
-          </div>
         </div>
       </div>
       
