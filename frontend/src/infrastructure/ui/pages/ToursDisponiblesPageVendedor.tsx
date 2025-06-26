@@ -175,7 +175,7 @@ const ToursDisponiblesPage: React.FC = () => {
   const { selectedSede, isAuthenticated } = useSelector((state: RootState) => state.auth);
   
   // Valores actuales con fecha actualizada
-  const currentDateTime = "2025-06-26 05:16:23";
+  const currentDateTime = "2025-06-26 05:30:31";
   const currentUser = "Angel226m";
   
   // Estado
@@ -550,6 +550,15 @@ const ToursDisponiblesPage: React.FC = () => {
     if (!hora) return '-';
     
     try {
+      // Formato correcto para las horas en formato ISO
+      if (hora.includes('T')) {
+        const date = parseISO(hora);
+        if (isValid(date)) {
+          return format(date, 'hh:mm a', { locale: es });
+        }
+      }
+      
+      // Formato tradicional HH:mm:ss
       const parsedHora = parse(hora, 'HH:mm:ss', new Date());
       if (isValid(parsedHora)) {
         return format(parsedHora, 'hh:mm a', { locale: es });
@@ -584,8 +593,20 @@ const ToursDisponiblesPage: React.FC = () => {
     
     if (instancia.hora_inicio && instancia.hora_fin) {
       try {
-        const inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
-        const fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
+        let inicio, fin;
+        
+        // Manejo para formato ISO
+        if (instancia.hora_inicio.includes('T')) {
+          inicio = parseISO(instancia.hora_inicio);
+        } else {
+          inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
+        }
+        
+        if (instancia.hora_fin.includes('T')) {
+          fin = parseISO(instancia.hora_fin);
+        } else {
+          fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
+        }
         
         if (isValid(inicio) && isValid(fin)) {
           let minutes = differenceInMinutes(fin, inicio);
@@ -1251,21 +1272,9 @@ const ToursDisponiblesPage: React.FC = () => {
         )}
         
         {/* Footer */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mt-8">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-            <div className="flex items-center text-gray-600">
-              <div className="bg-blue-100 p-2 rounded-full mr-3">
-                <FiInfo className="text-blue-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800">Sistema de Tours</p>
-                <p className="text-sm">Explore tours disponibles</p>
-              </div>
-            </div>
-            
-            <div className="text-sm text-gray-500">
-              {currentDateTime} • Usuario: {currentUser}
-            </div>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mt-8 text-right">
+          <div className="text-sm text-gray-500">
+            {currentDateTime} • {currentUser}
           </div>
         </div>
       </div>
