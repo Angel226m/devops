@@ -105,6 +105,13 @@ func (s *ClienteService) Create(cliente *entidades.NuevoClienteRequest) (int, er
 	}
 
 	// Verificar si ya existe cliente con el mismo correo
+	/*if cliente.Correo != "" {
+		existingEmail, err := s.clienteRepo.GetByCorreo(cliente.Correo)
+		if err == nil && existingEmail != nil {
+			return 0, errors.New("ya existe un cliente con ese correo electrónico")
+		}
+	}*/
+	// Verificar si ya existe cliente con el mismo correo (solo si se proporciona correo)
 	if cliente.Correo != "" {
 		existingEmail, err := s.clienteRepo.GetByCorreo(cliente.Correo)
 		if err == nil && existingEmail != nil {
