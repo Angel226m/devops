@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../store';
 import axios from '../../../api/axiosClient';
 import { endpoints } from '../../../api/endpoints';
-import { FaArrowLeft, FaSave, FaExclamationTriangle } from 'react-icons/fa';
+import { FaArrowLeft, FaSave, FaExclamationTriangle, FaSearch } from 'react-icons/fa';
 
 // Interfaces
 interface Reserva {
@@ -32,8 +32,8 @@ interface Cliente {
   razon_social?: string;
   direccion_fiscal?: string;
   nombre_completo?: string;
-  correo?: string;        // Ahora opcional
-  numero_celular?: string; // Ahora opcional
+  correo?: string;
+  numero_celular?: string;
 }
 
 // Componente principal
@@ -51,9 +51,12 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
   });
   
   const [loading, setLoading] = useState(isEditing);
+  const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [documentoSearch, setDocumentoSearch] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('DNI');
   const [searchTerm, setSearchTerm] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
@@ -85,15 +88,56 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
     fetchReserva();
   }, [isEditing, id]);
   
-  // Cargar lista de clientes para búsqueda
+  // Buscar cliente por documento (mejor enfoque)
+  const buscarClientePorDocumento = async () => {
+    if (!documentoSearch.trim()) {
+      setError('Ingrese un número de documento');
+      return;
+    }
+    
+    try {
+      setSearching(true);
+      setError(null);
+      
+      // Usar el endpoint para buscar por documento
+      const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
+        params: { query: documentoSearch }
+      });
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        // Filtrar por tipo de documento específico
+        const clientesDelTipo = response.data.data.filter(
+          (c: Cliente) => c.tipo_documento === tipoDocumento
+        );
+        
+        if (clientesDelTipo.length > 0) {
+          // Si hay coincidencias con el tipo de documento, mostrarlas
+          setClientes(clientesDelTipo);
+        } else {
+          // Si no hay coincidencias exactas, mostrar todos los resultados
+          setClientes(response.data.data);
+        }
+      } else {
+        setClientes([]);
+        setError('No se encontraron clientes con ese documento');
+      }
+    } catch (error) {
+      console.error('Error al buscar cliente:', error);
+      setError('Error al buscar cliente. Verifique los datos e intente nuevamente.');
+    } finally {
+      setSearching(false);
+    }
+  };
+  
+  // Cargar lista de clientes para búsqueda por nombre/texto
   useEffect(() => {
     const fetchClientes = async () => {
       if (!searchTerm.trim() || searchTerm.length < 3) return;
       
       try {
-        // Usar el endpoint correcto para buscar clientes que comprobamos que funciona
-        const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
-          params: { query: searchTerm }
+        // Usar el endpoint correcto para buscar clientes por texto
+        const response = await axios.get(endpoints.cliente.vendedorList, {
+          params: { search: searchTerm }
         });
         
         if (response.data && response.data.data) {
@@ -131,6 +175,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       documento_cliente: `${cliente.tipo_documento}: ${cliente.numero_documento}`
     });
     setSearchTerm('');
+    setDocumentoSearch('');
     setClientes([]);
   };
   
@@ -176,13 +221,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       }
     } catch (error: any) {
       console.error('Error al guardar reserva:', error);
-      
-      // Mostrar mensaje de error más detallado si está disponible
-      if (error.response && error.response.data && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError(error.message || 'Error al guardar la reserva');
-      }
+      setError(error.message || 'Error al guardar la reserva');
     } finally {
       setSaving(false);
     }
@@ -251,49 +290,90 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
                   </div>
                 ) : (
                   <div>
-                    <div className="relative">
+                    {/* Búsqueda por documento (método más directo) */}
+                    <div className="mb-4">
+                      <div className="flex space-x-2 mb-2">
+                        <select
+                          className="border rounded py-2 px-3 text-gray-700 w-1/3"
+                          value={tipoDocumento}
+                          onChange={(e) => setTipoDocumento(e.target.value)}
+                        >
+                          <option value="DNI">DNI</option>
+                          <option value="CE">CE</option>
+                          <option value="Pasaporte">Pasaporte</option>
+                          <option value="RUC">RUC</option>
+                        </select>
+                        
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            placeholder={`Ingrese número de ${tipoDocumento}`}
+                            value={documentoSearch}
+                            onChange={(e) => setDocumentoSearch(e.target.value)}
+                          />
+                        </div>
+                        
+                        <button
+                          type="button"
+                          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
+                          onClick={buscarClientePorDocumento}
+                          disabled={searching}
+                        >
+                          {searching ? (
+                            <div className="w-4 h-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                          ) : (
+                            <FaSearch className="mr-2" />
+                          )}
+                          Buscar
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Búsqueda por nombre (alternativa) */}
+                    <div className="relative mb-4">
+                      <p className="mb-2 text-sm font-semibold text-gray-600">O busque por nombre:</p>
                       <input
                         type="text"
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        placeholder="Buscar cliente por nombre o documento..."
+                        placeholder="Buscar cliente por nombre..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
-                      
-                      {clientes.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                          {clientes.map((cliente: Cliente) => (
-                            <div
-                              key={cliente.id_cliente}
-                              className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100"
-                              onClick={() => handleSelectCliente(cliente)}
-                            >
-                              <p className="font-medium">
-                                {cliente.tipo_documento === 'RUC'
-                                  ? cliente.razon_social
-                                  : cliente.nombre_completo || `${cliente.nombres} ${cliente.apellidos}`}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {cliente.tipo_documento}: {cliente.numero_documento}
-                              </p>
-                              {cliente.correo && (
-                                <p className="text-xs text-gray-500">
-                                  Email: {cliente.correo}
-                                </p>
-                              )}
-                              {cliente.numero_celular && (
-                                <p className="text-xs text-gray-500">
-                                  Teléfono: {cliente.numero_celular}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     
+                    {/* Resultados de búsqueda */}
+                    {clientes.length > 0 && (
+                      <div className="border border-gray-200 rounded-md max-h-60 overflow-y-auto mb-4">
+                        <h3 className="text-sm font-semibold bg-gray-100 px-3 py-2 border-b">
+                          Resultados ({clientes.length})
+                        </h3>
+                        {clientes.map((cliente) => (
+                          <div
+                            key={cliente.id_cliente}
+                            className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100"
+                            onClick={() => handleSelectCliente(cliente)}
+                          >
+                            <p className="font-medium">
+                              {cliente.tipo_documento === 'RUC'
+                                ? cliente.razon_social
+                                : cliente.nombre_completo || `${cliente.nombres} ${cliente.apellidos}`}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {cliente.tipo_documento}: {cliente.numero_documento}
+                            </p>
+                            {cliente.correo && (
+                              <p className="text-xs text-gray-500">
+                                {cliente.correo} {cliente.numero_celular ? `| ${cliente.numero_celular}` : ''}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     <p className="mt-2 text-sm text-gray-600">
-                      Ingrese al menos 3 caracteres para buscar un cliente. Para agregar un nuevo cliente,
+                      Para agregar un nuevo cliente,
                       <a href="/vendedor/clientes/nuevo" className="text-blue-600 hover:text-blue-800 ml-1">
                         haga clic aquí
                       </a>.
