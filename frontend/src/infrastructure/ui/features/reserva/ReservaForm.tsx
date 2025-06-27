@@ -1,4 +1,3 @@
- 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -64,7 +63,8 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
         setLoading(true);
         setError(null);
         
-        const response = await axios.get('/vendedor/reservas/' + id);
+        // Usar el endpoint correcto para obtener reserva
+        const response = await axios.get(endpoints.reserva.vendedorGetById(parseInt(id)));
         
         if (response.data && response.data.data) {
           setReserva(response.data.data);
@@ -88,7 +88,8 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       if (!searchTerm.trim() || searchTerm.length < 3) return;
       
       try {
-        const response = await axios.get('/vendedor/clientes', {
+        // Usar el endpoint correcto para buscar clientes
+        const response = await axios.get(endpoints.cliente.vendedorList, {
           params: { search: searchTerm }
         });
         
@@ -151,9 +152,11 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       let response;
       
       if (isEditing && id) {
-        response = await axios.put('/vendedor/reservas/' + id, data);
+        // Usar el endpoint correcto para actualizar reserva
+        response = await axios.put(endpoints.reserva.vendedorUpdate(parseInt(id)), data);
       } else {
-        response = await axios.post('/vendedor/reservas', data);
+        // Usar el endpoint correcto para crear reserva
+        response = await axios.post(endpoints.reserva.vendedorCreate, data);
       }
       
       if (response.data && response.data.data) {

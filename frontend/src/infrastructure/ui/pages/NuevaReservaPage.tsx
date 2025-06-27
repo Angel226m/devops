@@ -294,85 +294,97 @@ const NuevaReservaPage: React.FC = () => {
   }, [isAuthenticated, selectedSede, cargarInstanciaTour]);
 
   // Funciones para búsqueda de cliente
-  const buscarCliente = async () => {
-    if (!documentoSearch.trim()) {
-      setError('Ingrese un número de documento');
-      return;
-    }
+ // Función para buscar cliente
+const buscarCliente = async () => {
+  if (!documentoSearch.trim()) {
+    setError('Ingrese un número de documento');
+    return;
+  }
+  
+  try {
+    setSearchLoading(true);
+    setError(null);
+    setClienteEncontrado(null);
     
-    try {
-      setSearchLoading(true);
-      setError(null);
-      setClienteEncontrado(null);
-      
-      // Corregido: usar vendedorByDocumento en lugar de vendedorGetByDocumento
-      const response = await axios.get(endpoints.cliente.vendedorByDocumento, {
-        params: {
-          tipo: tipoDocumento,
-          numero: documentoSearch
-        }
-      });
-      
-      if (response.data && response.data.data) {
-        setClienteEncontrado(response.data.data);
-        // Actualizar el estado de nuevo cliente con los datos encontrados (para edición)
-        setNuevoCliente({
-          ...response.data.data,
-          tipo_documento: response.data.data.tipo_documento || tipoDocumento,
-          numero_documento: response.data.data.numero_documento || documentoSearch
-        });
-      } else {
-        // Cliente no encontrado, preparar para registro
-        setClienteEncontrado(null);
-        setNuevoCliente({
-          tipo_documento: tipoDocumento,
-          numero_documento: documentoSearch,
-          nombres: '',
-          apellidos: '',
-          correo: '',
-          numero_celular: ''
-        });
+    // Usar el endpoint correcto
+    const response = await axios.get(endpoints.cliente.vendedorByDocumento, {
+      params: {
+        tipo: tipoDocumento,
+        numero: documentoSearch
       }
-    } catch (error) {
-      console.error('Error al buscar cliente:', error);
-      setError('Error al buscar cliente. Verifique los datos e intente nuevamente.');
+    });
+    
+    if (response.data && response.data.data) {
+      setClienteEncontrado(response.data.data);
+      setNuevoCliente({
+        ...response.data.data,
+        tipo_documento: response.data.data.tipo_documento || tipoDocumento,
+        numero_documento: response.data.data.numero_documento || documentoSearch
+      });
+    } else {
+      // Cliente no encontrado, preparar para registro
       setClienteEncontrado(null);
-    } finally {
-      setSearchLoading(false);
+      setNuevoCliente({
+        tipo_documento: tipoDocumento,
+        numero_documento: documentoSearch,
+        nombres: '',
+        apellidos: '',
+        correo: '',
+        numero_celular: ''
+      });
     }
-  };
+  } catch (error) {
+    console.error('Error al buscar cliente:', error);
+    setError('Error al buscar cliente. Verifique los datos e intente nuevamente.');
+    setClienteEncontrado(null);
+  } finally {
+    setSearchLoading(false);
+  }
+};
 
   // Función para crear/actualizar cliente
- const guardarCliente = async () => {
+const guardarCliente = async () => {
   try {
     setSearchLoading(true);
     setError(null);
     
-    // Validación básica
+    // Validación según tipo de documento
     if (tipoDocumento === 'DNI' || tipoDocumento === 'CE' || tipoDocumento === 'Pasaporte') {
       if (!nuevoCliente.nombres || !nuevoCliente.apellidos) {
         setError('Debe ingresar nombres y apellidos');
         setSearchLoading(false);
         return;
       }
+      // Limpiar campos no aplicables
+      nuevoCliente.razon_social = undefined;
+      nuevoCliente.direccion_fiscal = undefined;
     } else if (tipoDocumento === 'RUC') {
       if (!nuevoCliente.razon_social || !nuevoCliente.direccion_fiscal) {
         setError('Debe ingresar razón social y dirección fiscal');
         setSearchLoading(false);
         return;
       }
+      // Limpiar campos no aplicables
+      nuevoCliente.nombres = undefined;
+      nuevoCliente.apellidos = undefined;
+    }
+    
+    // Validar correo (requerido según backend)
+    if (!nuevoCliente.correo) {
+      setError('El correo electrónico es obligatorio');
+      setSearchLoading(false);
+      return;
     }
     
     let response;
     if (clienteEncontrado?.id_cliente) {
-      // Corregido: Usar el endpoint correcto para actualizar cliente
-      // Si vendedorUpdate no existe, usar el endpoint correcto según tu API
+      // Usar el endpoint correcto para actualizar
       response = await axios.put(
-        endpoints.cliente.byId(clienteEncontrado.id_cliente), // o vendedorUpdateCliente si existe
+        endpoints.cliente.vendedorById(clienteEncontrado.id_cliente),
         nuevoCliente
       );
     } else {
-      // Crear nuevo cliente
+      // Usar el endpoint correcto para crear
       response = await axios.post(endpoints.cliente.vendedorCreate, nuevoCliente);
     }
     
@@ -389,7 +401,6 @@ const NuevaReservaPage: React.FC = () => {
     setSearchLoading(false);
   }
 };
-
   // Funciones para manejar pasajes
   const actualizarCantidadPasaje = (id: number, cantidad: number) => {
     setPasajesSeleccionados(prevState => 
@@ -488,6 +499,7 @@ const NuevaReservaPage: React.FC = () => {
   };
 
  // Crear reserva
+// Función para crear reserva
 const crearReserva = async () => {
   if (!instanciaTour || !clienteEncontrado?.id_cliente) {
     setError('Información incompleta para crear la reserva');
@@ -519,8 +531,8 @@ const crearReserva = async () => {
         }));
     }
     
-    // Usar URL directa en lugar de endpoints
-    const response = await axios.post('/vendedor/reservas', reservaData);
+    // Usar el endpoint correcto
+    const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
     
     if (response.data && response.data.data) {
       setReservaCreada(true);

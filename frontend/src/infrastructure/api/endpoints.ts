@@ -9,8 +9,7 @@ export const endpoints = {
     userSedes: '/auth/sedes',
     selectSede: '/auth/select-sede',
      solicitarRecuperacion: '/admin/recuperar-contrasena', // Para usuarios administrativos
-    solicitarRecuperacionCliente: '/clientes/recuperar-contrasena', // Para clientes
-    validarToken: '/auth/validar-token',
+     validarToken: '/auth/validar-token',
     cambiarContrasena: '/auth/cambiar-contrasena',
   },
   sede: {
@@ -57,9 +56,7 @@ export const endpoints = {
     // Rutas para chofer
     choferList: '/chofer/tipos-tour',
     
-    // Rutas para cliente
-    clienteList: '/cliente/tipos-tour',
-    clienteGetById: (id: number) => `/cliente/tipos-tour/${id}`,
+   
      
     // Rutas públicas
     publicList: '/tipos-tour',
@@ -118,11 +115,6 @@ export const endpoints = {
     vendedorListBySede: (idSede: number) => `/vendedor/tipos-pasaje/sede/${idSede}`,
     vendedorListByTipoTour: (idTipoTour: number) => `/vendedor/tipos-pasaje/tipo-tour/${idTipoTour}`,
     
-    // Rutas para cliente
-    clienteList: '/cliente/tipos-pasaje',
-    clienteListBySede: (idSede: number) => `/cliente/tipos-pasaje/sede/${idSede}`,
-    clienteListByTipoTour: (idTipoTour: number) => `/cliente/tipos-pasaje/tipo-tour/${idTipoTour}`,
-    
     // Rutas públicas
     publicList: '/tipos-pasaje',
     publicListBySede: (idSede: number) => `/tipos-pasaje/sede/${idSede}`,
@@ -145,10 +137,6 @@ export const endpoints = {
     vendedorListBySede: (idSede: number) => `/vendedor/paquetes-pasajes/sede/${idSede}`,
     vendedorListByTipoTour: (idTipoTour: number) => `/vendedor/paquetes-pasajes/tipo-tour/${idTipoTour}`,
     
-    // Rutas para cliente
-    clienteList: '/cliente/paquetes-pasajes',
-    clienteListBySede: (idSede: number) => `/cliente/paquetes-pasajes/sede/${idSede}`,
-    clienteListByTipoTour: (idTipoTour: number) => `/cliente/paquetes-pasajes/tipo-tour/${idTipoTour}`,
     
     // Rutas públicas
     publicList: '/paquetes-pasajes',
@@ -169,10 +157,7 @@ export const endpoints = {
     vendedorGetById: (id: number) => `/vendedor/galerias/${id}`,
     vendedorListByTipoTour: (idTipoTour: number) => `/vendedor/tipo-tours/${idTipoTour}/galerias`,
     
-    // Rutas para cliente (solo lectura)
-    clienteGetById: (id: number) => `/cliente/galerias/${id}`,
-    clienteListByTipoTour: (idTipoTour: number) => `/cliente/tipo-tours/${idTipoTour}/galerias`,
-    
+ 
     // Rutas públicas
     publicGetById: (id: number) => `/galerias/${id}`,
     publicListByTipoTour: (idTipoTour: number) => `/tipo-tours/${idTipoTour}/galerias`,
@@ -225,13 +210,7 @@ export const endpoints = {
     choferProgramacionSemanal: '/chofer/tours/programacion-semanal',
     choferPorFecha: (fecha: string) => `/chofer/tours/fecha/${fecha}`,
 
-    // Rutas para cliente
-    clienteDisponibles: '/cliente/tours/disponibles',
-    clienteDisponibilidadDia: (fecha: string) => `/cliente/tours/disponibilidad/${fecha}`,
-    clienteGetById: (id: number) => `/cliente/tours/${id}`,
-    clienteDisponiblesEnFecha: (fecha: string) => `/cliente/tours/disponibles-en-fecha/${fecha}`,
-    clienteDisponiblesEnRango: '/cliente/tours/disponibles-en-rango',
-    clienteVerificarDisponibilidad: '/cliente/tours/verificar-disponibilidad',
+ 
 
     // Rutas públicas
     disponibles: '/tours/disponibles',
@@ -290,6 +269,33 @@ instanciaTour: {
         vendedorDatosEmpresa: (id: number) => `/vendedor/clientes/${id}/datos-empresa`,
 
   },
+  // Agregar estos endpoints al objeto existente de endpoints.ts
+reserva: {
+  // Rutas para admin
+  list: '/admin/reservas',
+  getById: (id: number) => `/admin/reservas/${id}`,
+  create: '/admin/reservas',
+  update: (id: number) => `/admin/reservas/${id}`,
+  delete: (id: number) => `/admin/reservas/${id}`,
+  cambiarEstado: (id: number) => `/admin/reservas/${id}/estado`,
+  listByCliente: (idCliente: number) => `/admin/reservas/cliente/${idCliente}`,
+  listByInstancia: (idInstancia: number) => `/admin/reservas/instancia/${idInstancia}`,
+  listByFecha: (fecha: string) => `/admin/reservas/fecha/${fecha}`,
+  listByEstado: (estado: string) => `/admin/reservas/estado/${estado}`,
+  confirmarPago: '/admin/reservas/confirmar-pago',
+  
+  // Rutas para vendedor
+  vendedorList: '/vendedor/reservas',
+  vendedorCreate: '/vendedor/reservas',
+  vendedorGetById: (id: number) => `/vendedor/reservas/${id}`,
+  vendedorUpdate: (id: number) => `/vendedor/reservas/${id}`,
+  vendedorCambiarEstado: (id: number) => `/vendedor/reservas/${id}/estado`,
+  vendedorListByCliente: (idCliente: number) => `/vendedor/reservas/cliente/${idCliente}`,
+  vendedorListByInstancia: (idInstancia: number) => `/vendedor/reservas/instancia/${idInstancia}`,
+  vendedorListByFecha: (fecha: string) => `/vendedor/reservas/fecha/${fecha}`,
+  vendedorListByEstado: (estado: string) => `/vendedor/reservas/estado/${estado}`,
+  vendedorConfirmarPago: '/vendedor/reservas/confirmar-pago',
+},
   // ... otros endpoints
 };
 
