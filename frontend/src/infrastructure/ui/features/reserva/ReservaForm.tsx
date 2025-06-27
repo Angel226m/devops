@@ -32,6 +32,8 @@ interface Cliente {
   razon_social?: string;
   direccion_fiscal?: string;
   nombre_completo?: string;
+  correo?: string;        // Ahora opcional
+  numero_celular?: string; // Ahora opcional
 }
 
 // Componente principal
@@ -174,7 +176,13 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       }
     } catch (error: any) {
       console.error('Error al guardar reserva:', error);
-      setError(error.message || 'Error al guardar la reserva');
+      
+      // Mostrar mensaje de error más detallado si está disponible
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError(error.message || 'Error al guardar la reserva');
+      }
     } finally {
       setSaving(false);
     }
@@ -254,7 +262,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
                       
                       {clientes.length > 0 && (
                         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                          {clientes.map((cliente) => (
+                          {clientes.map((cliente: Cliente) => (
                             <div
                               key={cliente.id_cliente}
                               className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100"
@@ -268,6 +276,16 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
                               <p className="text-sm text-gray-600">
                                 {cliente.tipo_documento}: {cliente.numero_documento}
                               </p>
+                              {cliente.correo && (
+                                <p className="text-xs text-gray-500">
+                                  Email: {cliente.correo}
+                                </p>
+                              )}
+                              {cliente.numero_celular && (
+                                <p className="text-xs text-gray-500">
+                                  Teléfono: {cliente.numero_celular}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
