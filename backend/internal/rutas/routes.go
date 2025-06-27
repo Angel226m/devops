@@ -463,14 +463,14 @@ func SetupRoutes(
 			vendedor.GET("/paquetes-pasajes/tipo-tour/:id_tipo_tour", paquetePasajesController.ListByTipoTour)
 
 			// Ver métodos de pago (solo lectura)
-			vendedor.GET("/metodos-pago", metodoPagoController.List)
-			vendedor.GET("/metodos-pago/:id", metodoPagoController.GetByID)
-			vendedor.GET("/metodos-pago/sede/:idSede", metodoPagoController.ListBySede)
+			/*	vendedor.GET("/metodos-pago", metodoPagoController.List)
+				vendedor.GET("/metodos-pago/:id", metodoPagoController.GetByID)
+				vendedor.GET("/metodos-pago/sede/:idSede", metodoPagoController.ListBySede)
 
-			// Ver canales de venta (solo lectura)
-			vendedor.GET("/canales-venta", canalVentaController.List)
-			vendedor.GET("/canales-venta/:id", canalVentaController.GetByID)
-			vendedor.GET("/canales-venta/sede/:idSede", canalVentaController.ListBySede)
+				// Ver canales de venta (solo lectura)
+				vendedor.GET("/canales-venta", canalVentaController.List)
+				vendedor.GET("/canales-venta/:id", canalVentaController.GetByID)
+				vendedor.GET("/canales-venta/sede/:idSede", canalVentaController.ListBySede)*/
 
 			// Gestión de clientes
 			vendedor.POST("/clientes", clienteController.Create)

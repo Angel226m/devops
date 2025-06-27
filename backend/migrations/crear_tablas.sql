@@ -228,29 +228,7 @@ CREATE INDEX idx_tour_programado_vigencia ON tour_programado(vigencia_desde, vig
 CREATE INDEX idx_tour_programado_estado ON tour_programado(estado);
 CREATE INDEX idx_tour_programado_eliminado ON tour_programado(eliminado);
  
--- 11. Tabla metodo_pago (depende de sede)
-CREATE TABLE metodo_pago (
-    id_metodo_pago SERIAL PRIMARY KEY,
-    id_sede INT NOT NULL,
-    nombre VARCHAR(50) NOT NULL,
-    descripcion VARCHAR(255),
-    eliminado BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE INDEX idx_metodo_pago_sede ON metodo_pago(id_sede);
-CREATE INDEX idx_metodo_pago_eliminado ON metodo_pago(eliminado);
-
--- 12. Tabla canal_venta (depende de sede)
-CREATE TABLE canal_venta (
-    id_canal SERIAL PRIMARY KEY,
-    id_sede INT NOT NULL,
-    nombre VARCHAR(50) NOT NULL,
-    descripcion VARCHAR(255),
-    eliminado BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE INDEX idx_canal_venta_sede ON canal_venta(id_sede);
-CREATE INDEX idx_canal_venta_eliminado ON canal_venta(eliminado);
+ 
 
 -- 13. Tabla cliente (sin dependencias)
 CREATE TABLE cliente (
@@ -440,3 +418,30 @@ BEGIN
     WHERE expiracion < NOW() - INTERVAL '7 days';
 END;
 $$ LANGUAGE plpgsql;
+
+
+--analizr si se kedan o no 
+
+-- 11. Tabla metodo_pago (depende de sede)
+CREATE TABLE metodo_pago (
+    id_metodo_pago SERIAL PRIMARY KEY,
+    id_sede INT NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(255),
+    eliminado BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+CREATE INDEX idx_metodo_pago_sede ON metodo_pago(id_sede);
+CREATE INDEX idx_metodo_pago_eliminado ON metodo_pago(eliminado);
+
+-- 12. Tabla canal_venta (depende de sede)
+CREATE TABLE canal_venta (
+    id_canal SERIAL PRIMARY KEY,
+    id_sede INT NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(255),
+    eliminado BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (id_sede) REFERENCES sede(id_sede) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+CREATE INDEX idx_canal_venta_sede ON canal_venta(id_sede);
+CREATE INDEX idx_canal_venta_eliminado ON canal_venta(eliminado);

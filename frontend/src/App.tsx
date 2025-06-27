@@ -78,6 +78,8 @@ import ToursDisponiblesPage from './infrastructure/ui/pages/ToursDisponiblesPage
 import ClientesVendedorPage from './infrastructure/ui/pages/ClientesVendedorPage';
 import PagosVendedorPage from './infrastructure/ui/pages/PagosVendedorPage';
 import SoporteVendedorPage from './infrastructure/ui/pages/SoporteVendedorPage';
+import NuevaReservaPage from './infrastructure/ui/pages/NuevaReservaPage';
+
 // Componente para rutas protegidas con verificación de sesión mejorada
 const ProtectedRoute: React.FC<{ 
   children: React.ReactElement, 
@@ -330,7 +332,13 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }>
          <Route path="dashboard" element={<VendedorDashboard />} />
+  {/*<Route path="reservas" element={<ReservasVendedorPage />} />*/}
+    
+  {/* Rutas de reservas */}
   <Route path="reservas" element={<ReservasVendedorPage />} />
+  <Route path="reservas/nueva" element={<NuevaReservaPage />} /> {/* Nueva ruta */}
+  <Route path="reservas/:id" element={<ReservaDetail />} />
+  <Route path="reservas/editar/:id" element={<ReservaForm isEditing={true} />} />
   <Route path="tours" element={<ToursDisponiblesPage />} />
   
   {/* Rutas de clientes - AHORA usando rutas anidadas */}

@@ -98,7 +98,13 @@ export const ROUTES = {
   },
   VENDEDOR: {
     DASHBOARD: '/vendedor/dashboard',
-    RESERVAS: '/vendedor/reservas',
+   /* RESERVAS: '/vendedor/reservas',*/
+    RESERVAS: {
+      LIST: '/vendedor/reservas',
+      NUEVA: '/vendedor/reservas/nueva',
+      DETAIL: (id: string | number) => `/vendedor/reservas/${id}`,
+      EDIT: (id: string | number) => `/vendedor/reservas/editar/${id}`,
+    },
     TOURS: '/vendedor/tours',
        CLIENTES: '/vendedor/clientes', // Simplificado a una sola ruta base
 
