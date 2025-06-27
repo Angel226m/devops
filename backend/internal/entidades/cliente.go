@@ -22,6 +22,7 @@ type Cliente struct {
 }
 
 // NuevoClienteRequest representa los datos necesarios para crear un nuevo cliente
+// NuevoClienteRequest representa los datos necesarios para crear un nuevo cliente
 type NuevoClienteRequest struct {
 	TipoDocumento   string `json:"tipo_documento" validate:"required,oneof=DNI CE Pasaporte RUC"`
 	NumeroDocumento string `json:"numero_documento" validate:"required"`
@@ -31,9 +32,9 @@ type NuevoClienteRequest struct {
 	// Campos para empresas
 	RazonSocial     string `json:"razon_social" validate:"required_if=TipoDocumento RUC"`
 	DireccionFiscal string `json:"direccion_fiscal" validate:"required_if=TipoDocumento RUC"`
-	// Campos de contacto
-	Correo        string `json:"correo" validate:"required,email"`
-	NumeroCelular string `json:"numero_celular" validate:"required"`
+	// Campos de contacto - ahora opcionales
+	Correo        string `json:"correo" validate:"omitempty,email"`
+	NumeroCelular string `json:"numero_celular" validate:"omitempty"`
 	// Datos de sistema
 	Contrasena string `json:"contrasena,omitempty" validate:"omitempty,min=6"`
 }
