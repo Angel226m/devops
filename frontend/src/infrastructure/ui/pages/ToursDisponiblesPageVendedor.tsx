@@ -1,4 +1,4 @@
- import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Card from '../components/Card';
@@ -129,7 +129,8 @@ const isStringWithValidity = (obj: any): obj is StringWithValidity => {
     typeof obj === 'object' &&
     'String' in obj &&
     'Valid' in obj &&
-typeof obj.Valid === 'boolean'  );
+    typeof obj.Valid === 'boolean'
+  );
 };
 
 const ToursDisponiblesPage: React.FC = () => {
@@ -500,6 +501,11 @@ const ToursDisponiblesPage: React.FC = () => {
     navigate(`/vendedor/reservas/nueva?instanciaId=${instancia.id_instancia}`);
   };
 
+  const handleViewDetails = (instancia: InstanciaTour) => {
+    console.log('Ver detalles de:', instancia);
+    navigate(`/vendedor/tours/detalles/${instancia.id_instancia}`);
+  };
+
   const formatearHora = (hora: string): string => {
     if (!hora) return '-';
 
@@ -788,16 +794,16 @@ const ToursDisponiblesPage: React.FC = () => {
   return (
     <div className="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">🏖 Tours Disponibles</h1>
-              <p className="text-gray-600 flex items-center">
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">🏖 Tours Disponibles</h1>
+              <p className="text-gray-600 flex items-center text-lg">
                 <FaCalendarAlt className="mr-2 text-blue-500" />
-                <span className="font-medium">{formatearFecha(selectedDate)}</span>
+                <span className="font-semibold">{formatearFecha(selectedDate)}</span>
                 <span className="mx-2">•</span>
                 <FaMapMarkerAlt className="mr-2 text-green-500" />
-                <span className="font-medium">{safeGetStringValue(selectedSede?.nombre)}</span>
+                <span className="font-semibold">{safeGetStringValue(selectedSede?.nombre)}</span>
               </p>
             </div>
             
@@ -842,8 +848,8 @@ const ToursDisponiblesPage: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 overflow-x-auto border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <div className="bg-white rounded-2xl shadow-lg p-8 overflow-x-auto border border-gray-100">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
             <FaCalendarAlt className="mr-2 text-blue-500" />
             Seleccionar Fecha
           </h3>
@@ -878,8 +884,8 @@ const ToursDisponiblesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
             <FaSearch className="mr-2 text-blue-500" />
             Filtros de Búsqueda
           </h3>
@@ -888,16 +894,16 @@ const ToursDisponiblesPage: React.FC = () => {
               <input
                 type="text"
                 placeholder="Buscar por nombre, descripción, embarcación..."
-                className="pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium"
+                className="pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium text-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <FaSearch className="absolute left-4 top-4.5 text-gray-400 text-lg" />
+              <FaSearch className="absolute left-4 top-4.5 text-gray-400 text-xl" />
             </div>
 
             <div className="md:w-1/3">
               <select
-                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium bg-white"
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium bg-white text-lg"
                 value={selectedTipoTour || ''}
                 onChange={(e) => setSelectedTipoTour(e.target.value ? parseInt(e.target.value) : undefined)}
               >
@@ -975,7 +981,7 @@ const ToursDisponiblesPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-8">
                     <h3 className="text-3xl font-bold text-gray-800 mb-4">{safeGetStringValue(getNombreTipoTour(instancia))}</h3>
                     
                     <p className="text-gray-600 mb-6 leading-relaxed text-lg">{safeGetStringValue(getDescripcionTipoTour(instancia))}</p>
@@ -1098,13 +1104,19 @@ const ToursDisponiblesPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-4">
                       <Button 
                         onClick={() => handleCreateReserva(instancia)}
-                        className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        className="w-full sm:w-1/2 py-4 text-lg font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                         variant="success"
                       >
                         <FaCalendarAlt className="mr-3" /> 🎫 Reservar Ahora
+                      </Button>
+                      <Button 
+                        onClick={() => handleViewDetails(instancia)}
+                        className="w-full sm:w-1/2 py-4 text-lg font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      >
+                        <FaInfoCircle className="mr-3" /> Ver Detalles
                       </Button>
                     </div>
                   </div>
