@@ -79,6 +79,8 @@ import ClientesVendedorPage from './infrastructure/ui/pages/ClientesVendedorPage
 import PagosVendedorPage from './infrastructure/ui/pages/PagosVendedorPage';
 import SoporteVendedorPage from './infrastructure/ui/pages/SoporteVendedorPage';
 import NuevaReservaPage from './infrastructure/ui/pages/NuevaReservaPage';
+import ReservaDetail from './infrastructure/ui/features/reserva/ReservaDetail';
+import ReservaForm from './infrastructure/ui/features/reserva/ReservaForm';
 
 // Componente para rutas protegidas con verificación de sesión mejorada
 const ProtectedRoute: React.FC<{ 
