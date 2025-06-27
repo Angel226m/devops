@@ -31,6 +31,7 @@ interface Cliente {
   apellidos?: string;
   razon_social?: string;
   direccion_fiscal?: string;
+  nombre_completo?: string;
 }
 
 // Componente principal
@@ -88,9 +89,9 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       if (!searchTerm.trim() || searchTerm.length < 3) return;
       
       try {
-        // Usar el endpoint correcto para buscar clientes
-        const response = await axios.get(endpoints.cliente.vendedorList, {
-          params: { search: searchTerm }
+        // Usar el endpoint correcto para buscar clientes que comprobamos que funciona
+        const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
+          params: { query: searchTerm }
         });
         
         if (response.data && response.data.data) {
@@ -124,7 +125,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       id_cliente: cliente.id_cliente,
       nombre_cliente: cliente.tipo_documento === 'RUC' 
         ? cliente.razon_social 
-        : `${cliente.nombres} ${cliente.apellidos}`,
+        : cliente.nombre_completo || `${cliente.nombres} ${cliente.apellidos}`,
       documento_cliente: `${cliente.tipo_documento}: ${cliente.numero_documento}`
     });
     setSearchTerm('');
@@ -262,7 +263,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
                               <p className="font-medium">
                                 {cliente.tipo_documento === 'RUC'
                                   ? cliente.razon_social
-                                  : `${cliente.nombres} ${cliente.apellidos}`}
+                                  : cliente.nombre_completo || `${cliente.nombres} ${cliente.apellidos}`}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {cliente.tipo_documento}: {cliente.numero_documento}

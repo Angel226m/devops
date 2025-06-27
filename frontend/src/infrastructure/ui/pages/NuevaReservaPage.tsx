@@ -295,6 +295,7 @@ const NuevaReservaPage: React.FC = () => {
 
   // Funciones para búsqueda de cliente
  // Función para buscar cliente
+// En NuevaReservaPage.tsx, actualiza la función buscarCliente:
 const buscarCliente = async () => {
   if (!documentoSearch.trim()) {
     setError('Ingrese un número de documento');
@@ -306,23 +307,41 @@ const buscarCliente = async () => {
     setError(null);
     setClienteEncontrado(null);
     
-    // Usar el endpoint correcto
-    const response = await axios.get(endpoints.cliente.vendedorByDocumento, {
+    // Usar la ruta que sabemos que funciona (confirmada con curl)
+    const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
       params: {
-        tipo: tipoDocumento,
-        numero: documentoSearch
+        query: documentoSearch
       }
     });
     
-    if (response.data && response.data.data) {
-      setClienteEncontrado(response.data.data);
-      setNuevoCliente({
-        ...response.data.data,
-        tipo_documento: response.data.data.tipo_documento || tipoDocumento,
-        numero_documento: response.data.data.numero_documento || documentoSearch
-      });
+    if (response.data && response.data.data && response.data.data.length > 0) {
+      // Define explícitamente el tipo Cliente para 'c'
+      const clienteEncontradoData = response.data.data.find(
+        (c: Cliente) => c.tipo_documento === tipoDocumento && c.numero_documento === documentoSearch
+      );
+      
+      if (clienteEncontradoData) {
+        // Cliente encontrado con coincidencia exacta
+        setClienteEncontrado(clienteEncontradoData);
+        setNuevoCliente({
+          ...clienteEncontradoData,
+          tipo_documento: clienteEncontradoData.tipo_documento || tipoDocumento,
+          numero_documento: clienteEncontradoData.numero_documento || documentoSearch
+        });
+      } else {
+        // No se encontró un cliente con esa coincidencia exacta
+        setClienteEncontrado(null);
+        setNuevoCliente({
+          tipo_documento: tipoDocumento,
+          numero_documento: documentoSearch,
+          nombres: '',
+          apellidos: '',
+          correo: '',
+          numero_celular: ''
+        });
+      }
     } else {
-      // Cliente no encontrado, preparar para registro
+      // No se encontraron clientes
       setClienteEncontrado(null);
       setNuevoCliente({
         tipo_documento: tipoDocumento,

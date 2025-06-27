@@ -259,15 +259,25 @@ instanciaTour: {
         datosEmpresa: (id: number) => `/admin/clientes/${id}/datos-empresa`, // Añadida esta línea
 
     
+
+          // Rutas para vendedor
+  vendedorList: '/vendedor/clientes',
+  vendedorCreate: '/vendedor/clientes',
+  vendedorById: (id: number) => `/vendedor/clientes/${id}`,
+  // Actualizar estas rutas para usar las que funcionan
+  vendedorByDocumento: '/vendedor/clientes/buscar-documento', // Cambiar a la ruta que funciona
+  vendedorBuscarDocumento: '/vendedor/clientes/buscar-documento',
+  vendedorDatosFacturacion: (id: number) => `/vendedor/clientes/${id}/datos-facturacion`,
+  vendedorDatosEmpresa: (id: number) => `/vendedor/clientes/${id}/datos-empresa`,
     // Rutas para vendedor
-    vendedorList: '/vendedor/clientes',
+   /* vendedorList: '/vendedor/clientes',
     vendedorCreate: '/vendedor/clientes',
     vendedorById: (id: number) => `/vendedor/clientes/${id}`,
     vendedorByDocumento: '/vendedor/clientes/documento',
     vendedorBuscarDocumento: '/vendedor/clientes/buscar-documento',
     vendedorDatosFacturacion: (id: number) => `/vendedor/clientes/${id}/datos-facturacion`,
         vendedorDatosEmpresa: (id: number) => `/vendedor/clientes/${id}/datos-empresa`,
-
+*/
   },
   // Agregar estos endpoints al objeto existente de endpoints.ts
 reserva: {
