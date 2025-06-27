@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaStar } from 'react-icons/fa';
+import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaStar, FaTimes } from 'react-icons/fa';
 import { format, parse, isValid, differenceInMinutes, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import axios from '../../../infrastructure/api/axiosClient';
@@ -137,6 +137,11 @@ const ToursDisponiblesPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { selectedSede, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  // Estados para el modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTour, setSelectedTour] = useState<InstanciaTour | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const getCurrentDate = () => {
     const now = new Date();
@@ -501,9 +506,40 @@ const ToursDisponiblesPage: React.FC = () => {
     navigate(`/vendedor/reservas/nueva?instanciaId=${instancia.id_instancia}`);
   };
 
+  // Modificar para abrir el modal en lugar de navegar
   const handleViewDetails = (instancia: InstanciaTour) => {
     console.log('Ver detalles de:', instancia);
-    navigate(`/vendedor/tours/detalles/${instancia.id_instancia}`);
+    setSelectedTour(instancia);
+    setModalOpen(true);
+    setCurrentImageIndex(0); // Reiniciar el índice de imagen al abrir
+    // Scroll a inicio del modal (importante para móviles)
+    document.body.style.overflow = 'hidden'; // Prevenir scroll en la página principal
+  };
+
+  // Cerrar modal
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedTour(null);
+    document.body.style.overflow = 'auto'; // Restaurar scroll
+  };
+
+  // Navegación de imágenes en el modal
+  const handleNextImage = () => {
+    if (!selectedTour || !selectedTour.tour_programado?.galeria_imagenes) return;
+    
+    const totalImages = selectedTour.tour_programado.galeria_imagenes.length;
+    if (totalImages <= 1) return;
+    
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % totalImages);
+  };
+
+  const handlePrevImage = () => {
+    if (!selectedTour || !selectedTour.tour_programado?.galeria_imagenes) return;
+    
+    const totalImages = selectedTour.tour_programado.galeria_imagenes.length;
+    if (totalImages <= 1) return;
+    
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + totalImages) % totalImages);
   };
 
   const formatearHora = (hora: string): string => {
@@ -733,6 +769,194 @@ const ToursDisponiblesPage: React.FC = () => {
     }
   };
 
+  // Componente de Modal para detalles del tour
+  const DetallesModal = () => {
+    if (!selectedTour) return null;
+
+    const instancia = selectedTour;
+    const imagenes = getImagenesGaleria(instancia);
+    const currentImage = imagenes.length > 0 ? imagenes[currentImageIndex] : null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 overflow-y-auto backdrop-blur-sm" onClick={handleCloseModal}>
+        <div 
+          className="relative bg-white rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-fadeIn" 
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Botón de cerrar */}
+          <button 
+            onClick={handleCloseModal}
+            className="absolute top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+          >
+            <FaTimes className="text-gray-700 text-xl" />
+          </button>
+
+          {/* Galería de imágenes */}
+          <div className="relative h-80 md:h-96 bg-gray-200">
+            {imagenes.length > 0 ? (
+              <>
+                <img 
+                  src={currentImage?.imagen_url || getImagenTour(instancia)} 
+                  alt={currentImage?.descripcion || getNombreTipoTour(instancia)}
+                  className="w-full h-full object-cover"
+                />
+                {imagenes.length > 1 && (
+                  <>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} 
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-3 shadow-lg"
+                    >
+                      <FaInfoCircle className="rotate-180 text-gray-800" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleNextImage(); }} 
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white rounded-full p-3 shadow-lg"
+                    >
+                      <FaInfoCircle className="text-gray-800" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                      {imagenes.map((_, idx) => (
+                        <button 
+                          key={idx} 
+                          onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(idx); }}
+                          className={`w-3 h-3 rounded-full ${idx === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
+                          aria-label={`Ver imagen ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <FaShip className="text-6xl text-gray-400" />
+              </div>
+            )}
+          </div>
+
+          <div className="p-8">
+            {/* Encabezado */}
+            <div className="mb-6">
+              <div className="flex items-center text-sm text-gray-500 mb-2">
+                <FaMapMarkerAlt className="mr-2 text-green-500" />
+                <span>{safeGetStringValue(instancia.nombre_sede)}</span>
+                <span className="mx-2">•</span>
+                <FaCalendarAlt className="mr-2 text-blue-500" />
+                <span>{renderFechaInstancia(instancia)}</span>
+                <span className="mx-2">•</span>
+                <FaShip className="mr-2 text-purple-500" />
+                <span>{safeGetStringValue(instancia.nombre_embarcacion)}</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">{getNombreTipoTour(instancia)}</h2>
+              <div className="flex items-center mt-2">
+                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold mr-2">
+                  {instancia.estado}
+                </span>
+                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
+                  🕒 {calcularDuracion(instancia)}
+                </span>
+              </div>
+            </div>
+
+            {/* Información principal */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+                <h3 className="text-xl font-semibold text-blue-800 mb-4 flex items-center">
+                  <FaInfoCircle className="mr-2" /> Información del Tour
+                </h3>
+                <p className="text-gray-700 mb-6 leading-relaxed">
+                  {getDescripcionTipoTour(instancia)}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                    <div className="text-sm text-gray-500">Hora de salida</div>
+                    <div className="font-bold text-lg text-blue-800">{safeGetStringValue(instancia.hora_inicio_str || formatearHora(instancia.hora_inicio))}</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                    <div className="text-sm text-gray-500">Hora de regreso</div>
+                    <div className="font-bold text-lg text-blue-800">{safeGetStringValue(instancia.hora_fin_str || formatearHora(instancia.hora_fin))}</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                    <div className="text-sm text-gray-500">Cupo disponible</div>
+                    <div className="font-bold text-lg text-green-600">{instancia.cupo_disponible} de {instancia.tour_programado?.cupo_maximo || '?'}</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                    <div className="text-sm text-gray-500">Precio desde</div>
+                    <div className="font-bold text-lg text-green-600">S/ {precioMinimo(instancia).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipos de pasaje */}
+              <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+                <h3 className="text-xl font-semibold text-green-800 mb-4 flex items-center">
+                  <FaTicketAlt className="mr-2" /> Tipos de Pasaje
+                </h3>
+                <div className="space-y-3 max-h-56 overflow-y-auto pr-2">
+                  {instancia.tour_programado?.tipos_pasaje && instancia.tour_programado.tipos_pasaje.length > 0 ? (
+                    instancia.tour_programado.tipos_pasaje.map(tipo => (
+                      <div key={tipo.id_tipo_pasaje} className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center">
+                        <div>
+                          <div className="font-semibold text-gray-800">{safeGetStringValue(tipo.nombre)}</div>
+                          <div className="text-sm text-gray-500">Edad: {tipo.edad}</div>
+                        </div>
+                        <div className="font-bold text-green-600 text-xl">S/ {tipo.costo.toFixed(2)}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      No hay información de tipos de pasaje disponible
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Paquetes de pasajes */}
+            {instancia.tour_programado?.paquetes_pasajes && instancia.tour_programado.paquetes_pasajes.length > 0 && (
+              <div className="mb-8 bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+                <h3 className="text-xl font-semibold text-purple-800 mb-4 flex items-center">
+                  <FaBox className="mr-2" /> Paquetes Disponibles
+                </h3>
+                <div className="space-y-4">
+                  {instancia.tour_programado.paquetes_pasajes.map(paquete => (
+                    <div key={paquete.id_paquete} className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="font-semibold text-gray-800 text-lg">{safeGetStringValue(paquete.nombre)}</div>
+                        <div className="font-bold text-green-600 text-xl">S/ {paquete.precio_total.toFixed(2)}</div>
+                      </div>
+                      <p className="text-gray-600 mb-2">{safeGetStringValue(paquete.descripcion)}</p>
+                      <div className="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full inline-block">
+                        {paquete.cantidad_total} pasajes incluidos
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+              <Button 
+                onClick={(e) => { e.stopPropagation(); handleCreateReserva(instancia); }}
+                className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                variant="success"
+              >
+                <FaCalendarAlt className="mr-3" /> 🎫 Reservar Ahora
+              </Button>
+              <Button 
+                onClick={handleCloseModal}
+                className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                <FaTimes className="mr-3" /> Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (!isAuthReady || sedeError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-10 px-4">
@@ -918,7 +1142,7 @@ const ToursDisponiblesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {loading ? (
             <div className="col-span-full p-12 text-center">
               <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mx-auto mb-6"></div>
@@ -954,8 +1178,9 @@ const ToursDisponiblesPage: React.FC = () => {
           ) : (
             filteredInstancias.map(instancia => (
               <Card key={instancia.id_instancia} className="rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-300 border border-gray-100 transform hover:scale-[1.02]">
-                <div className="flex flex-col">
-                  <div className="w-full h-96 overflow-hidden relative">
+                <div className="flex flex-col h-full">
+                  {/* Imagen principal del tour - simplificada */}
+                  <div className="w-full h-56 overflow-hidden relative">
                     <img 
                       src={getImagenTour(instancia)} 
                       alt={safeGetStringValue(getNombreTipoTour(instancia))}
@@ -966,157 +1191,77 @@ const ToursDisponiblesPage: React.FC = () => {
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <div className="flex items-center text-white">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1">
-                          <FaMapMarkerAlt className="mr-2 inline" /> 
-                          <span className="font-semibold">{safeGetStringValue(instancia.nombre_sede)}</span>
-                        </div>
-                      </div>
-                    </div>
                     <div className="absolute top-4 right-4">
-                      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
+                      <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                         ✅ {instancia.estado}
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-8">
-                    <h3 className="text-3xl font-bold text-gray-800 mb-4">{safeGetStringValue(getNombreTipoTour(instancia))}</h3>
+                  <div className="p-6 flex flex-col flex-grow">
+                    {/* Título y breve descripción */}
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{safeGetStringValue(getNombreTipoTour(instancia))}</h3>
                     
-                    <p className="text-gray-600 mb-6 leading-relaxed text-lg">{safeGetStringValue(getDescripcionTipoTour(instancia))}</p>
-                    
-                    <div className="mb-6 grid grid-cols-2 gap-6">
-                      <div className="flex items-center text-gray-700">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl mr-3 shadow-sm">
-                          <FaClock className="text-blue-600 text-xl" /> 
+                    {/* Información esencial */}
+                    <div className="grid grid-cols-2 gap-4 my-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 flex items-center justify-center bg-blue-100 rounded-lg mr-3">
+                          <FaClock className="text-blue-600" /> 
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500 font-medium">Salida</p>
-                          <p className="font-bold text-xl">{safeGetStringValue(instancia.hora_inicio_str || formatearHora(instancia.hora_inicio))}</p>
+                          <p className="text-xs text-gray-500">Salida</p>
+                          <p className="font-bold">{safeGetStringValue(instancia.hora_inicio_str || formatearHora(instancia.hora_inicio))}</p>
                         </div>
                       </div>
-                      <div className="flex items-center text-gray-700">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 rounded-xl mr-3 shadow-sm">
-                          <FaUserFriends className="text-green-600 text-xl" /> 
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 flex items-center justify-center bg-green-100 rounded-lg mr-3">
+                          <FaUserFriends className="text-green-600" /> 
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500 font-medium">Disponibles</p>
-                          <p className="font-bold text-xl">{instancia.cupo_disponible} de {instancia.tour_programado?.cupo_maximo || '?'}</p>
+                          <p className="text-xs text-gray-500">Disponibles</p>
+                          <p className="font-bold">{instancia.cupo_disponible}</p>
                         </div>
                       </div>
-                      <div className="flex items-center text-gray-700">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl mr-3 shadow-sm">
-                          <FaShip className="text-purple-600 text-xl" /> 
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 flex items-center justify-center bg-amber-100 rounded-lg mr-3">
+                          <FaCalendarCheck className="text-amber-600" /> 
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500 font-medium">Embarcación</p>
-                          <p className="font-bold text-xl line-clamp-1">{safeGetStringValue(instancia.nombre_embarcacion || 'Asignada')}</p>
+                          <p className="text-xs text-gray-500">Fecha</p>
+                          <p className="font-bold">{renderFechaInstancia(instancia)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center text-gray-700">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl mr-3 shadow-sm">
-                          <FaCalendarCheck className="text-amber-600 text-xl" /> 
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 flex items-center justify-center bg-purple-100 rounded-lg mr-3">
+                          <FaClock className="text-purple-600" /> 
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500 font-medium">Fecha</p>
-                          <p className="font-bold text-xl">{renderFechaInstancia(instancia)}</p>
+                          <p className="text-xs text-gray-500">Duración</p>
+                          <p className="font-bold">{calcularDuracion(instancia)}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-                      <span className="flex items-center text-gray-800 font-bold text-2xl">
-                        <FaMoneyBillWave className="mr-2 text-green-600" /> 
-                        <span className="text-green-600">S/ {precioMinimo(instancia).toFixed(2)}</span>
-                        <span className="text-sm text-gray-500 ml-2">desde</span>
-                      </span>
-                      <span className="text-sm bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold shadow-sm">
-                        🕒 {calcularDuracion(instancia)}
-                      </span>
+                    {/* Precio */}
+                    <div className="bg-green-50 p-3 rounded-xl border border-green-200 flex justify-between items-center mb-4">
+                      <span className="text-sm text-gray-600">Desde:</span>
+                      <span className="font-bold text-xl text-green-600">S/ {precioMinimo(instancia).toFixed(2)}</span>
                     </div>
 
-                    <div className="mt-6 space-y-6 bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-2xl border border-gray-200">
-                      {instancia.tour_programado?.tipos_pasaje && instancia.tour_programado.tipos_pasaje.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-gray-700 flex items-center mb-4 text-lg">
-                            <FaTicketAlt className="mr-3 text-blue-500" /> Tipos de Pasaje
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {instancia.tour_programado.tipos_pasaje.map(tipo => (
-                              <div key={tipo.id_tipo_pasaje} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    <span className="font-semibold text-gray-800 text-lg">{safeGetStringValue(tipo.nombre)}</span>
-                                    <div className="text-sm text-gray-500 font-medium">Edad: {tipo.edad}</div>
-                                    <div className="text-sm text-gray-600 mt-1">🎟️ Ideal para {tipo.edad.toLowerCase()}</div>
-                                  </div>
-                                  <span className="font-bold text-green-600 text-xl">S/ {tipo.costo.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {instancia.tour_programado?.paquetes_pasajes && instancia.tour_programado.paquetes_pasajes.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-gray-700 flex items-center mb-4 mt-6 text-lg">
-                            <FaBox className="mr-3 text-purple-500" /> Paquetes Especiales
-                          </h4>
-                          <div className="grid grid-cols-1 gap-4">
-                            {instancia.tour_programado.paquetes_pasajes.map(paquete => (
-                              <div key={paquete.id_paquete} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="font-semibold text-gray-800 text-lg">{safeGetStringValue(paquete.nombre)}</span>
-                                  <span className="font-bold text-green-600 text-xl">S/ {paquete.precio_total.toFixed(2)}</span>
-                                </div>
-                                <p className="text-gray-600 mb-2 leading-relaxed">{safeGetStringValue(paquete.descripcion)}</p>
-                                <div className="text-sm text-gray-500 font-medium bg-purple-50 px-3 py-1 rounded-full inline-block">
-                                  📦 Incluye {paquete.cantidad_total} pasajes
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {getImagenesGaleria(instancia).length > 0 && (
-                      <div className="mt-6">
-                        <h4 className="font-bold text-gray-700 flex items-center mb-4 text-lg">
-                          <FaInfoCircle className="mr-3 text-blue-500" /> Galería de Imágenes
-                        </h4>
-                        <div className="flex overflow-x-auto space-x-4 py-2">
-                          {getImagenesGaleria(instancia).map((img, index) => (
-                            <div key={img.id || index} className="flex-shrink-0 w-48 h-48 rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                              <img 
-                                src={img.imagen_url} 
-                                alt={safeGetStringValue(img.descripcion) || `Imagen ${index + 1}`}
-                                className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Error';
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-4">
+                                      {/* Botones de acción */}
+                    <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
                       <Button 
                         onClick={() => handleCreateReserva(instancia)}
-                        className="w-full sm:w-1/2 py-4 text-lg font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        className="py-3 text-sm font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-lg transition-all duration-200"
                         variant="success"
                       >
-                        <FaCalendarAlt className="mr-3" /> 🎫 Reservar Ahora
+                        <FaCalendarAlt className="mr-2" /> Reservar
                       </Button>
                       <Button 
                         onClick={() => handleViewDetails(instancia)}
-                        className="w-full sm:w-1/2 py-4 text-lg font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        className="py-3 text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-200"
                       >
-                        <FaInfoCircle className="mr-3" /> Ver Detalles
+                        <FaInfoCircle className="mr-2" /> Detalles
                       </Button>
                     </div>
                   </div>
@@ -1125,6 +1270,9 @@ const ToursDisponiblesPage: React.FC = () => {
             ))
           )}
         </div>
+
+        {/* Modal de detalles */}
+        {modalOpen && <DetallesModal />}
 
         {loading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -1142,5 +1290,18 @@ const ToursDisponiblesPage: React.FC = () => {
     </div>
   );
 };
+
+// Añadir estilo global para la animación de fadeIn
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+`;
+document.head.appendChild(style);
 
 export default ToursDisponiblesPage;
