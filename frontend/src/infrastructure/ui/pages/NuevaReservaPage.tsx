@@ -12,7 +12,7 @@ import {
   FaInfoCircle, FaClock, FaUserFriends, FaCalendarAlt, FaCalendarCheck, 
   FaBox, FaMapMarkerAlt
 } from 'react-icons/fa';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Interfaces necesarias
@@ -219,6 +219,28 @@ const NuevaReservaPage: React.FC = () => {
         throw new Error('Formato de respuesta inesperado');
       }
       
+      // Formatear fechas y horas correctamente
+      if (instancia.fecha_especifica && instancia.fecha_especifica.includes('T')) {
+        const fecha = parseISO(instancia.fecha_especifica);
+        if (isValid(fecha)) {
+          instancia.fecha_especifica_str = format(fecha, 'yyyy-MM-dd');
+        }
+      }
+      
+      if (instancia.hora_inicio && instancia.hora_inicio.includes('T')) {
+        const hora = parseISO(instancia.hora_inicio);
+        if (isValid(hora)) {
+          instancia.hora_inicio_str = format(hora, 'HH:mm:ss');
+        }
+      }
+      
+      if (instancia.hora_fin && instancia.hora_fin.includes('T')) {
+        const hora = parseISO(instancia.hora_fin);
+        if (isValid(hora)) {
+          instancia.hora_fin_str = format(hora, 'HH:mm:ss');
+        }
+      }
+      
       // Cargar información adicional del tour programado
       const tourResponse = await axios.get(endpoints.tourProgramado.vendedorGetById(instancia.id_tour_programado));
       
@@ -293,43 +315,53 @@ const NuevaReservaPage: React.FC = () => {
     }
   }, [isAuthenticated, selectedSede, cargarInstanciaTour]);
 
-  // Funciones para búsqueda de cliente
- // Función para buscar cliente
-// En NuevaReservaPage.tsx, actualiza la función buscarCliente:
-const buscarCliente = async () => {
-  if (!documentoSearch.trim()) {
-    setError('Ingrese un número de documento');
-    return;
-  }
-  
-  try {
-    setSearchLoading(true);
-    setError(null);
-    setClienteEncontrado(null);
+  // Función para buscar cliente por documento
+  const buscarCliente = async () => {
+    if (!documentoSearch.trim()) {
+      setError('Ingrese un número de documento');
+      return;
+    }
     
-    // Usar la ruta que sabemos que funciona (confirmada con curl)
-    const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
-      params: {
-        query: documentoSearch
-      }
-    });
-    
-    if (response.data && response.data.data && response.data.data.length > 0) {
-      // Define explícitamente el tipo Cliente para 'c'
-      const clienteEncontradoData = response.data.data.find(
-        (c: Cliente) => c.tipo_documento === tipoDocumento && c.numero_documento === documentoSearch
-      );
+    try {
+      setSearchLoading(true);
+      setError(null);
+      setClienteEncontrado(null);
       
-      if (clienteEncontradoData) {
-        // Cliente encontrado con coincidencia exacta
-        setClienteEncontrado(clienteEncontradoData);
-        setNuevoCliente({
-          ...clienteEncontradoData,
-          tipo_documento: clienteEncontradoData.tipo_documento || tipoDocumento,
-          numero_documento: clienteEncontradoData.numero_documento || documentoSearch
-        });
+      // Usar la ruta correcta para búsqueda por documento
+      const response = await axios.get(endpoints.cliente.vendedorBuscarDocumento, {
+        params: {
+          query: documentoSearch
+        }
+      });
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        // Buscar cliente con el tipo y número de documento específicos
+        const clienteEncontradoData = response.data.data.find(
+          (c: Cliente) => c.tipo_documento === tipoDocumento && c.numero_documento === documentoSearch
+        );
+        
+        if (clienteEncontradoData) {
+          // Cliente encontrado con coincidencia exacta
+          setClienteEncontrado(clienteEncontradoData);
+          setNuevoCliente({
+            ...clienteEncontradoData,
+            tipo_documento: clienteEncontradoData.tipo_documento || tipoDocumento,
+            numero_documento: clienteEncontradoData.numero_documento || documentoSearch
+          });
+        } else {
+          // No se encontró un cliente con esa coincidencia exacta
+          setClienteEncontrado(null);
+          setNuevoCliente({
+            tipo_documento: tipoDocumento,
+            numero_documento: documentoSearch,
+            nombres: '',
+            apellidos: '',
+            correo: '',
+            numero_celular: ''
+          });
+        }
       } else {
-        // No se encontró un cliente con esa coincidencia exacta
+        // No se encontraron clientes
         setClienteEncontrado(null);
         setNuevoCliente({
           tipo_documento: tipoDocumento,
@@ -340,86 +372,84 @@ const buscarCliente = async () => {
           numero_celular: ''
         });
       }
-    } else {
-      // No se encontraron clientes
+    } catch (error) {
+      console.error('Error al buscar cliente:', error);
+      setError('Error al buscar cliente. Verifique los datos e intente nuevamente.');
       setClienteEncontrado(null);
-      setNuevoCliente({
-        tipo_documento: tipoDocumento,
-        numero_documento: documentoSearch,
-        nombres: '',
-        apellidos: '',
-        correo: '',
-        numero_celular: ''
-      });
+    } finally {
+      setSearchLoading(false);
     }
-  } catch (error) {
-    console.error('Error al buscar cliente:', error);
-    setError('Error al buscar cliente. Verifique los datos e intente nuevamente.');
-    setClienteEncontrado(null);
-  } finally {
-    setSearchLoading(false);
-  }
-};
+  };
 
   // Función para crear/actualizar cliente
-const guardarCliente = async () => {
-  try {
-    setSearchLoading(true);
-    setError(null);
-    
-    // Validación según tipo de documento
-    if (tipoDocumento === 'DNI' || tipoDocumento === 'CE' || tipoDocumento === 'Pasaporte') {
-      if (!nuevoCliente.nombres || !nuevoCliente.apellidos) {
-        setError('Debe ingresar nombres y apellidos');
-        setSearchLoading(false);
-        return;
+  const guardarCliente = async () => {
+    try {
+      setSearchLoading(true);
+      setError(null);
+      
+      // Validación según tipo de documento
+      if (tipoDocumento === 'DNI' || tipoDocumento === 'CE' || tipoDocumento === 'Pasaporte') {
+        if (!nuevoCliente.nombres || !nuevoCliente.apellidos) {
+          setError('Debe ingresar nombres y apellidos');
+          setSearchLoading(false);
+          return;
+        }
+        // Limpiar campos no aplicables
+        nuevoCliente.razon_social = undefined;
+        nuevoCliente.direccion_fiscal = undefined;
+      } else if (tipoDocumento === 'RUC') {
+        if (!nuevoCliente.razon_social || !nuevoCliente.direccion_fiscal) {
+          setError('Debe ingresar razón social y dirección fiscal');
+          setSearchLoading(false);
+          return;
+        }
+        // Limpiar campos no aplicables
+        nuevoCliente.nombres = undefined;
+        nuevoCliente.apellidos = undefined;
       }
-      // Limpiar campos no aplicables
-      nuevoCliente.razon_social = undefined;
-      nuevoCliente.direccion_fiscal = undefined;
-    } else if (tipoDocumento === 'RUC') {
-      if (!nuevoCliente.razon_social || !nuevoCliente.direccion_fiscal) {
-        setError('Debe ingresar razón social y dirección fiscal');
-        setSearchLoading(false);
-        return;
+      
+      // Validar formato de correo solo si se proporcionó uno
+      if (nuevoCliente.correo && nuevoCliente.correo.trim() !== '') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(nuevoCliente.correo)) {
+          setError('El formato del correo electrónico no es válido');
+          setSearchLoading(false);
+          return;
+        }
       }
-      // Limpiar campos no aplicables
-      nuevoCliente.nombres = undefined;
-      nuevoCliente.apellidos = undefined;
-    }
-    
-    // Validar correo (requerido según backend)
-    if (!nuevoCliente.correo) {
-      setError('El correo electrónico es obligatorio');
+      
+      let response;
+      if (clienteEncontrado?.id_cliente) {
+        // Usar el endpoint correcto para actualizar
+        response = await axios.put(
+          endpoints.cliente.vendedorById(clienteEncontrado.id_cliente),
+          nuevoCliente
+        );
+      } else {
+        // Usar el endpoint correcto para crear
+        response = await axios.post(endpoints.cliente.vendedorCreate, nuevoCliente);
+      }
+      
+      if (response.data && response.data.data) {
+        setClienteEncontrado(response.data.data);
+        setModoRegistroCliente(false);
+      } else {
+        throw new Error('No se pudo guardar la información del cliente');
+      }
+    } catch (error: any) {
+      console.error('Error al guardar cliente:', error);
+      
+      // Mostrar mensaje de error detallado si está disponible
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('Error al guardar la información del cliente. Intente nuevamente.');
+      }
+    } finally {
       setSearchLoading(false);
-      return;
     }
-    
-    let response;
-    if (clienteEncontrado?.id_cliente) {
-      // Usar el endpoint correcto para actualizar
-      response = await axios.put(
-        endpoints.cliente.vendedorById(clienteEncontrado.id_cliente),
-        nuevoCliente
-      );
-    } else {
-      // Usar el endpoint correcto para crear
-      response = await axios.post(endpoints.cliente.vendedorCreate, nuevoCliente);
-    }
-    
-    if (response.data && response.data.data) {
-      setClienteEncontrado(response.data.data);
-      setModoRegistroCliente(false);
-    } else {
-      throw new Error('No se pudo guardar la información del cliente');
-    }
-  } catch (error) {
-    console.error('Error al guardar cliente:', error);
-    setError('Error al guardar la información del cliente. Intente nuevamente.');
-  } finally {
-    setSearchLoading(false);
-  }
-};
+  };
+
   // Funciones para manejar pasajes
   const actualizarCantidadPasaje = (id: number, cantidad: number) => {
     setPasajesSeleccionados(prevState => 
@@ -517,68 +547,69 @@ const guardarCliente = async () => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
- // Crear reserva
-// Función para crear reserva
-const crearReserva = async () => {
-  if (!instanciaTour || !clienteEncontrado?.id_cliente) {
-    setError('Información incompleta para crear la reserva');
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    setError(null);
-    
-    const reservaData: ReservaData = {
-      id_vendedor: user?.id_usuario,
-      id_cliente: clienteEncontrado.id_cliente,
-      id_instancia: instanciaTour.id_instancia,
-      total_pagar: totalReserva,
-      notas: notasReserva || undefined,
-      estado: 'RESERVADO'
-    };
-    
-    if (usarPaquete && paqueteSeleccionado) {
-      reservaData.id_paquete = paqueteSeleccionado.id_paquete;
-    } else {
-      // Filtrar solo pasajes con cantidad > 0
-      reservaData.pasajes = pasajesSeleccionados
-        .filter(p => p.cantidad > 0)
-        .map(p => ({
-          id_tipo_pasaje: p.id_tipo_pasaje,
-          cantidad: p.cantidad
-        }));
+  // Crear reserva
+  const crearReserva = async () => {
+    if (!instanciaTour || !clienteEncontrado?.id_cliente) {
+      setError('Información incompleta para crear la reserva');
+      return;
     }
     
-    // Usar el endpoint correcto
-    const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
-    
-    if (response.data && response.data.data) {
-      setReservaCreada(true);
-      setReservaId(response.data.data.id_reserva);
-    } else {
-      throw new Error('No se pudo crear la reserva');
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const reservaData: ReservaData = {
+        id_vendedor: user?.id_usuario,
+        id_cliente: clienteEncontrado.id_cliente,
+        id_instancia: instanciaTour.id_instancia,
+        total_pagar: totalReserva,
+        notas: notasReserva || undefined,
+        estado: 'RESERVADO'
+      };
+      
+      if (usarPaquete && paqueteSeleccionado) {
+        reservaData.id_paquete = paqueteSeleccionado.id_paquete;
+      } else {
+        // Filtrar solo pasajes con cantidad > 0
+        reservaData.pasajes = pasajesSeleccionados
+          .filter(p => p.cantidad > 0)
+          .map(p => ({
+            id_tipo_pasaje: p.id_tipo_pasaje,
+            cantidad: p.cantidad
+          }));
+      }
+      
+      // Usar el endpoint correcto
+      const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
+      
+      if (response.data && response.data.data) {
+        setReservaCreada(true);
+        setReservaId(response.data.data.id_reserva);
+      } else {
+        throw new Error('No se pudo crear la reserva');
+      }
+    } catch (error) {
+      console.error('Error al crear reserva:', error);
+      setError('Error al crear la reserva. Por favor, intente nuevamente.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error al crear reserva:', error);
-    setError('Error al crear la reserva. Por favor, intente nuevamente.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-  // Formatear hora
+  // Función mejorada para formatear hora
   const formatearHora = (hora: string): string => {
     if (!hora) return '-';
 
     try {
+      // Si es formato ISO con T
       if (hora.includes('T')) {
-        const date = new Date(hora);
+        const date = parseISO(hora);
         if (isValid(date)) {
           return format(date, 'hh:mm a', { locale: es });
         }
       }
 
+      // Si es formato HH:mm:ss
       const parsedHora = parse(hora, 'HH:mm:ss', new Date());
       if (isValid(parsedHora)) {
         return format(parsedHora, 'hh:mm a', { locale: es });
@@ -590,11 +621,20 @@ const crearReserva = async () => {
     return hora;
   };
 
-  // Formatear fecha
+  // Función mejorada para formatear fecha
   const formatearFecha = (fecha: string): string => {
     if (!fecha) return '-';
 
     try {
+      // Si es formato ISO con T
+      if (fecha.includes('T')) {
+        const date = parseISO(fecha);
+        if (isValid(date)) {
+          return format(date, 'EEEE dd MMMM yyyy', { locale: es });
+        }
+      }
+
+      // Si es formato yyyy-MM-dd
       const parsedFecha = parse(fecha, 'yyyy-MM-dd', new Date());
       if (isValid(parsedFecha)) {
         return format(parsedFecha, 'EEEE dd MMMM yyyy', { locale: es });
@@ -662,7 +702,7 @@ const crearReserva = async () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Fecha</p>
-                    <p className="font-semibold">{formatearFecha(instanciaTour.fecha_especifica)}</p>
+                    <p className="font-semibold">{formatearFecha(instanciaTour.fecha_especifica_str || instanciaTour.fecha_especifica)}</p>
                   </div>
                 </div>
                 
@@ -672,7 +712,7 @@ const crearReserva = async () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Hora de salida</p>
-                    <p className="font-semibold">{formatearHora(instanciaTour.hora_inicio)}</p>
+                    <p className="font-semibold">{formatearHora(instanciaTour.hora_inicio_str || instanciaTour.hora_inicio)}</p>
                   </div>
                 </div>
                 
@@ -1262,12 +1302,12 @@ const crearReserva = async () => {
                 
                 <div>
                   <p className="text-sm text-gray-500">Fecha</p>
-                  <p className="font-semibold">{formatearFecha(instanciaTour?.fecha_especifica || '')}</p>
+                  <p className="font-semibold">{formatearFecha(instanciaTour?.fecha_especifica_str || instanciaTour?.fecha_especifica || '')}</p>
                 </div>
                 
                 <div>
                   <p className="text-sm text-gray-500">Hora de salida</p>
-                  <p className="font-semibold">{formatearHora(instanciaTour?.hora_inicio || '')}</p>
+                  <p className="font-semibold">{formatearHora(instanciaTour?.hora_inicio_str || instanciaTour?.hora_inicio || '')}</p>
                 </div>
                 
                 <div>
@@ -1309,7 +1349,7 @@ const crearReserva = async () => {
           
           <div className="border border-gray-200 rounded-lg p-4 mb-6">
             <h3 className="font-bold text-lg text-gray-800 mb-3 flex items-center">
-              <FaTicketAlt className="mr-2 text-purple-500" />
+                         <FaTicketAlt className="mr-2 text-purple-500" />
               Detalle de Pasajes
             </h3>
             
@@ -1373,7 +1413,7 @@ const crearReserva = async () => {
           
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">
             <div className="flex justify-between items-center">
-                           <div>
+              <div>
                 <p className="text-gray-700 font-medium">Total a pagar:</p>
                 <p className="text-3xl font-bold text-green-600">S/ {totalReserva.toFixed(2)}</p>
               </div>
