@@ -914,15 +914,10 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       return false;
     }
     
-    if (!ESTADOS_RESERVA.includes(reserva.estado)) {
-      setError('Estado de reserva inválido');
-      return false;
-    }
-    
     return true;
   };
   
-  // Función para guardar la reserva
+  // Función para guardar la reserva - NUEVA IMPLEMENTACIÓN DIRECTA CON AXIOS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -934,9 +929,8 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       setSaving(true);
       setError(null);
       
-      // Preparar datos de la reserva siguiendo exactamente el formato que espera el backend
-      // Convertir pasajes seleccionados al formato correcto (solo los que tienen cantidad > 0)
-      const pasajesFiltrados: PasajeCantidadRequest[] = pasajesSeleccionados
+      // Preparar datos de la reserva con la estructura EXACTA que espera el backend
+      const pasajesFiltrados = pasajesSeleccionados
         .filter(p => p.cantidad > 0)
         .map(p => ({
           id_tipo_pasaje: p.id_tipo_pasaje,
@@ -950,35 +944,31 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
         return;
       }
       
-      // Crear el objeto de solicitud de reserva exactamente como lo espera el backend
-      const reservaData: NuevaReservaRequest = {
+      // Estructura correcta con cantidad_pasajes en lugar de pasajes
+      const reservaData = {
         id_cliente: reserva.id_cliente,
         id_instancia: reserva.id_instancia,
+        id_vendedor: user?.id_usuario,
         total_pagar: totalAPagar,
         notas: "Reserva creada por vendedor", // Texto predeterminado
-        cantidad_pasajes: pasajesFiltrados,
-        paquetes: [] // Array vacío, no usamos paquetes
+        estado: "CONFIRMADA", // Valor fijo para vendedores
+        cantidad_pasajes: pasajesFiltrados // AQUÍ ESTÁ LA CORRECCIÓN: cantidad_pasajes, no pasajes
       };
       
-      // Si el usuario es vendedor, agregar su ID
-      if (user?.id_usuario) {
-        reservaData.id_vendedor = user.id_usuario;
-      }
-      
-      // Log detallado para depuración
       console.log('📤 Datos de reserva a enviar:', JSON.stringify(reservaData, null, 2));
       
-      // Intentar crear la reserva usando el thunk de Redux
-      const resultAction = await dispatch(crearReserva(reservaData));
+      // Usar axios directamente para más control
+      const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
       
-      // Si la acción fue exitosa
-      if (crearReserva.fulfilled.match(resultAction)) {
-        // Obtener el ID de la reserva creada
-        const idReservaCreada = resultAction.payload;
-        console.log('✅ Reserva creada exitosamente. ID:', idReservaCreada);
+      console.log('✅ Respuesta de creación:', response.data);
+      
+      // Extraer el ID de la reserva creada
+let idReservaCreada: number;
+      if (response.data && response.data.data && response.data.data.id_reserva) {
+        idReservaCreada = response.data.data.id_reserva;
         
         // Si se debe registrar pago, crear pago asociado
-        if (registrarPago && montoPagado > 0 && idReservaCreada) {
+        if (registrarPago && montoPagado > 0) {
           try {
             const pagoData = {
               id_reserva: idReservaCreada,
@@ -1006,14 +996,15 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
         setTimeout(() => {
           navigate('/vendedor/reservas/' + idReservaCreada);
         }, 2000);
-      } else {
-        // Si hubo un error, mostrar el mensaje
-        const errorMsg = resultAction.payload || 'Error al crear la reserva';
-        throw new Error(errorMsg as string);
       }
     } catch (error: any) {
       console.error('❌ Error al guardar reserva:', error);
-      setError(error.message || 'Error al guardar la reserva');
+      
+      if (error.response) {
+        console.error('Respuesta de error:', error.response.data);
+      }
+      
+      setError(error.response?.data?.message || error.message || 'Error al guardar la reserva');
     } finally {
       setSaving(false);
     }
