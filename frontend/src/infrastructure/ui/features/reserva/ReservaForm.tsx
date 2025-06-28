@@ -891,6 +891,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
   
   // Función para guardar la reserva
   const handleSubmit = async (e: React.FormEvent) => {
+    
     e.preventDefault();
     
     if (!reserva.id_cliente) {
@@ -930,7 +931,8 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
         cantidad_pasajes: pasajesFiltrados,
         paquetes: [] // No estamos utilizando paquetes en este ejemplo
       };
-      
+         // Antes de la petición
+console.log('Datos a enviar:', JSON.stringify(reservaData, null, 2));
       let idReservaCreada: number;
       
       if (isEditing && id) {
@@ -969,8 +971,7 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       setTimeout(() => {
         navigate('/vendedor/reservas/' + idReservaCreada);
       }, 2000);
-      // Antes de la petición
-console.log('Datos a enviar:', JSON.stringify(reservaData, null, 2));
+    
     } catch (error: any) {
       console.error('Error al guardar reserva:', error);
       setError(error.response?.data?.message || error.message || 'Error al guardar la reserva');
