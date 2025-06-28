@@ -483,6 +483,8 @@ import {
 } from 'react-icons/fa';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { NuevaReservaRequest, PasajeCantidadRequest } from '../../../../domain/entities/Reserva';
+import { crearReserva } from '../../../store/slices/reservaSlice';
 
 // Constantes para opciones disponibles
 const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'YAPE', 'PLIN', 'MERCADOPAGO', 'DEPOSITO'];
@@ -561,7 +563,7 @@ interface PaquetePasajeDetalle {
 const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
   const { user, selectedSede } = useSelector((state: any) => state.auth);
   
   // Estados
@@ -932,8 +934,9 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
       setSaving(true);
       setError(null);
       
-      // Preparar datos de la reserva
-      const pasajesFiltrados = pasajesSeleccionados
+      // Preparar datos de la reserva siguiendo exactamente el formato que espera el backend
+      // Convertir pasajes seleccionados al formato correcto (solo los que tienen cantidad > 0)
+      const pasajesFiltrados: PasajeCantidadRequest[] = pasajesSeleccionados
         .filter(p => p.cantidad > 0)
         .map(p => ({
           id_tipo_pasaje: p.id_tipo_pasaje,
@@ -947,100 +950,70 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
         return;
       }
       
-      const reservaData = {
+      // Crear el objeto de solicitud de reserva exactamente como lo espera el backend
+      const reservaData: NuevaReservaRequest = {
         id_cliente: reserva.id_cliente,
         id_instancia: reserva.id_instancia,
-        id_vendedor: user?.id_usuario,
         total_pagar: totalAPagar,
-        notas: reserva.notas || '',
-        estado: reserva.estado,
+        notas: "Reserva creada por vendedor", // Texto predeterminado
         cantidad_pasajes: pasajesFiltrados,
-        paquetes: [] // No estamos utilizando paquetes en este ejemplo
+        paquetes: [] // Array vacío, no usamos paquetes
       };
       
-      // Log detallado de los datos que se van a enviar
+      // Si el usuario es vendedor, agregar su ID
+      if (user?.id_usuario) {
+        reservaData.id_vendedor = user.id_usuario;
+      }
+      
+      // Log detallado para depuración
       console.log('📤 Datos de reserva a enviar:', JSON.stringify(reservaData, null, 2));
-      console.log('🔍 Detalles importantes:');
-      console.log(`- ID Cliente: ${reservaData.id_cliente}`);
-      console.log(`- ID Instancia: ${reservaData.id_instancia}`);
-      console.log(`- ID Vendedor: ${reservaData.id_vendedor}`);
-      console.log(`- Total a pagar: ${reservaData.total_pagar}`);
-      console.log(`- Estado: ${reservaData.estado}`);
-      console.log(`- Cantidad de tipos de pasajes: ${reservaData.cantidad_pasajes.length}`);
-      console.log(`- Total pasajeros: ${totalPasajeros}`);
       
-      let idReservaCreada: number;
+      // Intentar crear la reserva usando el thunk de Redux
+      const resultAction = await dispatch(crearReserva(reservaData));
       
-      if (isEditing && id) {
-        // Actualizar reserva existente
-        console.log(`🔄 Actualizando reserva existente ID: ${id}`);
-        const response = await axios.put(endpoints.reserva.vendedorUpdate(parseInt(id)), reservaData);
-        console.log('✅ Respuesta de actualización:', response.data);
-        idReservaCreada = parseInt(id);
-      } else {
-        // Crear nueva reserva
-        console.log('🆕 Creando nueva reserva');
-        const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
-        console.log('✅ Respuesta de creación:', response.data);
+      // Si la acción fue exitosa
+      if (crearReserva.fulfilled.match(resultAction)) {
+        // Obtener el ID de la reserva creada
+        const idReservaCreada = resultAction.payload;
+        console.log('✅ Reserva creada exitosamente. ID:', idReservaCreada);
         
-        if (response.data && response.data.data && response.data.data.id_reserva) {
-          idReservaCreada = response.data.data.id_reserva;
-          console.log(`🆔 ID de reserva creada: ${idReservaCreada}`);
+        // Si se debe registrar pago, crear pago asociado
+        if (registrarPago && montoPagado > 0 && idReservaCreada) {
+          try {
+            const pagoData = {
+              id_reserva: idReservaCreada,
+              metodo_pago: metodoPago,
+              canal_pago: 'LOCAL',
+              id_sede: selectedSede?.id_sede,
+              monto: montoPagado,
+              numero_comprobante: numeroComprobante || undefined
+            };
+            
+            console.log('💰 Datos de pago a enviar:', JSON.stringify(pagoData, null, 2));
+            
+            const pagosResponse = await axios.post(endpoints.pago.vendedorCreate, pagoData);
+            console.log('✅ Pago creado exitosamente:', pagosResponse.data);
+            setSuccessMessage('Reserva y pago creados exitosamente');
+          } catch (pagoError: any) {
+            console.error('⚠️ Error al crear pago:', pagoError);
+            setSuccessMessage('Reserva creada exitosamente, pero hubo un problema al registrar el pago');
+          }
         } else {
-          throw new Error('No se recibió ID de reserva en la respuesta');
+          setSuccessMessage('Reserva creada exitosamente');
         }
-      }
-      
-      // Si se registra pago, crear pago asociado
-      if (registrarPago && montoPagado > 0) {
-        const pagoData = {
-          id_reserva: idReservaCreada,
-          metodo_pago: metodoPago,
-          canal_pago: 'LOCAL',
-          id_sede: selectedSede?.id_sede,
-          monto: montoPagado,
-          numero_comprobante: numeroComprobante || undefined
-        };
         
-        console.log('💰 Datos de pago a enviar:', JSON.stringify(pagoData, null, 2));
-        
-        try {
-          const responsePago = await axios.post(endpoints.pago.vendedorCreate, pagoData);
-          console.log('✅ Respuesta de creación de pago:', responsePago.data);
-        } catch (errorPago: any) {
-          console.error('❌ Error al crear pago:', errorPago);
-          console.error('Detalles del error de pago:', errorPago.response?.data);
-          
-          // No interrumpimos el flujo si falla el pago, solo mostramos advertencia
-          setSuccessMessage('Reserva creada exitosamente, pero hubo un error al registrar el pago');
-        }
+        // Redirigir después de un breve tiempo
+        setTimeout(() => {
+          navigate('/vendedor/reservas/' + idReservaCreada);
+        }, 2000);
+      } else {
+        // Si hubo un error, mostrar el mensaje
+        const errorMsg = resultAction.payload || 'Error al crear la reserva';
+        throw new Error(errorMsg as string);
       }
-      
-      setSuccessMessage(isEditing 
-        ? 'Reserva actualizada exitosamente' 
-        : 'Reserva creada exitosamente');
-      
-      // Redirigir después de un breve tiempo
-      setTimeout(() => {
-        navigate('/vendedor/reservas/' + idReservaCreada);
-      }, 2000);
-    
     } catch (error: any) {
       console.error('❌ Error al guardar reserva:', error);
-      
-      // Mostrar detalles completos del error para depuración
-      if (error.response) {
-        console.error('Detalles de la respuesta de error:');
-        console.error('- Status:', error.response.status);
-        console.error('- Data:', error.response.data);
-        console.error('- Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('No se recibió respuesta del servidor:', error.request);
-      } else {
-        console.error('Error al configurar la solicitud:', error.message);
-      }
-      
-      setError(error.response?.data?.message || error.message || 'Error al guardar la reserva');
+      setError(error.message || 'Error al guardar la reserva');
     } finally {
       setSaving(false);
     }
@@ -1482,22 +1455,8 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
                   </div>
                 )}
                 
-                {/* Estado de la reserva */}
-                <div className="mt-6">
-                  <label className="block text-gray-700 text-sm font-semibold mb-2">
-                    Estado de la Reserva
-                  </label>
-                  <select
-                    name="estado"
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    value={reserva.estado}
-                    onChange={(e) => setReserva({...reserva, estado: e.target.value})}
-                  >
-                    {ESTADOS_RESERVA.map(estado => (
-                      <option key={estado} value={estado}>{estado}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Estado de la reserva - FIJADO A "CONFIRMADA" para vendedores */}
+                <input type="hidden" name="estado" value="CONFIRMADA" />
                 
                 {/* Notas */}
                 <div className="mt-4">
