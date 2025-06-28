@@ -959,7 +959,8 @@ console.log('Datos a enviar:', JSON.stringify(reservaData, null, 2));
           monto: montoPagado,
           numero_comprobante: numeroComprobante || undefined
         };
-        
+        console.log('💵 Datos del pago a enviar:', JSON.stringify(pagoData, null, 2));
+
         await axios.post(endpoints.pago.vendedorCreate, pagoData);
       }
       
