@@ -486,6 +486,7 @@ import { es } from 'date-fns/locale';
 
 // Constantes para opciones disponibles
 const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'YAPE', 'PLIN', 'MERCADOPAGO', 'DEPOSITO'];
+const ESTADOS_RESERVA = ['CONFIRMADA', 'RESERVADO', 'COMPLETADA', 'CANCELADA'];
 
 // Interfaces
 interface Reserva {
@@ -889,23 +890,41 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
     }
   };
   
-  // Función para guardar la reserva
-  const handleSubmit = async (e: React.FormEvent) => {
-    
-    e.preventDefault();
-    
-    if (!reserva.id_cliente) {
+  // Función para validar la reserva antes de enviar
+  const validarReserva = () => {
+    if (!reserva.id_cliente || reserva.id_cliente <= 0) {
       setError('Debe seleccionar un cliente');
-      return;
+      return false;
     }
     
-    if (!reserva.id_instancia) {
+    if (!reserva.id_instancia || reserva.id_instancia <= 0) {
       setError('Debe seleccionar una instancia de tour');
-      return;
+      return false;
     }
     
     if (totalPasajeros <= 0) {
       setError('Debe agregar al menos un pasajero');
+      return false;
+    }
+    
+    if (instanciaSeleccionada && totalPasajeros > instanciaSeleccionada.cupo_disponible) {
+      setError(`No hay suficiente cupo disponible. Cupo disponible: ${instanciaSeleccionada.cupo_disponible}`);
+      return false;
+    }
+    
+    if (!ESTADOS_RESERVA.includes(reserva.estado)) {
+      setError('Estado de reserva inválido');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Función para guardar la reserva
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validarReserva()) {
       return;
     }
     
@@ -921,31 +940,54 @@ const ReservaForm: React.FC<{ isEditing?: boolean }> = ({ isEditing = false }) =
           cantidad: p.cantidad
         }));
       
+      // Verificar que haya al menos un pasaje
+      if (pasajesFiltrados.length === 0) {
+        setError('Debe seleccionar al menos un tipo de pasaje');
+        setSaving(false);
+        return;
+      }
+      
       const reservaData = {
         id_cliente: reserva.id_cliente,
         id_instancia: reserva.id_instancia,
         id_vendedor: user?.id_usuario,
         total_pagar: totalAPagar,
-        notas: reserva.notas,
+        notas: reserva.notas || '',
         estado: reserva.estado,
         cantidad_pasajes: pasajesFiltrados,
         paquetes: [] // No estamos utilizando paquetes en este ejemplo
       };
-         // Antes de la petición
-console.log('Datos a enviar:', JSON.stringify(reservaData, null, 2));
+      
+      // Log detallado de los datos que se van a enviar
+      console.log('📤 Datos de reserva a enviar:', JSON.stringify(reservaData, null, 2));
+      console.log('🔍 Detalles importantes:');
+      console.log(`- ID Cliente: ${reservaData.id_cliente}`);
+      console.log(`- ID Instancia: ${reservaData.id_instancia}`);
+      console.log(`- ID Vendedor: ${reservaData.id_vendedor}`);
+      console.log(`- Total a pagar: ${reservaData.total_pagar}`);
+      console.log(`- Estado: ${reservaData.estado}`);
+      console.log(`- Cantidad de tipos de pasajes: ${reservaData.cantidad_pasajes.length}`);
+      console.log(`- Total pasajeros: ${totalPasajeros}`);
+      
       let idReservaCreada: number;
       
       if (isEditing && id) {
         // Actualizar reserva existente
+        console.log(`🔄 Actualizando reserva existente ID: ${id}`);
         const response = await axios.put(endpoints.reserva.vendedorUpdate(parseInt(id)), reservaData);
+        console.log('✅ Respuesta de actualización:', response.data);
         idReservaCreada = parseInt(id);
       } else {
         // Crear nueva reserva
+        console.log('🆕 Creando nueva reserva');
         const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
+        console.log('✅ Respuesta de creación:', response.data);
+        
         if (response.data && response.data.data && response.data.data.id_reserva) {
           idReservaCreada = response.data.data.id_reserva;
+          console.log(`🆔 ID de reserva creada: ${idReservaCreada}`);
         } else {
-          throw new Error('Error al crear la reserva');
+          throw new Error('No se recibió ID de reserva en la respuesta');
         }
       }
       
@@ -959,10 +1001,19 @@ console.log('Datos a enviar:', JSON.stringify(reservaData, null, 2));
           monto: montoPagado,
           numero_comprobante: numeroComprobante || undefined
         };
-     console.log('📤 JSON final que se está enviando a /vendedor/reservas:');
-console.log(JSON.stringify(reservaData, null, 2));
-
-        await axios.post(endpoints.pago.vendedorCreate, pagoData);
+        
+        console.log('💰 Datos de pago a enviar:', JSON.stringify(pagoData, null, 2));
+        
+        try {
+          const responsePago = await axios.post(endpoints.pago.vendedorCreate, pagoData);
+          console.log('✅ Respuesta de creación de pago:', responsePago.data);
+        } catch (errorPago: any) {
+          console.error('❌ Error al crear pago:', errorPago);
+          console.error('Detalles del error de pago:', errorPago.response?.data);
+          
+          // No interrumpimos el flujo si falla el pago, solo mostramos advertencia
+          setSuccessMessage('Reserva creada exitosamente, pero hubo un error al registrar el pago');
+        }
       }
       
       setSuccessMessage(isEditing 
@@ -975,7 +1026,20 @@ console.log(JSON.stringify(reservaData, null, 2));
       }, 2000);
     
     } catch (error: any) {
-      console.error('Error al guardar reserva:', error);
+      console.error('❌ Error al guardar reserva:', error);
+      
+      // Mostrar detalles completos del error para depuración
+      if (error.response) {
+        console.error('Detalles de la respuesta de error:');
+        console.error('- Status:', error.response.status);
+        console.error('- Data:', error.response.data);
+        console.error('- Headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('No se recibió respuesta del servidor:', error.request);
+      } else {
+        console.error('Error al configurar la solicitud:', error.message);
+      }
+      
       setError(error.response?.data?.message || error.message || 'Error al guardar la reserva');
     } finally {
       setSaving(false);
@@ -1429,10 +1493,9 @@ console.log(JSON.stringify(reservaData, null, 2));
                     value={reserva.estado}
                     onChange={(e) => setReserva({...reserva, estado: e.target.value})}
                   >
-                    <option value="CONFIRMADA">Confirmada</option>
-                    <option value="RESERVADO">Reservada</option>
-                    <option value="COMPLETADA">Completada</option>
-                    <option value="CANCELADA">Cancelada</option>
+                    {ESTADOS_RESERVA.map(estado => (
+                      <option key={estado} value={estado}>{estado}</option>
+                    ))}
                   </select>
                 </div>
                 
