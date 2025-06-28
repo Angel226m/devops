@@ -98,6 +98,10 @@ import instanciaTourReducer, { InstanciaTourState } from './slices/instanciaTour
 import { GaleriaTourRepoHttp } from '../repositories/GaleriaTourRepoHttp';
 import { TourProgramadoRepoHttp } from '../repositories/TourProgramadoRepoHttp';
 import { InstanciaTourRepoHttp } from '../repositories/InstanciaTourRepoHttp';
+ 
+import reservaReducer, { ReservaState } from './slices/reservaSlice';
+import pagoReducer, { PagoState } from './slices/pagoSlice';
+
 
 import axiosClient from '../api/axiosClient';
 
@@ -117,7 +121,9 @@ export interface RootState {
   tourProgramado: TourProgramadoState;
     instanciaTour: InstanciaTourState;    
       cliente: ClienteState;
+  reserva: ReservaState;
 
+  pago: PagoState;
 
   // Agrega otros reducers aquí
 }
@@ -144,6 +150,8 @@ export const store = configureStore({
     tourProgramado: tourProgramadoReducer,
     instanciaTour: instanciaTourReducer,
             cliente: clienteReducer,
+    reserva: reservaReducer,
+    pago: pagoReducer,
 
 
     // Agrega otros reducers según sea necesario

@@ -280,7 +280,7 @@ instanciaTour: {
 */
   },
   // Agregar estos endpoints al objeto existente de endpoints.ts
-reserva: {
+/*reserva: {
   // Rutas para admin
   list: '/admin/reservas',
   getById: (id: number) => `/admin/reservas/${id}`,
@@ -310,3 +310,62 @@ reserva: {
 };
 
 
+*/
+reserva: {
+
+
+ // Rutas para admin
+  list: '/admin/reservas',
+  getById: (id: number) => `/admin/reservas/${id}`,
+  create: '/admin/reservas',
+  update: (id: number) => `/admin/reservas/${id}`,
+  delete: (id: number) => `/admin/reservas/${id}`,
+  cambiarEstado: (id: number) => `/admin/reservas/${id}/estado`,
+  listByCliente: (idCliente: number) => `/admin/reservas/cliente/${idCliente}`,
+  listByInstancia: (idInstancia: number) => `/admin/reservas/instancia/${idInstancia}`,
+  listByFecha: (fecha: string) => `/admin/reservas/fecha/${fecha}`,
+  listByEstado: (estado: string) => `/admin/reservas/estado/${estado}`,
+  confirmarPago: '/admin/reservas/confirmar-pago',
+  
+  // Rutas para vendedor
+  vendedorList: '/vendedor/reservas',
+  vendedorCreate: '/vendedor/reservas',
+  vendedorGetById: (id: number) => `/vendedor/reservas/${id}`,
+  vendedorUpdate: (id: number) => `/vendedor/reservas/${id}`,
+  vendedorCambiarEstado: (id: number) => `/vendedor/reservas/${id}/estado`,
+  vendedorListByCliente: (idCliente: number) => `/vendedor/reservas/cliente/${idCliente}`,
+  vendedorListByInstancia: (idInstancia: number) => `/vendedor/reservas/instancia/${idInstancia}`,
+  vendedorListByFecha: (fecha: string) => `/vendedor/reservas/fecha/${fecha}`,
+  vendedorListByEstado: (estado: string) => `/vendedor/reservas/estado/${estado}`,
+  vendedorConfirmarPago: '/vendedor/reservas/confirmar-pago',
+},// Parte a añadir en infrastructure/api/endpoints.ts
+pago: {
+  // Rutas para admin
+  list: '/admin/pagos',
+  getById: (id: number) => `/admin/pagos/${id}`,
+  create: '/admin/pagos',
+  update: (id: number) => `/admin/pagos/${id}`,
+  delete: (id: number) => `/admin/pagos/${id}`,
+  cambiarEstado: (id: number) => `/admin/pagos/${id}/estado`,
+  listByReserva: (idReserva: number) => `/admin/pagos/reserva/${idReserva}`,
+  listByFecha: (fecha: string) => `/admin/pagos/fecha/${fecha}`,
+  listByEstado: (estado: string) => `/admin/pagos/estado/${estado}`,
+  getTotalPagadoByReserva: (idReserva: number) => `/admin/pagos/reserva/${idReserva}/total`,
+  listByCliente: (idCliente: number) => `/admin/pagos/cliente/${idCliente}`,
+  listBySede: (idSede: number) => `/admin/pagos/sede/${idSede}`,
+  
+  // Rutas para vendedor
+  vendedorList: '/vendedor/pagos',
+  vendedorGetById: (id: number) => `/vendedor/pagos/${id}`,
+  vendedorCreate: '/vendedor/pagos',
+  vendedorUpdate: (id: number) => `/vendedor/pagos/${id}`,
+  vendedorDelete: (id: number) => `/vendedor/pagos/${id}`,
+  vendedorCambiarEstado: (id: number) => `/vendedor/pagos/${id}/estado`,
+  vendedorListByReserva: (idReserva: number) => `/vendedor/pagos/reserva/${idReserva}`,
+  vendedorGetTotalPagadoByReserva: (idReserva: number) => `/vendedor/pagos/reserva/${idReserva}/total`,
+  vendedorListBySede: (idSede: number) => `/vendedor/pagos/sede/${idSede}`,
+  vendedorListByFecha: (fecha: string) => `/vendedor/pagos/fecha/${fecha}`,
+  vendedorListByEstado: (estado: string) => `/vendedor/pagos/estado/${estado}`,
+  vendedorListByCliente: (idCliente: number) => `/vendedor/pagos/cliente/${idCliente}`,
+},
+};
