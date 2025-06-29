@@ -9,7 +9,7 @@ export interface Pago {
   monto: number;
   fecha_pago?: string;
   estado: string;
-  comprobante?: string;
+  comprobante?: string | null;
   numero_comprobante?: string | null;
   url_comprobante?: string | null;
   eliminado?: boolean;

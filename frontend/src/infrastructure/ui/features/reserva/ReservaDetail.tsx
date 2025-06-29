@@ -620,7 +620,8 @@ import { endpoints } from '../../../api/endpoints';
 import { 
   FaArrowLeft, FaEdit, FaTrash, FaMoneyBill, FaFileInvoice, FaTicketAlt, 
   FaUser, FaCalendarAlt, FaShip, FaClock, FaClipboardCheck, FaExclamationTriangle,
-  FaCheckCircle, FaDownload, FaMoneyBillWave, FaPhone, FaEnvelope, FaUsers
+  FaCheckCircle, FaDownload, FaMoneyBillWave, FaPhone, FaEnvelope, FaUsers,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -629,7 +630,7 @@ import ROUTES from '../../../../shared/constants/appRoutes';
 // Interfaces
 interface Reserva {
   id_reserva: number;
-  id_vendedor: number;
+  id_vendedor?: number;
   nombre_vendedor?: string;
   id_cliente: number;
   id_instancia: number;
@@ -678,6 +679,7 @@ const ReservaDetail: React.FC = () => {
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pagosError, setPagosError] = useState<string | null>(null);
   const [totalPagado, setTotalPagado] = useState(0);
   const [totalPasajeros, setTotalPasajeros] = useState(0);
   
@@ -695,6 +697,7 @@ const ReservaDetail: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        setPagosError(null);
         
         // Cargar la reserva
         const response = await axios.get(endpoints.reserva.vendedorGetById(parseInt(id)));
@@ -724,7 +727,13 @@ const ReservaDetail: React.FC = () => {
             }
           } catch (pagoError: any) {
             console.error('Error al cargar pagos:', pagoError);
-            // No establecer error general, solo mostrar mensaje de que no hay pagos
+            setPagosError(
+              pagoError.response?.data?.message || 
+              pagoError.message || 
+              'Error al cargar los pagos de esta reserva'
+            );
+            // Mantener pagos como array vacío
+            setPagos([]);
           }
         } else {
           throw new Error('No se encontró la reserva');
@@ -774,10 +783,13 @@ const ReservaDetail: React.FC = () => {
       case 'RESERVADO':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'CONFIRMADO':
+      case 'CONFIRMADA':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'COMPLETADO':
+      case 'COMPLETADA':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'CANCELADO':
+      case 'CANCELADA':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -873,7 +885,8 @@ const ReservaDetail: React.FC = () => {
                   </button>
                 )}
                 
-                {(reserva.estado === 'RESERVADO' || reserva.estado === 'CONFIRMADO') && (
+                {(reserva.estado === 'RESERVADO' || reserva.estado === 'CONFIRMADO' || 
+                  reserva.estado === 'RESERVADA' || reserva.estado === 'CONFIRMADA') && (
                   <button
                     className="bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg flex items-center transition-colors"
                   >
@@ -1094,7 +1107,18 @@ const ReservaDetail: React.FC = () => {
                 </div>
               </div>
               
-              {pagos.length > 0 ? (
+              {pagosError ? (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg mb-4">
+                  <div className="flex items-start">
+                    <FaInfoCircle className="mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">No se pudieron cargar los pagos</p>
+                      <p className="mt-1 text-sm">{pagosError}</p>
+                      <p className="mt-2 text-sm">Nota técnica: Este problema puede estar relacionado con valores NULL en la columna "numero_comprobante".</p>
+                    </div>
+                  </div>
+                </div>
+              ) : pagos.length > 0 ? (
                 <div>
                   <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
                     <div className="bg-gradient-to-r from-amber-400 to-amber-500 p-1 rounded text-white mr-2">
@@ -1116,7 +1140,7 @@ const ReservaDetail: React.FC = () => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {pagos.map((pago, index) => (
-                          <tr key={pago.id_pago || index} className="hover:bg-gray-50">
+                          <tr key={index} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {formatearFecha(pago.fecha_pago)}
                             </td>
