@@ -126,8 +126,7 @@ func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
 	queryMetodoPago := `
 		SELECT COALESCE(mp.nombre, 'No registrado') 
 		FROM pago p
-		LEFT JOIN metodo_pago mp ON p.metodo_pago = mp.metodo_pago
-		WHERE p.id_reserva = $1 AND p.eliminado = FALSE
+ 		WHERE p.id_reserva = $1 AND p.eliminado = FALSE
 		ORDER BY p.fecha_pago DESC
 		LIMIT 1
 	`
