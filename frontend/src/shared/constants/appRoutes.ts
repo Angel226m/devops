@@ -111,6 +111,13 @@ export const ROUTES = {
 
     PAGOS: '/vendedor/pagos',
     SOPORTE: '/vendedor/soporte',
+
+       RESERVA: {
+    LIST: '/vendedor/reserva',
+    CREAR: '/vendedor/reserva/crear',
+    VER: (id: string | number) => `/vendedor/reserva/ver/${id}`,
+    EDITAR: (id: string | number) => `/vendedor/reserva/editar/${id}`,
+  },
   },
   
   CHOFER: {
