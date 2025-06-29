@@ -141,7 +141,7 @@ interface ReservaData {
   total_pagar: number;
   notas?: string;
   estado: string;
-  pasajes?: PasajeCantidad[];
+  cantidad_pasajes?: PasajeCantidad[];  // <-- CAMBIAR A cantidad_pasajes
 }
 
 // Componente principal
@@ -547,54 +547,55 @@ const NuevaReservaPage: React.FC = () => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
-  // Crear reserva
-  const crearReserva = async () => {
-    if (!instanciaTour || !clienteEncontrado?.id_cliente) {
-      setError('Información incompleta para crear la reserva');
-      return;
+const crearReserva = async () => {
+  if (!instanciaTour || !clienteEncontrado?.id_cliente) {
+    setError('Información incompleta para crear la reserva');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const reservaData: ReservaData = {
+      id_vendedor: user?.id_usuario,
+      id_cliente: clienteEncontrado.id_cliente,
+      id_instancia: instanciaTour.id_instancia,
+      total_pagar: totalReserva,
+      notas: notasReserva || undefined,
+      estado: 'RESERVADO'
+    };
+    
+    if (usarPaquete && paqueteSeleccionado) {
+      reservaData.id_paquete = paqueteSeleccionado.id_paquete;
+    } else {
+      // Filtrar solo pasajes con cantidad > 0
+      reservaData.cantidad_pasajes = pasajesSeleccionados  // <-- CAMBIAR A cantidad_pasajes
+        .filter(p => p.cantidad > 0)
+        .map(p => ({
+          id_tipo_pasaje: p.id_tipo_pasaje,
+          cantidad: p.cantidad
+        }));
     }
     
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const reservaData: ReservaData = {
-        id_vendedor: user?.id_usuario,
-        id_cliente: clienteEncontrado.id_cliente,
-        id_instancia: instanciaTour.id_instancia,
-        total_pagar: totalReserva,
-        notas: notasReserva || undefined,
-        estado: 'RESERVADO'
-      };
-      
-      if (usarPaquete && paqueteSeleccionado) {
-        reservaData.id_paquete = paqueteSeleccionado.id_paquete;
-      } else {
-        // Filtrar solo pasajes con cantidad > 0
-        reservaData.pasajes = pasajesSeleccionados
-          .filter(p => p.cantidad > 0)
-          .map(p => ({
-            id_tipo_pasaje: p.id_tipo_pasaje,
-            cantidad: p.cantidad
-          }));
-      }
-      
-      // Usar el endpoint correcto
-      const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
-      
-      if (response.data && response.data.data) {
-        setReservaCreada(true);
-        setReservaId(response.data.data.id_reserva);
-      } else {
-        throw new Error('No se pudo crear la reserva');
-      }
-    } catch (error) {
-      console.error('Error al crear reserva:', error);
-      setError('Error al crear la reserva. Por favor, intente nuevamente.');
-    } finally {
-      setLoading(false);
+    console.log('Datos a enviar:', JSON.stringify(reservaData));
+    
+    // Usar el endpoint correcto
+    const response = await axios.post(endpoints.reserva.vendedorCreate, reservaData);
+    
+    if (response.data && response.data.data) {
+      setReservaCreada(true);
+      setReservaId(response.data.data.id_reserva);
+    } else {
+      throw new Error('No se pudo crear la reserva');
     }
-  };
+  } catch (error) {
+    console.error('Error al crear reserva:', error);
+    setError('Error al crear la reserva. Por favor, intente nuevamente.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Función mejorada para formatear hora
   const formatearHora = (hora: string): string => {
