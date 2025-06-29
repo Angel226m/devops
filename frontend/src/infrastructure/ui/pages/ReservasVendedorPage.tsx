@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Table from '../components/Table';
 import Button from '../components/Button';
-import Modal from '../components/Modal';
 import { FaCalendarPlus, FaSearch, FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import ROUTES from '../../../shared/constants/appRoutes';
 
 const ReservasVendedorPage: React.FC = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { selectedSede } = useSelector((state: RootState) => state.auth);
   
   const [loading, setLoading] = useState(false);
   const [reservas, setReservas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedReserva, setSelectedReserva] = useState<any>(null);
   
   useEffect(() => {
     const fetchReservas = async () => {
@@ -41,18 +41,18 @@ const ReservasVendedorPage: React.FC = () => {
   }, [dispatch, selectedSede]);
   
   const handleCreateReserva = () => {
-    setSelectedReserva(null);
-    setIsModalOpen(true);
+    // Redirigir a la página de nueva reserva en lugar de abrir un modal
+    navigate(ROUTES.VENDEDOR.RESERVA.CREAR);
   };
   
   const handleEditReserva = (reserva: any) => {
-    setSelectedReserva(reserva);
-    setIsModalOpen(true);
+    // Redirigir a la página de edición
+    navigate(ROUTES.VENDEDOR.RESERVA.EDITAR(reserva.id));
   };
   
   const handleViewReserva = (reserva: any) => {
-    // Aquí podrías navegar a una vista detallada o abrir un modal con detalles
-    console.log('Ver reserva:', reserva);
+    // Redirigir a la página de detalle
+    navigate(ROUTES.VENDEDOR.RESERVA.VER(reserva.id));
   };
   
   const handleDeleteReserva = (reserva: any) => {
@@ -98,24 +98,30 @@ const ReservasVendedorPage: React.FC = () => {
       header: 'Acciones',
       accessor: (row: any) => (
         <div className="flex space-x-2">
-          <button 
+          <Button 
+            size="sm"
+            variant="primary"
             onClick={() => handleViewReserva(row)}
-            className="p-1 text-blue-600 hover:text-blue-800"
+            className="p-1 text-white bg-blue-600 hover:bg-blue-700 rounded"
           >
-            <FaEye />
-          </button>
-          <button 
+            <FaEye className="mr-1" /> Ver
+          </Button>
+          <Button 
+            size="sm"
+            variant="secondary"
             onClick={() => handleEditReserva(row)}
-            className="p-1 text-yellow-600 hover:text-yellow-800"
+            className="p-1 text-white bg-yellow-600 hover:bg-yellow-700 rounded"
           >
-            <FaEdit />
-          </button>
-          <button 
+            <FaEdit className="mr-1" /> Editar
+          </Button>
+          <Button 
+            size="sm"
+            variant="danger"
             onClick={() => handleDeleteReserva(row)}
-            className="p-1 text-red-600 hover:text-red-800"
+            className="p-1 text-white bg-red-600 hover:bg-red-700 rounded"
           >
-            <FaTrash />
-          </button>
+            <FaTrash className="mr-1" /> Eliminar
+          </Button>
         </div>
       )
     }
@@ -182,33 +188,6 @@ const ReservasVendedorPage: React.FC = () => {
           />
         )}
       </div>
-      
-      {/* Modal para crear/editar reserva */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
-      >
-        <div className="p-4">
-          <form className="space-y-4">
-            {/* Aquí irían los campos del formulario de reserva */}
-            <p className="text-gray-500">Formulario de reserva aquí...</p>
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                onClick={() => setIsModalOpen(false)}
-                variant="secondary"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                variant="success"
-              >
-                {selectedReserva ? "Actualizar" : "Guardar"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
     </div>
   );
 };
