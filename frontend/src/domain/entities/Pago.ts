@@ -10,8 +10,8 @@ export interface Pago {
   fecha_pago?: string;
   estado: string;
   comprobante?: string;
-  numero_comprobante?: string;
-  url_comprobante?: string;
+  numero_comprobante?: string | null;
+  url_comprobante?: string | null;
   eliminado?: boolean;
   
   // Campos calculados o relacionados
@@ -29,9 +29,9 @@ export interface NuevoPagoRequest {
   canal_pago: string;
   id_sede?: number | null;
   monto: number;
-  comprobante?: string;
-  numero_comprobante?: string;
-  url_comprobante?: string;
+  comprobante?: string | null;
+  numero_comprobante?: string | null;
+  url_comprobante?: string | null;
 }
 
 export interface ActualizarPagoRequest {
@@ -39,9 +39,9 @@ export interface ActualizarPagoRequest {
   canal_pago: string;
   id_sede?: number | null;
   monto: number;
-  comprobante?: string;
-  numero_comprobante?: string;
-  url_comprobante?: string;
+  comprobante?: string | null;
+  numero_comprobante?: string | null;
+  url_comprobante?: string | null;
   estado: string;
 }
 
