@@ -51,13 +51,26 @@ export class ClienteRepoHttp implements ClienteRepository {
     return response.data.id;
   }
 
-  async findById(id: number): Promise<Cliente> {
+ /* async findById(id: number): Promise<Cliente> {
     const ep = this.getEndpoints();
     const response = await this.http.get(ep.byId(id));
     return response.data;
-  }
+  }*/
 
-  async findByDocumento(documento: string): Promise<Cliente> {
+  async findById(id: number): Promise<Cliente> {
+  const ep = this.getEndpoints();
+  const response = await this.http.get(ep.byId(id));
+  console.log('Respuesta API findById:', response.data);
+  
+  // Verificar si la respuesta tiene la estructura { data: {...} }
+  if (response.data && typeof response.data === 'object' && response.data.data) {
+    return response.data.data;
+  }
+  
+  // Si no tiene esa estructura, devolver los datos directamente
+  return response.data;
+}
+    async findByDocumento(documento: string): Promise<Cliente> {
     const ep = this.getEndpoints();
     const response = await this.http.get(ep.byDocumento, {
       params: { documento }

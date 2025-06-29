@@ -351,7 +351,7 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
 };
 
 export default ClienteDetail;*/
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../../store';
@@ -370,8 +370,7 @@ import {
   FaUser, FaIdCard, FaEnvelope, FaPhone, FaBuilding, 
   FaPencilAlt, FaArrowLeft, FaClipboardCheck, FaEdit, 
   FaCheck, FaMapMarkerAlt, FaCalendarAlt, FaHistory,
-  FaUserEdit, FaSave,
-  FaTimes
+  FaUserEdit, FaSave, FaTimes
 } from 'react-icons/fa';
 
 interface ClienteDetailProps {
@@ -408,18 +407,24 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
     };
   }, [dispatch, id]);
   
+  // Log para depuración
+  useEffect(() => {
+    console.log('Cliente actual recibido:', clienteActual);
+  }, [clienteActual]);
+  
   useEffect(() => {
     if (clienteActual) {
-      setIsEmpresa(clienteActual.tipo_documento === 'RUC');
+      const tipoDoc = clienteActual.tipo_documento || '';
+      setIsEmpresa(tipoDoc === 'RUC');
       setFormData({
-        tipo_documento: clienteActual.tipo_documento,
-        numero_documento: clienteActual.numero_documento,
+        tipo_documento: tipoDoc,
+        numero_documento: clienteActual.numero_documento || '',
         nombres: clienteActual.nombres || '',
         apellidos: clienteActual.apellidos || '',
         razon_social: clienteActual.razon_social || '',
         direccion_fiscal: clienteActual.direccion_fiscal || '',
-        correo: clienteActual.correo,
-        numero_celular: clienteActual.numero_celular
+        correo: clienteActual.correo || '',
+        numero_celular: clienteActual.numero_celular || ''
       });
     }
   }, [clienteActual]);
@@ -505,7 +510,12 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
   }
   
   const detailTitle = title || "Detalles del Cliente";
-  const isEmpresaActual = clienteActual.tipo_documento === 'RUC';
+  const isEmpresaActual = (clienteActual.tipo_documento || '') === 'RUC';
+  
+  // Generar nombres o razón social según el tipo de cliente
+  const nombreCompleto = isEmpresaActual 
+    ? clienteActual.razon_social || 'Sin nombre'
+    : `${clienteActual.nombres || ''} ${clienteActual.apellidos || ''}`.trim() || 'Sin nombre';
   
   // Fechas ficticias para el historial de ejemplo
   const fechaRegistro = new Date();
@@ -583,8 +593,7 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
                   <div className="mt-6 mb-4">
                     <p className="text-sm opacity-80">Nombre / Razón Social</p>
                     <h3 className="text-xl font-bold mt-1">
-                      {isEmpresaActual ? clienteActual.razon_social : 
-                        `${clienteActual.nombres} ${clienteActual.apellidos}`}
+                      {nombreCompleto}
                     </h3>
                   </div>
                   
@@ -594,7 +603,7 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
                     </div>
                     <div className="ml-3">
                       <p className="text-sm opacity-80">Documento de Identidad</p>
-                      <p className="font-medium">{clienteActual.tipo_documento}: {clienteActual.numero_documento}</p>
+                      <p className="font-medium">{clienteActual.tipo_documento || ''}: {clienteActual.numero_documento || ''}</p>
                     </div>
                   </div>
                 </div>
@@ -696,7 +705,7 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
                       <p className="text-sm text-gray-500">Documento</p>
                       <p className="font-medium text-gray-800 flex items-center">
                         <FaIdCard className="mr-2 text-blue-500" />
-                        {clienteActual.tipo_documento}
+                        {clienteActual.tipo_documento || '-'}
                       </p>
                     </div>
                     
@@ -738,7 +747,7 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
                   </div>
                   <h4 className="text-md font-medium text-gray-700">Registro del cliente</h4>
                   <p className="text-gray-600 mt-1">
-                    El cliente fue registrado en el sistema con documento {clienteActual.tipo_documento}: {clienteActual.numero_documento}.
+                    El cliente fue registrado en el sistema con documento {clienteActual.tipo_documento || ''}: {clienteActual.numero_documento || ''}.
                   </p>
                 </div>
               </div>
@@ -910,15 +919,15 @@ const ClienteDetail: React.FC<ClienteDetailProps> = ({ title }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                 <FaPhone className="mr-2 text-gray-500" /> Número de Celular *
               </label>
-                           <FormInput 
-                  name="numero_celular" 
-                  value={formData.numero_celular} 
-                  onChange={handleChange} 
-                  required
-                  className="rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                />
-              </div>
+              <FormInput 
+                name="numero_celular" 
+                value={formData.numero_celular} 
+                onChange={handleChange} 
+                required
+                className="rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
             </div>
+          </div>
           
           <div className="flex justify-end space-x-3 mt-6">
             <Button 
