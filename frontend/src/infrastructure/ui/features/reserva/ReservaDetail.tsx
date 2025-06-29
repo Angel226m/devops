@@ -419,7 +419,6 @@ const ReservaDetail: React.FC = () => {
 };
 
 export default ReservaDetail;*/
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -429,7 +428,7 @@ import { endpoints } from '../../../api/endpoints';
 import { 
   FaArrowLeft, FaEdit, FaTrash, FaMoneyBill, FaFileInvoice, FaTicketAlt, 
   FaUser, FaCalendarAlt, FaShip, FaClock, FaClipboardCheck, FaExclamationTriangle,
-  FaCheckCircle, FaDownload, FaMoneyBillWave, FaPhone, FaEnvelope
+  FaCheckCircle, FaDownload, FaMoneyBillWave, FaPhone, FaEnvelope, FaUsers
 } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -439,37 +438,30 @@ import ROUTES from '../../../../shared/constants/appRoutes';
 interface Reserva {
   id_reserva: number;
   id_vendedor: number;
+  nombre_vendedor?: string;
   id_cliente: number;
   id_instancia: number;
   id_paquete?: number;
   fecha_reserva: string;
+  fecha_expiracion?: string;
   total_pagar: number;
   notas?: string;
   estado: string;
-  fecha_expiracion?: string;
   eliminado: boolean;
   nombre_cliente?: string;
   documento_cliente?: string;
   nombre_tour?: string;
   fecha_tour?: string;
-  hora_tour?: string;
-  detalles_pasajes?: DetallePasaje[];
-  detalles_paquete?: DetallePaquete;
+  hora_inicio_tour?: string;
+  hora_fin_tour?: string;
+  cantidad_pasajes?: PasajeCantidad[];
 }
 
-interface DetallePasaje {
+interface PasajeCantidad {
   id_tipo_pasaje: number;
-  nombre_tipo_pasaje: string;
+  nombre_tipo: string;
   cantidad: number;
-  costo_unitario: number;
-  subtotal: number;
-}
-
-interface DetallePaquete {
-  id_paquete: number;
-  nombre_paquete: string;
-  cantidad: number;
-  precio_total: number;
+  precio_unitario?: number;
 }
 
 interface Pago {
@@ -481,19 +473,27 @@ interface Pago {
   fecha_pago: string;
   estado: string;
   comprobante?: string;
+  numero_comprobante?: string;
 }
 
 // Componente principal
 const ReservaDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { selectedSede } = useSelector((state: RootState) => state.auth);
+  const { user, selectedSede } = useSelector((state: RootState) => state.auth);
   
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPagado, setTotalPagado] = useState(0);
+  const [totalPasajeros, setTotalPasajeros] = useState(0);
+  
+  // Fecha UTC formateada
+  const getCurrentDateTimeUTC = (): string => {
+    const now = new Date();
+    return now.toISOString().replace('T', ' ').substring(0, 19);
+  };
   
   // Cargar datos de la reserva
   useEffect(() => {
@@ -508,7 +508,14 @@ const ReservaDetail: React.FC = () => {
         const response = await axios.get(endpoints.reserva.vendedorGetById(parseInt(id)));
         
         if (response.data && response.data.data) {
-          setReserva(response.data.data);
+          const reservaData = response.data.data;
+          setReserva(reservaData);
+          
+          // Calcular total de pasajeros
+          if (reservaData.cantidad_pasajes && Array.isArray(reservaData.cantidad_pasajes)) {
+            const total = reservaData.cantidad_pasajes.reduce((sum: number, pasaje: PasajeCantidad) => sum + pasaje.cantidad, 0);
+            setTotalPasajeros(total);
+          }
           
           // Cargar pagos asociados
           const pagosResponse = await axios.get(endpoints.pago.vendedorListByReserva(parseInt(id)));
@@ -516,12 +523,9 @@ const ReservaDetail: React.FC = () => {
             setPagos(pagosResponse.data.data);
             
             // Calcular total pagado
-            let total = 0;
-            pagosResponse.data.data.forEach((pago: Pago) => {
-              if (pago.estado === 'PROCESADO') {
-                total += pago.monto;
-              }
-            });
+            const total = pagosResponse.data.data.reduce((sum: number, pago: Pago) => {
+              return pago.estado === 'PROCESADO' ? sum + pago.monto : sum;
+            }, 0);
             
             setTotalPagado(total);
           }
@@ -541,10 +545,18 @@ const ReservaDetail: React.FC = () => {
   
   // Formatear fecha
   const formatearFecha = (fecha: string): string => {
-    if (!fecha) return '-';
+    if (!fecha) return 'No especificada';
+    
+    // Si ya viene en formato DD/MM/YYYY
+    if (fecha.includes('/')) {
+      return fecha;
+    }
     
     try {
       const date = new Date(fecha);
+      if (isNaN(date.getTime())) {
+        return fecha; // Devolver el string original si no es una fecha válida
+      }
       return format(date, 'dd/MM/yyyy HH:mm', { locale: es });
     } catch (error) {
       return fecha;
@@ -582,11 +594,21 @@ const ReservaDetail: React.FC = () => {
     navigate(ROUTES.VENDEDOR.RESERVA.EDITAR(id || ''));
   };
   
+  const handleBack = () => {
+    navigate(ROUTES.VENDEDOR.RESERVA.LIST);
+  };
+  
   return (
     <div className="py-8 px-4 bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="max-w-6xl mx-auto">
+        {/* Información de fecha y usuario actual */}
+        <div className="text-xs text-gray-500 mb-2 text-right">
+          <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {getCurrentDateTimeUTC()}</p>
+          <p>Current User's Login: {user?.nombres|| 'angel06220'}</p>
+        </div>
+      
         <button
-          onClick={() => navigate(ROUTES.VENDEDOR.RESERVA.LIST)}
+          onClick={handleBack}
           className="flex items-center text-blue-600 hover:text-blue-800 mb-6 bg-white px-4 py-2 rounded-lg shadow-sm transition-all hover:shadow"
         >
           <FaArrowLeft className="mr-2" /> Volver a Reservas
@@ -604,7 +626,7 @@ const ReservaDetail: React.FC = () => {
               {error}
             </p>
             <button 
-              onClick={() => navigate(ROUTES.VENDEDOR.RESERVA.LIST)}
+              onClick={handleBack}
               className="mt-4 bg-red-100 hover:bg-red-200 text-red-800 font-bold py-2 px-4 rounded"
             >
               Volver a Reservas
@@ -628,6 +650,11 @@ const ReservaDetail: React.FC = () => {
                     {formatearFecha(reserva.fecha_reserva)}
                   </span>
                 </div>
+                {reserva.nombre_vendedor && (
+                  <div className="text-sm text-gray-500 mt-1">
+                    <span>Registrado por: {reserva.nombre_vendedor}</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
@@ -727,7 +754,12 @@ const ReservaDetail: React.FC = () => {
                     <p className="text-sm text-gray-500">Hora</p>
                     <div className="flex items-center">
                       <FaClock className="text-green-600 mr-2" />
-                      <p className="font-medium">{reserva.hora_tour || 'No especificada'}</p>
+                      <p className="font-medium">
+                        {reserva.hora_inicio_tour 
+                          ? `${reserva.hora_inicio_tour}${reserva.hora_fin_tour ? ' - ' + reserva.hora_fin_tour : ''}`
+                          : 'No especificada'
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -736,6 +768,15 @@ const ReservaDetail: React.FC = () => {
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="font-medium text-gray-700 mb-1">Notas:</p>
                     <p className="text-gray-600">{reserva.notas}</p>
+                  </div>
+                )}
+                
+                {reserva.fecha_expiracion && (
+                  <div className="mt-4 p-2 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+                    <p className="flex items-center text-amber-700">
+                      <FaExclamationTriangle className="mr-2" />
+                      Expira el {formatearFecha(reserva.fecha_expiracion)}
+                    </p>
                   </div>
                 )}
               </div>
@@ -750,37 +791,7 @@ const ReservaDetail: React.FC = () => {
                 Detalles de Pasajes
               </h3>
               
-              {reserva.detalles_paquete ? (
-                <div>
-                  <div className="bg-purple-50 p-3 rounded-t-lg grid grid-cols-12 gap-4 font-bold border border-b-0 border-purple-200">
-                    <div className="col-span-8">Paquete</div>
-                    <div className="col-span-2 text-center">Cantidad</div>
-                    <div className="col-span-2 text-right">Subtotal</div>
-                  </div>
-                  
-                  <div className="p-4 grid grid-cols-12 gap-4 border border-gray-200 rounded-b-lg mb-4">
-                    <div className="col-span-8">
-                      <p className="font-semibold text-purple-800">{reserva.detalles_paquete.nombre_paquete}</p>
-                    </div>
-                    
-                    <div className="col-span-2 text-center">
-                      <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full">
-                        {reserva.detalles_paquete.cantidad}
-                      </span>
-                    </div>
-                    
-                    <div className="col-span-2 text-right font-bold text-purple-800">
-                      {formatMoneda(reserva.detalles_paquete.precio_total)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-bold">
-                      Total: {formatMoneda(reserva.detalles_paquete.precio_total)}
-                    </div>
-                  </div>
-                </div>
-              ) : reserva.detalles_pasajes && reserva.detalles_pasajes.length > 0 ? (
+              {reserva.cantidad_pasajes && reserva.cantidad_pasajes.length > 0 ? (
                 <div>
                   <div className="bg-purple-50 p-3 rounded-t-lg grid grid-cols-12 gap-4 font-bold border border-b-0 border-purple-200">
                     <div className="col-span-8">Tipo de Pasaje</div>
@@ -788,33 +799,45 @@ const ReservaDetail: React.FC = () => {
                     <div className="col-span-2 text-right">Subtotal</div>
                   </div>
                   
-                  {reserva.detalles_pasajes.map((detalle, index) => (
-                    <div key={index} className={`p-4 grid grid-cols-12 gap-4 border-l border-r border-gray-200 ${
-                      index === reserva.detalles_pasajes!.length - 1 ? 'border-b rounded-b-lg' : 'border-b'
+                  {reserva.cantidad_pasajes.map((pasaje, index) => (
+                    <div key={pasaje.id_tipo_pasaje} className={`p-4 grid grid-cols-12 gap-4 border-l border-r border-gray-200 ${
+                      index === reserva.cantidad_pasajes!.length - 1 ? 'border-b rounded-b-lg' : 'border-b'
                     }`}>
                       <div className="col-span-8">
-                        <p className="font-semibold text-gray-800">{detalle.nombre_tipo_pasaje}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatMoneda(detalle.costo_unitario)} por pasaje
-                        </p>
+                        <div className="flex items-center">
+                          <div className="bg-purple-100 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                            <FaUsers className="text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">{pasaje.nombre_tipo}</p>
+                            {pasaje.precio_unitario && (
+                              <p className="text-sm text-gray-500">
+                                {formatMoneda(pasaje.precio_unitario)} por pasaje
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       
                       <div className="col-span-2 text-center">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full">
-                          {detalle.cantidad}
+                        <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
+                          {pasaje.cantidad}
                         </span>
                       </div>
                       
                       <div className="col-span-2 text-right font-bold text-purple-800">
-                        {formatMoneda(detalle.subtotal)}
+                        {pasaje.precio_unitario 
+                          ? formatMoneda(pasaje.cantidad * pasaje.precio_unitario)
+                          : '-'
+                        }
                       </div>
                     </div>
                   ))}
                   
                   <div className="flex justify-end mt-4">
                     <div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-bold flex items-center">
-                      <FaTicketAlt className="mr-2" />
-                      Total: {formatMoneda(reserva.total_pagar)}
+                      <FaUsers className="mr-2" />
+                      Total Pasajeros: {totalPasajeros} - {formatMoneda(reserva.total_pagar)}
                     </div>
                   </div>
                 </div>
@@ -843,7 +866,8 @@ const ReservaDetail: React.FC = () => {
                   </p>
                   <p className="text-2xl font-bold text-blue-800 mt-2">{formatMoneda(reserva.total_pagar)}</p>
                 </div>
-                           <div className="bg-green-50 rounded-lg p-5 border border-green-200 flex flex-col justify-between">
+                
+                <div className="bg-green-50 rounded-lg p-5 border border-green-200 flex flex-col justify-between">
                   <p className="text-sm text-green-700 flex items-center">
                     <FaCheckCircle className="mr-2" />
                     Total Pagado
@@ -901,6 +925,11 @@ const ReservaDetail: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                               {pago.metodo_pago}
+                              {pago.numero_comprobante && (
+                                <div className="text-xs text-gray-500">
+                                  Comprobante: {pago.numero_comprobante}
+                                </div>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {pago.canal_pago}
@@ -959,7 +988,7 @@ const ReservaDetail: React.FC = () => {
             {/* Botones de acción principales */}
             <div className="flex flex-wrap justify-end space-x-0 space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
               <button
-                onClick={() => navigate(ROUTES.VENDEDOR.RESERVA.LIST)}
+                onClick={handleBack}
                 className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg flex items-center justify-center transition-all"
               >
                 <FaArrowLeft className="mr-2" />
@@ -988,7 +1017,7 @@ const ReservaDetail: React.FC = () => {
             <div>
               <p className="font-medium">No se encontró información para esta reserva.</p>
               <button 
-                onClick={() => navigate(ROUTES.VENDEDOR.RESERVA.LIST)}
+                onClick={handleBack}
                 className="mt-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-medium py-1 px-4 rounded transition-colors"
               >
                 Volver a Reservas

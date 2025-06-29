@@ -10,23 +10,12 @@ import FormInput from '../../components/FormInput';
 import { 
   FaCalendarPlus, FaSearch, FaEye, FaEdit, 
   FaTrash, FaFilter, FaCalendarAlt, FaSort,
-  FaInfoCircle, FaExclamationTriangle
+  FaInfoCircle, FaExclamationTriangle, FaUsers
 } from 'react-icons/fa';
 import ROUTES from '../../../../shared/constants/appRoutes';
 
-// Define la interfaz para la reserva
-interface Reserva {
-  id_reserva?: number;
-  nombre_cliente?: string;
-  documento_cliente?: string;
-  nombre_tour?: string;
-  fecha_tour?: string;
-  hora_inicio_tour?: string;
-  total_pasajeros?: number;
-  estado?: string;
-  total_pagar?: number;
-  [key: string]: any; // Esta es la firma de índice que permite indexación con string
-}
+// Importar las interfaces desde el dominio para evitar conflictos de tipado
+import { Reserva, PasajeCantidad } from '../../../../domain/entities/Reserva';
 
 // Define la interfaz para la columna según el componente Table
 interface Column {
@@ -53,9 +42,21 @@ const ReservaList: React.FC = () => {
     dispatch(fetchReservas());
   }, [dispatch]);
   
+  // Calcular el total de pasajeros a partir del array cantidad_pasajes
+  const calcularTotalPasajeros = (reserva: Reserva): number => {
+    if (!reserva.cantidad_pasajes || !Array.isArray(reserva.cantidad_pasajes)) {
+      return 0;
+    }
+    
+    return reserva.cantidad_pasajes.reduce((total, pasaje) => {
+      return total + (pasaje.cantidad || 0);
+    }, 0);
+  };
+  
   // Filtrar reservas por término de búsqueda y filtros seleccionados
+  // Usamos un tipado más genérico para evitar conflictos
   const filteredReservas = Array.isArray(reservas) ? 
-    reservas.filter((reserva: Reserva) => {
+    reservas.filter((reserva: any) => {
       const clientName = reserva.nombre_cliente || '';
       const tourName = reserva.nombre_tour || '';
       const estado = reserva.estado || '';
@@ -72,13 +73,20 @@ const ReservaList: React.FC = () => {
     }) : [];
   
   // Función segura para obtener un valor de ordenación de un objeto
-  const getSortValue = (obj: Reserva, field: SortableField): any => {
+  const getSortValue = (obj: any, field: SortableField): any => {
     switch (field) {
       case 'nombre_cliente':
         return obj.nombre_cliente || '';
       case 'nombre_tour':
         return obj.nombre_tour || '';
       case 'fecha_tour':
+        // Manejar formato DD/MM/YYYY que viene de la API
+        if (obj.fecha_tour && obj.fecha_tour.includes('/')) {
+          const [day, month, year] = obj.fecha_tour.split('/');
+          if (day && month && year) {
+            return new Date(`${year}-${month}-${day}`).getTime();
+          }
+        }
         return obj.fecha_tour ? new Date(obj.fecha_tour).getTime() : 0;
       case 'estado':
         return obj.estado || '';
@@ -90,7 +98,7 @@ const ReservaList: React.FC = () => {
   };
   
   // Ordenar reservas
-  const sortedReservas = [...filteredReservas].sort((a: Reserva, b: Reserva) => {
+  const sortedReservas = [...filteredReservas].sort((a: any, b: any) => {
     const valueA = getSortValue(a, sortField);
     const valueB = getSortValue(b, sortField);
     
@@ -100,26 +108,33 @@ const ReservaList: React.FC = () => {
   });
   
   // Si no hay reservas, usar datos de ejemplo temporales
-  const displayReservas: Reserva[] = sortedReservas.length > 0 ? sortedReservas : [
+  const displayReservas = sortedReservas.length > 0 ? sortedReservas : [
     { 
       id_reserva: 1, 
       nombre_cliente: 'Juan Pérez', 
       nombre_tour: 'Islas Ballestas',
-      fecha_tour: '2025-06-12',
+      fecha_tour: '12/06/2025',
       hora_inicio_tour: '10:30',
-      total_pasajeros: 3,
+      hora_fin_tour: '12:30',
       estado: 'CONFIRMADO',
-      total_pagar: 150.00
+      total_pagar: 150.00,
+      cantidad_pasajes: [
+        { id_tipo_pasaje: 1, nombre_tipo: 'Adulto', cantidad: 2 },
+        { id_tipo_pasaje: 2, nombre_tipo: 'Niño', cantidad: 1 }
+      ]
     },
     { 
       id_reserva: 2, 
       nombre_cliente: 'María López', 
       nombre_tour: 'Reserva de Paracas',
-      fecha_tour: '2025-06-15',
+      fecha_tour: '15/06/2025',
       hora_inicio_tour: '09:00',
-      total_pasajeros: 2,
+      hora_fin_tour: '11:00',
       estado: 'RESERVADO',
-      total_pagar: 100.00
+      total_pagar: 100.00,
+      cantidad_pasajes: [
+        { id_tipo_pasaje: 1, nombre_tipo: 'Adulto', cantidad: 2 }
+      ]
     }
   ];
   
@@ -127,17 +142,17 @@ const ReservaList: React.FC = () => {
     navigate(ROUTES.VENDEDOR.RESERVA.CREAR);
   };
   
-  const handleViewReserva = (reserva: Reserva) => {
+  const handleViewReserva = (reserva: any) => {
     const idReserva = reserva.id_reserva || 0;
     navigate(ROUTES.VENDEDOR.RESERVA.VER(idReserva));
   };
   
-  const handleEditReserva = (reserva: Reserva) => {
+  const handleEditReserva = (reserva: any) => {
     const idReserva = reserva.id_reserva || 0;
     navigate(ROUTES.VENDEDOR.RESERVA.EDITAR(idReserva));
   };
   
-  const handleDeleteReserva = (reserva: Reserva) => {
+  const handleDeleteReserva = (reserva: any) => {
     if (window.confirm(`¿Estás seguro de eliminar la reserva de ${reserva.nombre_cliente || 'este cliente'}?`)) {
       // Lógica para eliminar
       console.log('Eliminar reserva:', reserva);
@@ -170,15 +185,24 @@ const ReservaList: React.FC = () => {
   };
   
   const formatFecha = (fechaStr: string) => {
+    // Si la fecha ya viene en formato DD/MM/YYYY, retornarla directamente
+    if (fechaStr && fechaStr.includes('/')) {
+      return fechaStr;
+    }
+    
+    // Si no, intentar convertir
     try {
       const fecha = new Date(fechaStr);
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha no válida';
+      }
       return fecha.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
       });
     } catch (e) {
-      return fechaStr || 'N/A';
+      return 'Fecha no válida';
     }
   };
   
@@ -192,7 +216,7 @@ const ReservaList: React.FC = () => {
   const columns: Column[] = [
     { 
       header: 'Cliente', 
-      accessor: (reserva: Reserva) => (
+      accessor: (reserva: any) => (
         <div>
           <p className="font-medium">{reserva.nombre_cliente || 'Sin nombre'}</p>
           <p className="text-xs text-gray-500">{reserva.documento_cliente || 'Sin documento'}</p>
@@ -201,7 +225,7 @@ const ReservaList: React.FC = () => {
     },
     { 
       header: 'Tour',
-      accessor: (reserva: Reserva) => (
+      accessor: (reserva: any) => (
         <div>
           <p className="font-medium">{reserva.nombre_tour || 'Sin tour'}</p>
           <p className="text-xs text-gray-500">
@@ -212,7 +236,7 @@ const ReservaList: React.FC = () => {
     },
     { 
       header: 'Hora',
-      accessor: (reserva: Reserva) => (
+      accessor: (reserva: any) => (
         <div className="flex items-center">
           <FaCalendarAlt className="text-blue-500 mr-2" />
           <span>{reserva.hora_inicio_tour || '--:--'}</span>
@@ -221,17 +245,29 @@ const ReservaList: React.FC = () => {
     },
     { 
       header: 'Pasajeros', 
-      accessor: (reserva: Reserva) => (
-        <div className="text-center">
-          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-200">
-            {reserva.total_pasajeros || 0}
-          </span>
-        </div>
-      )
+      accessor: (reserva: any) => {
+        const totalPasajeros = calcularTotalPasajeros(reserva);
+        return (
+          <div className="text-center">
+            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-200 flex items-center justify-center w-8 h-8 mx-auto">
+              {totalPasajeros}
+            </span>
+            <div className="text-xs text-gray-500 mt-1">
+              {reserva.cantidad_pasajes && reserva.cantidad_pasajes.length > 0 ? (
+                reserva.cantidad_pasajes.map((p: any) => (
+                  <div key={p.id_tipo_pasaje}>{p.nombre_tipo}: {p.cantidad}</div>
+                ))
+              ) : (
+                <span>Sin detalles</span>
+              )}
+            </div>
+          </div>
+        );
+      }
     },
     { 
       header: 'Estado', 
-      accessor: (reserva: Reserva) => {
+      accessor: (reserva: any) => {
         const statusClass = getStatusColor(reserva.estado || 'RESERVADO');
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
@@ -242,7 +278,7 @@ const ReservaList: React.FC = () => {
     },
     { 
       header: 'Total',
-      accessor: (reserva: Reserva) => (
+      accessor: (reserva: any) => (
         <div className="font-medium text-right">
           S/ {(reserva.total_pagar || 0).toFixed(2)}
         </div>
@@ -250,7 +286,7 @@ const ReservaList: React.FC = () => {
     },
     {
       header: 'Acciones',
-      accessor: (row: Reserva) => (
+      accessor: (row: any) => (
         <div className="flex space-x-1">
           <Button 
             size="sm" 
@@ -287,8 +323,8 @@ const ReservaList: React.FC = () => {
   // Componente de encabezado para mostrar con los iconos de ordenación
   const renderTableHeader = () => (
     <div className="flex items-center justify-between py-2 px-4 bg-gray-50 border-b">
-      <div className="flex items-center space-x-2">
-        <span className="font-medium text-gray-700">
+      <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+        <span className="font-medium text-gray-700 whitespace-nowrap">
           Ordenar por: 
         </span>
         <button 
@@ -330,6 +366,18 @@ const ReservaList: React.FC = () => {
     </div>
   );
   
+  const currentDateTimeUTC = () => {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+  
   return (
     <Card className="shadow-lg border border-gray-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -358,6 +406,12 @@ const ReservaList: React.FC = () => {
           <p>Error al cargar reservas: {error}</p>
         </div>
       )}
+      
+      {/* Información de fecha y usuario actual */}
+      <div className="text-xs text-gray-500 mb-3 text-right">
+        <p>Current Date and Time (UTC): {currentDateTimeUTC()}</p>
+        <p>Current User's Login: {useSelector((state: RootState) => state.auth.user?.nombres) || 'angel06220'}</p>
+      </div>
       
       {/* Filtros y búsqueda */}
       <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg mb-6 border border-blue-100 shadow-sm">
@@ -393,6 +447,7 @@ const ReservaList: React.FC = () => {
               <option value="">Todos los tours</option>
               <option value="Islas Ballestas">Islas Ballestas</option>
               <option value="Reserva de Paracas">Reserva de Paracas</option>
+              <option value="Isla Blanca">Isla Blanca</option>
             </select>
             <Button 
               variant="primary"
