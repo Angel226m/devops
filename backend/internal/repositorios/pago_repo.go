@@ -201,6 +201,7 @@ func (r *PagoRepository) List() ([]*entidades.Pago, error) {
 }
 
 // ListByReserva lista todos los pagos de una reserva específica
+// ListByReserva lista todos los pagos de una reserva específica
 func (r *PagoRepository) ListByReserva(idReserva int) ([]*entidades.Pago, error) {
 	query := `SELECT p.id_pago, p.id_reserva, p.metodo_pago, p.canal_pago, p.id_sede,
               p.monto, p.fecha_pago, p.estado, p.comprobante, p.numero_comprobante, p.url_comprobante, p.eliminado,
