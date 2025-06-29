@@ -85,10 +85,19 @@ export class ClienteRepoHttp implements ClienteRepository {
     const ep = this.getEndpoints();
     await this.http.delete(ep.byId(id));
   }
-
+/*
   async findAll(params?: BusquedaClienteParams): Promise<Cliente[]> {
     const ep = this.getEndpoints();
     const response = await this.http.get(ep.list, { params });
     return response.data;
-  }
+  }*/
+
+
+    async findAll(params?: BusquedaClienteParams): Promise<Cliente[]> {
+  const ep = this.getEndpoints();
+  const response = await this.http.get(ep.list, { params });
+  // Devolver el array de clientes dentro de data
+  console.log('Respuesta API findAll:', response.data);
+  return response.data.data || []; // Extraemos el array de data
+}
 }
