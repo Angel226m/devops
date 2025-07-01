@@ -1054,7 +1054,8 @@ const VendedorDashboard: React.FC = () => {
   );
 };
 
-export default VendedorDashboard;*/   import React, { useState, useEffect } from 'react';
+export default VendedorDashboard;*/   
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AppDispatch, RootState } from '../../store';
 import { Link, useNavigate } from 'react-router-dom';
@@ -1524,6 +1525,12 @@ const VendedorDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Información de fecha y usuario actual */}
+      <div className="text-xs text-gray-500 mb-2 text-right">
+        <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-07-01 04:34:09</p>
+        <p>Current User's Login: angel06220</p>
+      </div>
+    
       {/* Bienvenida y resumen */}
       <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-blue-500">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center">
@@ -1541,12 +1548,6 @@ const VendedorDashboard: React.FC = () => {
             <span className="text-gray-500 text-sm">{user?.nombres || 'angel06220'}</span>
           </div>
         </div>
-      </div>
-      
-      {/* Información de fecha y usuario actual */}
-      <div className="text-xs text-gray-500 mb-2 text-right">
-        <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-07-01 04:16:59</p>
-        <p>Current User's Login: angel06220</p>
       </div>
       
       {/* Tarjetas de resumen */}
@@ -2040,9 +2041,9 @@ const VendedorDashboard: React.FC = () => {
             
             {reservasHoy.length > 0 && (
               <div className="mt-3 text-right">
-                <Link to={ROUTES.RESERVAS.LIST} className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                <a href="#" className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
                   Ver todas las reservas <FaChevronRight className="ml-1" />
-                </Link>
+                </a>
               </div>
             )}
           </div>
@@ -2120,9 +2121,9 @@ const VendedorDashboard: React.FC = () => {
             
             {salidasHoy.length > 0 && (
               <div className="mt-3 text-right">
-                <Link to={ROUTES.TOURS} className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                <a href="#" className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
                   Ver todas las salidas <FaChevronRight className="ml-1" />
-                </Link>
+                </a>
               </div>
             )}
           </div>
@@ -2135,33 +2136,33 @@ const VendedorDashboard: React.FC = () => {
           <FaSyncAlt className="mr-2 text-blue-500" /> Acciones rápidas
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Link to={ROUTES.RESERVAS.NUEVA} className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+          <a href="#" className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
             <div className="bg-blue-100 p-3 rounded-full mb-2">
               <FaCalendarAlt className="text-blue-600" />
             </div>
             <span className="text-sm text-gray-800">Nueva Reserva</span>
-          </Link>
+          </a>
           
-          <Link to={ROUTES.CLIENTES} className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+          <a href="#" className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
             <div className="bg-green-100 p-3 rounded-full mb-2">
               <FaUsers className="text-green-600" />
             </div>
             <span className="text-sm text-gray-800">Nuevo Cliente</span>
-          </Link>
+          </a>
           
-          <Link to={ROUTES.PAGOS} className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+          <a href="#" className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
             <div className="bg-purple-100 p-3 rounded-full mb-2">
               <FaCreditCard className="text-purple-600" />
             </div>
             <span className="text-sm text-gray-800">Registrar Pago</span>
-          </Link>
+          </a>
           
-          <Link to={ROUTES.CLIENTES} className="flex flex-col items-center justify-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+          <a href="#" className="flex flex-col items-center justify-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
             <div className="bg-amber-100 p-3 rounded-full mb-2">
               <FaPhone className="text-amber-600" />
             </div>
             <span className="text-sm text-gray-800">Buscar Cliente</span>
-          </Link>
+          </a>
         </div>
       </div>
       
