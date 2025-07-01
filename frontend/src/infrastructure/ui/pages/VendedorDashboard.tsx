@@ -1,4 +1,4 @@
- /*
+/*  
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../../infrastructure/store/index';
@@ -1054,7 +1054,9 @@ const VendedorDashboard: React.FC = () => {
   );
 };
 
-export default VendedorDashboard;*/   import React, { useState, useEffect, useCallback } from 'react';
+export default VendedorDashboard;*/
+
+ import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../../infrastructure/store/index';
 import { 
@@ -1067,10 +1069,7 @@ import {
   endOfWeek, 
   startOfMonth, 
   endOfMonth, 
-  eachDayOfInterval,
-  parse,
-  isValid,
-  addDays
+  eachDayOfInterval
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -1113,65 +1112,8 @@ import {
   FiFilter,
   FiArrowRight
 } from 'react-icons/fi';
-import axios from 'axios';
-import { endpoints } from '../../../infrastructure/api/endpoints';
-import { Link } from 'react-router-dom';
 
-// Tipos para los datos reales
-interface Pago {
-  id_pago: number;
-  id_reserva: number;
-  metodo_pago: string;
-  canal_pago: string;
-  monto: number;
-  fecha_pago: string;
-  estado: string;
-  comprobante?: string;
-  nombre_cliente?: string;
-}
-
-interface Reserva {
-  id_reserva: number;
-  nombre_cliente: string;
-  nombre_tour: string;
-  fecha_tour: string;
-  hora_inicio_tour: string;
-  hora_fin_tour: string;
-  total_pagar: number;
-  estado: string;
-  metodo_pago?: string;
-  cantidad_pasajes?: PasajeCantidad[];
-}
-
-interface PasajeCantidad {
-  id_tipo_pasaje?: number;
-  id_reserva?: number;
-  cantidad: number;
-  nombre_tipo?: string;
-}
-
-interface InstanciaTour {
-  id_instancia: number;
-  id_tour_programado: number;
-  fecha_especifica: string;
-  hora_inicio: string;
-  hora_fin: string;
-  id_chofer: number | null;
-  id_embarcacion: number;
-  cupo_disponible: number;
-  cupos_total?: number;
-  estado: string;
-  eliminado?: boolean;
-  nombre_tipo_tour?: string;
-  nombre_embarcacion?: string;
-  nombre_sede?: string;
-  hora_inicio_str?: string;
-  hora_fin_str?: string;
-  fecha_especifica_str?: string;
-  lugar_salida?: string;
-}
-
-// Tipo para representar las estadísticas diarias
+// Tipos para nuestros datos
 interface DailyStats {
   fecha: string;
   reservas: number;
@@ -1180,388 +1122,235 @@ interface DailyStats {
   fechaCompleta?: Date;
 }
 
-// Tipo para los métodos de pago
+interface VentaResumen {
+  id: number;
+  tour: string;
+  horario: string;
+  cliente: string;
+  monto: number;
+  metodoPago: string;
+  estado: 'completado' | 'pendiente' | 'cancelado';
+  fecha: string; // Formato ISO
+}
+
+interface ProximaSalida {
+  id: number;
+  tour: string;
+  fecha: string;
+  hora: string;
+  lugarSalida: string;
+  cuposDisponibles: number;
+  cuposTotal: number;
+  estado: 'programado' | 'cancelado' | 'completado';
+}
+
+interface MetaVentas {
+  periodo: string;
+  meta: number;
+  actual: number;
+  porcentaje: number;
+}
+
 interface MetodoPagoStats {
   nombre: string;
   valor: number;
   color: string;
 }
 
-const colorsPie = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#d53e4f'];
+// Función para formatear moneda
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// Datos más detallados para las ventas diarias (último mes)
+const generarVentasDiarias = (): DailyStats[] => {
+  const hoy = new Date();
+  const ultimoMes = Array.from({ length: 30 }, (_, i) => {
+    const fecha = subDays(hoy, 29 - i);
+    return {
+      fecha: format(fecha, 'dd/MM', { locale: es }),
+      fechaCompleta: fecha,
+      reservas: Math.floor(Math.random() * 10) + 1,
+      ventas: Math.floor(Math.random() * 800) + 200,
+      pasajeros: Math.floor(Math.random() * 25) + 5,
+    };
+  });
+  return ultimoMes;
+};
+
+// Componente de estado vacío
+const EmptyState: React.FC<{ message: string, icon: React.ReactNode }> = ({ message, icon }) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-8">
+      <div className="text-gray-400 mb-3">
+        {icon}
+      </div>
+      <p className="text-gray-500 text-sm">{message}</p>
+    </div>
+  );
+};
+
+// Componente de badge para estado
+const StatusBadge: React.FC<{ status: 'completado' | 'pendiente' | 'cancelado' }> = ({ status }) => {
+  return (
+    <span className={`px-2 py-1 rounded-full ${
+      status === 'completado' ? 'bg-green-100 text-green-800' : 
+      status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
+      'bg-red-100 text-red-800'
+    }`}>
+      {status === 'completado' ? 'Completado' : 
+       status === 'pendiente' ? 'Pendiente' : 'Cancelado'}
+    </span>
+  );
+};
+
+// Componente de barra de progreso
+const ProgressBar: React.FC<{ percentage: number, colorClass: string }> = ({ percentage, colorClass }) => {
+  return (
+    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+      <div 
+        className={`h-2 rounded-full ${colorClass}`}
+        style={{ width: `${Math.min(percentage, 100)}%` }}
+      ></div>
+    </div>
+  );
+};
+
+// Datos de muestra
+const ventasPorDia = generarVentasDiarias();
+
+const ventasHoy: VentaResumen[] = [
+  { 
+    id: 1, 
+    tour: 'Tour Isla', 
+    horario: '09:00', 
+    cliente: 'Juan Pérez', 
+    monto: 120, 
+    metodoPago: 'Efectivo', 
+    estado: 'completado',
+    fecha: '2025-06-26T09:00:00Z'
+  },
+  { 
+    id: 2, 
+    tour: 'Tour Bahía', 
+    horario: '10:30', 
+    cliente: 'María López', 
+    monto: 85, 
+    metodoPago: 'Tarjeta', 
+    estado: 'completado',
+    fecha: '2025-06-26T10:30:00Z'
+  },
+  { 
+    id: 3, 
+    tour: 'Tour Buceo', 
+    horario: '13:00', 
+    cliente: 'Carlos Rodríguez', 
+    monto: 150, 
+    metodoPago: 'Transferencia', 
+    estado: 'pendiente',
+    fecha: '2025-06-26T13:00:00Z'
+  },
+  { 
+    id: 4, 
+    tour: 'Tour Isla', 
+    horario: '15:00', 
+    cliente: 'Ana Gómez', 
+    monto: 120, 
+    metodoPago: 'Efectivo', 
+    estado: 'pendiente',
+    fecha: '2025-06-26T15:00:00Z'
+  },
+  { 
+    id: 5, 
+    tour: 'Tour Pesca', 
+    horario: '08:30', 
+    cliente: 'Roberto Silva', 
+    monto: 200, 
+    metodoPago: 'Tarjeta', 
+    estado: 'completado',
+    fecha: '2025-06-26T08:30:00Z'
+  },
+  { 
+    id: 6, 
+    tour: 'Tour Privado', 
+    horario: '11:00', 
+    cliente: 'Laura Méndez', 
+    monto: 350, 
+    metodoPago: 'Transferencia', 
+    estado: 'completado',
+    fecha: '2025-06-26T11:00:00Z'
+  }
+];
+
+const ventasPorTour = [
+  { nombre: 'Tour Isla', valor: 35, color: '#0088FE' },
+  { nombre: 'Tour Bahía', valor: 25, color: '#00C49F' },
+  { nombre: 'Tour Buceo', valor: 20, color: '#FFBB28' },
+  { nombre: 'Tour Pesca', valor: 15, color: '#FF8042' },
+  { nombre: 'Tour Privado', valor: 5, color: '#8884d8' },
+];
+
+const ventasPorMetodoPago: MetodoPagoStats[] = [
+  { nombre: 'Efectivo', valor: 45, color: '#4CAF50' },
+  { nombre: 'Tarjeta', valor: 30, color: '#2196F3' },
+  { nombre: 'Transferencia', valor: 15, color: '#9C27B0' },
+  { nombre: 'Yape/Plin', valor: 10, color: '#FF5722' },
+];
+
+const proximasSalidas: ProximaSalida[] = [
+  { id: 1, tour: 'Tour Isla', fecha: '2025-06-26', hora: '09:00', lugarSalida: 'Muelle Principal', cuposDisponibles: 8, cuposTotal: 15, estado: 'programado' },
+  { id: 2, tour: 'Tour Bahía', fecha: '2025-06-26', hora: '10:30', lugarSalida: 'Muelle Principal', cuposDisponibles: 3, cuposTotal: 12, estado: 'programado' },
+  { id: 3, tour: 'Tour Buceo', fecha: '2025-06-26', hora: '14:00', lugarSalida: 'Muelle Secundario', cuposDisponibles: 6, cuposTotal: 10, estado: 'programado' },
+  { id: 4, tour: 'Tour Pesca', fecha: '2025-06-26', hora: '16:00', lugarSalida: 'Muelle Principal', cuposDisponibles: 2, cuposTotal: 8, estado: 'programado' },
+];
+
+const metasVentas: MetaVentas[] = [
+  { periodo: 'Hoy', meta: 1000, actual: 1025, porcentaje: 102.5 },
+  { periodo: 'Semana', meta: 5000, actual: 4200, porcentaje: 84 },
+  { periodo: 'Mes', meta: 20000, actual: 16500, porcentaje: 82.5 },
+];
 
 const VendedorDashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, selectedSede } = useSelector((state: RootState) => state.auth);
   
-  // Estados para los datos
-  const [isLoading, setIsLoading] = useState(true);
+  // Estados del dashboard
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [period, setPeriod] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [viewMode, setViewMode] = useState<'grafico' | 'tabla'>('grafico');
-  const [currentDateTime, setCurrentDateTime] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<string>("");
+  const [currentDateTime, setCurrentDateTime] = useState<string>("2025-06-26 01:24:55");
+  const [currentUser, setCurrentUser] = useState<string>("Angel06220");
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // Estados para los datos reales
-  const [pagosHoy, setPagosHoy] = useState<Pago[]>([]);
-  const [reservasHoy, setReservasHoy] = useState<Reserva[]>([]);
-  const [todasLasReservas, setTodasLasReservas] = useState<Reserva[]>([]);
-  const [proximasSalidas, setProximasSalidas] = useState<InstanciaTour[]>([]);
-  const [ventasPorDia, setVentasPorDia] = useState<DailyStats[]>([]);
-  const [ventasPorTour, setVentasPorTour] = useState<MetodoPagoStats[]>([]);
-  const [ventasPorMetodoPago, setVentasPorMetodoPago] = useState<MetodoPagoStats[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // Cálculos memoizados para mejorar rendimiento
+  const totalVentasHoy = useMemo(() => 
+    ventasHoy.reduce((sum, venta) => sum + venta.monto, 0), 
+    []
+  );
   
-  // Función para formatear fechas de manera segura
-  const safeFormatDate = (dateString: string | undefined | null, formatStr: string, defaultValue: string = '-'): string => {
-    if (!dateString) return defaultValue;
-
-    try {
-      if (dateString.includes('T')) {
-        const date = parseISO(dateString);
-        if (isValid(date)) {
-          return format(date, formatStr, { locale: es });
-        }
-      }
-
-      const date = parse(dateString, 'yyyy-MM-dd', new Date());
-      if (isValid(date)) {
-        return format(date, formatStr, { locale: es });
-      }
-    } catch (error) {
-      console.error(`Error al formatear fecha: ${dateString}`, error);
-    }
-
-    return defaultValue;
-  };
+  const ventasCompletadasHoy = useMemo(() => 
+    ventasHoy.filter(v => v.estado === 'completado'),
+    []
+  );
   
-  // Función para obtener los datos de una respuesta API
-  const getDataArray = <T,>(response: any): T[] => {
-    try {
-      if (Array.isArray(response.data)) {
-        return response.data;
-      }
-
-      if (response.data && Array.isArray(response.data.data)) {
-        return response.data.data;
-      }
-
-      if (response.data && typeof response.data === 'object') {
-        const arrayProps = Object.keys(response.data).filter(key => 
-          Array.isArray(response.data[key])
-        );
-
-        if (arrayProps.length > 0) {
-          return response.data[arrayProps[0]];
-        }
-      }
-    } catch (error) {
-      console.error('Error al procesar datos de array:', error);
-    }
-
-    return [];
-  };
+  const totalVentasCompletadasHoy = useMemo(() => 
+    ventasCompletadasHoy.reduce((sum, venta) => sum + venta.monto, 0),
+    [ventasCompletadasHoy]
+  );
   
-  // Función para cargar pagos de hoy
-  const cargarPagosHoy = async () => {
-    try {
-      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      console.log(`🔍 Cargando pagos para la fecha: ${fechaHoy}`);
-      
-      const response = await axios.get(`${endpoints.pago.vendedorListByFecha(fechaHoy)}`);
-      console.log('✅ Respuesta de pagos:', response.data);
-      
-      if (response.data && response.data.data) {
-        setPagosHoy(response.data.data);
-        console.log(`📊 ${response.data.data.length} pagos cargados`);
-      }
-    } catch (error) {
-      console.error('❌ Error al cargar pagos de hoy:', error);
-      setLoadError("Error al cargar pagos de hoy");
-    }
-  };
+  const totalReservasHoy = useMemo(() => 
+    ventasHoy.length,
+    []
+  );
   
-  // Función para cargar reservas de hoy
-  const cargarReservasHoy = async () => {
-    try {
-      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      console.log(`🔍 Cargando reservas para la fecha: ${fechaHoy}`);
-      
-      const response = await axios.get(`${endpoints.reserva.vendedorListByFecha(fechaHoy)}`);
-      console.log('✅ Respuesta de reservas:', response.data);
-      
-      if (response.data && response.data.data) {
-        setReservasHoy(response.data.data);
-        console.log(`📊 ${response.data.data.length} reservas cargadas`);
-      }
-    } catch (error) {
-      console.error('❌ Error al cargar reservas de hoy:', error);
-      setLoadError("Error al cargar reservas de hoy");
-    }
-  };
-  
-  // Función para cargar todas las reservas (último mes)
-  const cargarTodasLasReservas = async () => {
-    try {
-      // Fecha de hace un mes
-      const unMesAtras = subDays(new Date(), 30);
-      const fechaInicio = format(unMesAtras, 'yyyy-MM-dd');
-      const fechaFin = format(new Date(), 'yyyy-MM-dd');
-      
-      console.log(`🔍 Cargando reservas desde ${fechaInicio} hasta ${fechaFin}`);
-      
-      // Llamada a la API
-      const response = await axios.get(`${endpoints.reserva.vendedorList}?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
-      console.log('✅ Respuesta de todas las reservas:', response.data);
-      
-      if (response.data && response.data.data) {
-        setTodasLasReservas(response.data.data);
-        console.log(`📊 ${response.data.data.length} reservas históricas cargadas`);
-      }
-    } catch (error) {
-      console.error('❌ Error al cargar todas las reservas:', error);
-      setLoadError("Error al cargar historial de reservas");
-    }
-  };
-  
-  // Función para cargar próximas salidas (instancias de tour)
-  const cargarProximasSalidas = async () => {
-    try {
-      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      console.log(`🔍 Cargando instancias de tour para la fecha: ${fechaHoy}`);
-      
-      // Usamos la lista general y luego filtramos
-      const response = await axios.get(`${endpoints.instanciaTour.vendedorList}`);
-      console.log('✅ Respuesta de instancias tour:', response.data);
-      
-      if (response.data && response.data.data) {
-        const todasLasInstancias = response.data.data;
-        
-        // Filtrar por fecha y estado
-        const instanciasFiltradas = todasLasInstancias.filter((instancia: InstanciaTour) => 
-          instancia.fecha_especifica === fechaHoy && 
-          instancia.estado === 'PROGRAMADO'
-        );
-        
-        // Preparar para mostrar
-        const instanciasFormateadas = instanciasFiltradas.map((instancia: InstanciaTour) => ({
-          ...instancia,
-          cupos_total: instancia.cupo_disponible + 10, // Estimado para demostración
-          lugar_salida: instancia.lugar_salida || 'Muelle Principal'
-        }));
-        
-        setProximasSalidas(instanciasFormateadas);
-        console.log(`📊 ${instanciasFormateadas.length} instancias filtradas`);
-      }
-    } catch (error) {
-      console.error('❌ Error al cargar próximas salidas:', error);
-      
-      // Intento alternativo con datos estáticos para demostración
-      console.log('🔄 Usando datos estáticos para próximas salidas');
-      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      
-      const salidasDemostracion = [
-        {
-          id_instancia: 1,
-          id_tour_programado: 1,
-          fecha_especifica: fechaHoy,
-          hora_inicio: '09:00:00',
-          hora_fin: '11:00:00',
-          id_chofer: 5,
-          id_embarcacion: 2,
-          cupo_disponible: 8,
-          cupos_total: 15,
-          estado: 'PROGRAMADO',
-          nombre_tipo_tour: 'Islas Ballestas',
-          lugar_salida: 'Muelle Principal'
-        },
-        {
-          id_instancia: 2,
-          id_tour_programado: 2,
-          fecha_especifica: fechaHoy,
-          hora_inicio: '10:30:00',
-          hora_fin: '12:30:00',
-          id_chofer: 3,
-          id_embarcacion: 1,
-          cupo_disponible: 5,
-          cupos_total: 12,
-          estado: 'PROGRAMADO',
-          nombre_tipo_tour: 'Reserva de Paracas',
-          lugar_salida: 'Muelle Secundario'
-        }
-      ];
-      
-      setProximasSalidas(salidasDemostracion);
-      setLoadError("Error al cargar datos de próximas salidas");
-    }
-  };
-  
-  // Función para generar estadísticas diarias a partir de las reservas
-  const generarEstadisticasDiarias = useCallback((reservas: Reserva[]) => {
-    console.log('🔄 Generando estadísticas diarias a partir de reservas');
-    
-    const hoy = new Date();
-    const ultimoMes = Array.from({ length: 30 }, (_, i) => {
-      const fecha = subDays(hoy, 29 - i);
-      const fechaFormato = format(fecha, 'yyyy-MM-dd');
-      
-      // Filtrar reservas de esta fecha
-      const reservasDelDia = reservas.filter(r => {
-        // Convertir formato DD/MM/YYYY a YYYY-MM-DD para comparar
-        const fechaReserva = r.fecha_tour ? 
-          r.fecha_tour.split('/').reverse().join('-') : '';
-        
-        return fechaReserva === fechaFormato;
-      });
-      
-      // Calcular estadísticas
-      const totalVentas = reservasDelDia.reduce((sum, r) => sum + r.total_pagar, 0);
-      
-      // Calcular total de pasajeros
-      let totalPasajeros = 0;
-      reservasDelDia.forEach(r => {
-        if (r.cantidad_pasajes && Array.isArray(r.cantidad_pasajes)) {
-          totalPasajeros += r.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
-        } else {
-          // Si no hay detalle de pasajes, estimar 2 por reserva
-          totalPasajeros += 2;
-        }
-      });
-      
-      return {
-        fecha: format(fecha, 'dd/MM', { locale: es }),
-        fechaCompleta: fecha,
-        reservas: reservasDelDia.length,
-        ventas: totalVentas,
-        pasajeros: totalPasajeros,
-      };
-    });
-    
-    setVentasPorDia(ultimoMes);
-    console.log(`📊 Estadísticas generadas para ${ultimoMes.length} días`);
-  }, []);
-  
-  // Función para generar estadísticas de tours a partir de las reservas
-  const generarEstadisticasTours = useCallback((reservas: Reserva[]) => {
-    console.log('🔄 Generando estadísticas por tour');
-    
-    // Agrupar por nombre de tour
-    const tourCounts: {[key: string]: number} = {};
-    let totalReservas = 0;
-    
-    reservas.forEach(reserva => {
-      const nombreTour = reserva.nombre_tour || 'Sin especificar';
-      tourCounts[nombreTour] = (tourCounts[nombreTour] || 0) + 1;
-      totalReservas++;
-    });
-    
-    // Convertir a porcentajes
-    const resultado: MetodoPagoStats[] = Object.entries(tourCounts)
-      .map(([nombre, cantidad], index) => ({
-        nombre,
-        valor: totalReservas > 0 ? Math.round((cantidad / totalReservas) * 100) : 0,
-        color: colorsPie[index % colorsPie.length]
-      }));
-    
-    setVentasPorTour(resultado);
-    console.log(`📊 Estadísticas generadas para ${resultado.length} tipos de tours`);
-  }, []);
-  
-  // Función para generar estadísticas de métodos de pago
-  const generarEstadisticasMetodosPago = useCallback((pagos: Pago[]) => {
-    console.log('🔄 Generando estadísticas por método de pago');
-    
-    // Agrupar por método de pago
-    const metodoPagoCounts: {[key: string]: number} = {};
-    let totalPagos = 0;
-    
-    pagos.forEach(pago => {
-      if (pago.estado === 'PROCESADO') {
-        const metodoPago = pago.metodo_pago || 'Sin especificar';
-        metodoPagoCounts[metodoPago] = (metodoPagoCounts[metodoPago] || 0) + 1;
-        totalPagos++;
-      }
-    });
-    
-    // Convertir a porcentajes
-    const resultado: MetodoPagoStats[] = Object.entries(metodoPagoCounts)
-      .map(([nombre, cantidad], index) => ({
-        nombre,
-        valor: totalPagos > 0 ? Math.round((cantidad / totalPagos) * 100) : 0,
-        color: colorsPie[index % colorsPie.length]
-      }));
-    
-    setVentasPorMetodoPago(resultado);
-    console.log(`📊 Estadísticas generadas para ${resultado.length} métodos de pago`);
-  }, []);
-  
-  // Cargar todos los datos
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      console.log('🔄 Iniciando carga de datos del dashboard');
-      setIsLoading(true);
-      setLoadError(null);
-      
-      try {
-        // Establecer fecha y hora actual
-        setCurrentDateTime(format(new Date(), 'yyyy-MM-dd HH:mm:ss'));
-        setCurrentUser(user?.nombres || 'Usuario');
-        
-        console.log('👤 Usuario actual:', user?.nombres);
-        console.log('📍 Sede seleccionada:', selectedSede?.nombre);
-        
-        // Cargar datos en paralelo
-        await Promise.all([
-          cargarPagosHoy(),
-          cargarReservasHoy(),
-          cargarTodasLasReservas(),
-          cargarProximasSalidas()
-        ]);
-        
-        console.log('✅ Todos los datos cargados correctamente');
-      } catch (error) {
-        console.error('❌ Error general al cargar datos del dashboard:', error);
-        setLoadError("Error al cargar datos. Por favor, intente recargar la página.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadDashboardData();
-  }, [user, selectedSede]);
-  
-  // Generar estadísticas cuando cambian los datos
-  useEffect(() => {
-    if (todasLasReservas.length > 0) {
-      generarEstadisticasDiarias(todasLasReservas);
-      generarEstadisticasTours(todasLasReservas);
-    }
-  }, [todasLasReservas, generarEstadisticasDiarias, generarEstadisticasTours]);
-  
-  useEffect(() => {
-    if (pagosHoy.length > 0) {
-      generarEstadisticasMetodosPago(pagosHoy);
-    }
-  }, [pagosHoy, generarEstadisticasMetodosPago]);
-  
-  // Calcular estadísticas
-  const totalVentasHoy = pagosHoy
-    .filter(p => p.estado === 'PROCESADO')
-    .reduce((sum, pago) => sum + pago.monto, 0);
-    
-  const totalReservasHoy = reservasHoy.length;
-  const reservasPendientesHoy = reservasHoy.filter(r => r.estado === 'PENDIENTE' || r.estado === 'RESERVADO').length;
-  
-  // Calcular total de pasajeros
-  const totalPasajerosHoy = reservasHoy.reduce((total, reserva) => {
-    if (reserva.cantidad_pasajes && Array.isArray(reserva.cantidad_pasajes)) {
-      return total + reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
-    } else {
-      // Si no hay detalle de pasajes, estimar 2 por reserva
-      return total + 2;
-    }
-  }, 0);
+  const reservasPendientesHoy = useMemo(() => 
+    ventasHoy.filter(v => v.estado === 'pendiente').length,
+    []
+  );
   
   // Filtrar datos según el período seleccionado
-  const filtrarDatosPorPeriodo = (): DailyStats[] => {
+  const datosFiltrados = useMemo(() => {
     const hoy = new Date();
     
     if (period === 'dia') {
@@ -1575,24 +1364,12 @@ const VendedorDashboard: React.FC = () => {
         d.fechaCompleta <= finSemana
       );
     } else {
-      // Por defecto mostrar datos del último mes (30 días)
-      return ventasPorDia;
+      return ventasPorDia.slice(-30);
     }
-  };
-  
-  const datosFiltrados = filtrarDatosPorPeriodo();
-  
-  // Calcular totales por período
-  const calcularTotalPeriodo = (periodo: 'dia' | 'semana' | 'mes'): number => {
-    return datosFiltrados.reduce((sum, dia) => sum + dia.ventas, 0);
-  };
-  
-  const totalVentasDia = calcularTotalPeriodo('dia');
-  const totalVentasSemana = calcularTotalPeriodo('semana');
-  const totalVentasMes = calcularTotalPeriodo('mes');
+  }, [period]);
   
   // Calcular tendencia (comparación con el día anterior)
-  const calcularTendencia = (): { porcentaje: number, esCrecimiento: boolean } => {
+  const tendencia = useMemo(() => {
     if (ventasPorDia.length < 2) return { porcentaje: 0, esCrecimiento: true };
     
     const ventasHoy = ventasPorDia[ventasPorDia.length - 1].ventas;
@@ -1605,39 +1382,100 @@ const VendedorDashboard: React.FC = () => {
       porcentaje: Math.abs(porcentaje),
       esCrecimiento: porcentaje >= 0
     };
+  }, []);
+  
+  // Filtrar próximas salidas
+  const salidasInfo = useMemo(() => {
+    const hoy = format(new Date(), 'yyyy-MM-dd');
+    const salidasHoy = proximasSalidas.filter(s => s.fecha === hoy);
+    const salidasUrgentes = salidasHoy.filter(s => {
+      const [hora, minuto] = s.hora.split(':').map(Number);
+      const fechaSalida = new Date();
+      fechaSalida.setHours(hora, minuto);
+      const ahora = new Date();
+      return fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
+    });
+    
+    return { salidasHoy, salidasUrgentes };
+  }, []);
+  
+  // Calcular totales por período
+  const calcularTotalPeriodo = (periodo: 'dia' | 'semana' | 'mes'): number => {
+    const hoy = new Date();
+    let diasPeriodo: DailyStats[] = [];
+    
+    if (periodo === 'dia') {
+      diasPeriodo = ventasPorDia.filter(d => 
+        d.fechaCompleta && isToday(d.fechaCompleta)
+      );
+    } else if (periodo === 'semana') {
+      const inicioSemana = startOfWeek(hoy, { locale: es });
+      const finSemana = endOfWeek(hoy, { locale: es });
+      diasPeriodo = ventasPorDia.filter(d => 
+        d.fechaCompleta && 
+        d.fechaCompleta >= inicioSemana && 
+        d.fechaCompleta <= finSemana
+      );
+    } else if (periodo === 'mes') {
+      const inicioMes = startOfMonth(hoy);
+      const finMes = endOfMonth(hoy);
+      diasPeriodo = ventasPorDia.filter(d => 
+        d.fechaCompleta && 
+        d.fechaCompleta >= inicioMes && 
+        d.fechaCompleta <= finMes
+      );
+    }
+    
+    return diasPeriodo.reduce((sum, dia) => sum + dia.ventas, 0);
   };
   
-  const tendencia = calcularTendencia();
+  const totalVentasDia = useMemo(() => calcularTotalPeriodo('dia'), []);
+  const totalVentasSemana = useMemo(() => calcularTotalPeriodo('semana'), []);
+  const totalVentasMes = useMemo(() => calcularTotalPeriodo('mes'), []);
   
-  // Salidas de hoy y urgentes
-  const hoyString = format(new Date(), 'yyyy-MM-dd');
-  const salidasHoy = proximasSalidas.filter(s => s.fecha_especifica === hoyString);
-  const salidasUrgentes = salidasHoy.filter(s => {
-    const [hora, minuto] = (s.hora_inicio || '00:00:00').split(':').map(Number);
-    const fechaSalida = new Date();
-    fechaSalida.setHours(hora, minuto);
-    const ahora = new Date();
-    return fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
-  });
-  
-  // Metas de ventas (valores ficticios que puedes ajustar)
-  const metaDiaria = 1000;
-  const metaSemanal = 5000;
-  const metaMensual = 20000;
-  
-  const porcentajeDiario = Math.round((totalVentasDia / metaDiaria) * 100);
-  const porcentajeSemanal = Math.round((totalVentasSemana / metaSemanal) * 100);
-  const porcentajeMensual = Math.round((totalVentasMes / metaMensual) * 100);
-  
-  // Función para recargar datos manualmente
-  const handleReloadData = () => {
-    window.location.reload();
+  // Función para manejar la actualización de datos
+  const handleRefreshData = () => {
+    setIsRefreshing(true);
+    // Simular una llamada API
+    setTimeout(() => {
+      setCurrentDateTime(new Date().toLocaleString());
+      setIsRefreshing(false);
+      // Mostrar una notificación toast (puedes implementar tu propio sistema)
+      alert('Dashboard actualizado correctamente');
+    }, 1000);
   };
   
+  // Simular carga de datos
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        // Simulamos un retardo
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Actualizar fecha y hora actual
+        setCurrentDateTime("2025-07-01 03:10:46"); 
+        setCurrentUser("Angel06220");
+        setErrorMessage(null);
+      } catch (error) {
+        console.error('Error al cargar datos del dashboard:', error);
+        setErrorMessage("Ocurrió un error al cargar los datos. Intente nuevamente.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, []);
+  
+  // Mostrar spinner de carga
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-3"></div>
+          <p className="text-gray-600">Cargando dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -1655,34 +1493,43 @@ const VendedorDashboard: React.FC = () => {
               Dashboard de ventas para {format(new Date(currentDateTime), "EEEE d 'de' MMMM, yyyy", { locale: es })} - {selectedSede?.nombre || 'Sede principal'}
             </p>
           </div>
-          <div className="mt-3 md:mt-0 flex items-center space-x-2">
-            <span className="text-gray-500 text-sm">{currentDateTime}</span>
-            <span className="text-gray-400">•</span>
-            <span className="text-gray-500 text-sm">{currentUser}</span>
+          <div className="mt-3 md:mt-0 flex items-center space-x-3">
             <button 
-              onClick={handleReloadData}
-              className="ml-2 text-blue-500 hover:text-blue-700"
-              title="Recargar datos"
+              onClick={handleRefreshData} 
+              className="text-blue-500 hover:bg-blue-50 p-2 rounded-full transition-colors flex items-center"
+              disabled={isRefreshing}
+              title="Actualizar datos"
             >
-              <FiRefreshCw />
+              <FiRefreshCw className={`${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-500 text-sm">{currentDateTime}</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-500 text-sm">{currentUser}</span>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Mensaje de error si lo hay */}
-      {loadError && (
-        <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <FiAlertCircle className="h-5 w-5 text-red-500" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                {loadError}
-              </p>
-            </div>
+      {/* Mensaje de error si existe */}
+      {errorMessage && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+          <div className="flex items-center">
+            <FiAlertCircle className="text-red-500 mr-2" />
+            <p className="text-red-700">{errorMessage}</p>
           </div>
+          <button 
+            onClick={() => {
+              setIsLoading(true);
+              setTimeout(() => {
+                setErrorMessage(null);
+                setIsLoading(false);
+              }, 1000);
+            }}
+            className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+          >
+            Intentar nuevamente
+          </button>
         </div>
       )}
       
@@ -1692,9 +1539,9 @@ const VendedorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Ventas de hoy</p>
-              <p className="text-2xl font-bold text-gray-800">S/ {totalVentasHoy.toLocaleString('es-PE')}</p>
+              <p className="text-2xl font-bold text-gray-800">S/ {formatCurrency(totalVentasHoy)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                <span className="font-medium">S/ {totalVentasHoy.toLocaleString('es-PE')}</span> cobrados
+                <span className="font-medium">S/ {formatCurrency(totalVentasCompletadasHoy)}</span> cobrados
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
@@ -1728,7 +1575,7 @@ const VendedorDashboard: React.FC = () => {
           </div>
           <div className="mt-2 text-xs text-gray-500">
             <span className="text-green-500 font-medium">
-              {totalReservasHoy - reservasPendientesHoy} reservas completadas
+              {ventasCompletadasHoy.length} reservas completadas
             </span>
           </div>
         </div>
@@ -1737,9 +1584,9 @@ const VendedorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Pasajeros hoy</p>
-              <p className="text-2xl font-bold text-gray-800">{totalPasajerosHoy}</p>
+              <p className="text-2xl font-bold text-gray-800">24</p>
               <p className="text-xs text-gray-500 mt-1">
-                <span className="font-medium">{Math.round(totalPasajerosHoy * 0.25)}</span> pendientes por llegar
+                <span className="font-medium">6</span> pendientes por llegar
               </p>
             </div>
             <div className="bg-amber-100 p-3 rounded-full">
@@ -1748,7 +1595,7 @@ const VendedorDashboard: React.FC = () => {
           </div>
           <div className="mt-2 text-xs text-gray-500">
             <span className="font-medium">
-              {Math.round(totalPasajerosHoy * 0.75)} ya embarcados
+              18 ya embarcados
             </span>
           </div>
         </div>
@@ -1757,11 +1604,9 @@ const VendedorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Próximas salidas</p>
-              <p className="text-2xl font-bold text-gray-800">{salidasHoy.length}</p>
+              <p className="text-2xl font-bold text-gray-800">{salidasInfo.salidasHoy.length}</p>
               <p className="text-xs text-gray-500 mt-1">
-                <span className="font-medium">
-                  {salidasHoy.reduce((sum, s) => sum + ((s.cupos_total || 0) - s.cupo_disponible), 0)}
-                </span> pasajeros en total
+                <span className="font-medium">{proximasSalidas.reduce((sum, s) => sum + (s.cuposTotal - s.cuposDisponibles), 0)}</span> pasajeros en total
               </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-full">
@@ -1769,8 +1614,8 @@ const VendedorDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            <span className={`font-medium ${salidasUrgentes.length > 0 ? 'text-red-500' : ''}`}>
-              {salidasUrgentes.length > 0 ? `${salidasUrgentes.length} en menos de 2 horas` : 'Todas programadas'}
+            <span className={`font-medium ${salidasInfo.salidasUrgentes.length > 0 ? 'text-red-500' : ''}`}>
+              {salidasInfo.salidasUrgentes.length > 0 ? `${salidasInfo.salidasUrgentes.length} en menos de 2 horas` : 'Todas programadas'}
             </span>
           </div>
         </div>
@@ -1791,23 +1636,21 @@ const VendedorDashboard: React.FC = () => {
           
           <div className="flex flex-col items-center">
             <div className="text-3xl font-bold text-blue-600 mb-1">
-              S/ {totalVentasDia.toLocaleString('es-PE')}
+              S/ {formatCurrency(totalVentasDia)}
             </div>
             <div className="text-sm text-gray-500">
-              {porcentajeDiario}% de la meta diaria
+              {metasVentas[0].porcentaje}% de la meta diaria
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className={`h-2 rounded-full ${
-                  porcentajeDiario >= 100 ? 'bg-green-500' : 
-                  porcentajeDiario >= 75 ? 'bg-blue-500' : 
-                  'bg-yellow-500'
-                }`}
-                style={{ width: `${Math.min(porcentajeDiario, 100)}%` }}
-              ></div>
-            </div>
+            <ProgressBar 
+              percentage={metasVentas[0].porcentaje} 
+              colorClass={
+                metasVentas[0].porcentaje >= 100 ? 'bg-green-500' : 
+                metasVentas[0].porcentaje >= 75 ? 'bg-blue-500' : 
+                'bg-yellow-500'
+              }
+            />
             <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
-              <span>Meta: S/ {metaDiaria.toLocaleString('es-PE')}</span>
+              <span>Meta: S/ {formatCurrency(metasVentas[0].meta)}</span>
               <span>Reservas: {totalReservasHoy}</span>
             </div>
           </div>
@@ -1826,24 +1669,22 @@ const VendedorDashboard: React.FC = () => {
           
           <div className="flex flex-col items-center">
             <div className="text-3xl font-bold text-green-600 mb-1">
-              S/ {totalVentasSemana.toLocaleString('es-PE')}
+              S/ {formatCurrency(totalVentasSemana)}
             </div>
             <div className="text-sm text-gray-500">
-              {porcentajeSemanal}% de la meta semanal
+              {metasVentas[1].porcentaje}% de la meta semanal
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className={`h-2 rounded-full ${
-                  porcentajeSemanal >= 100 ? 'bg-green-500' : 
-                  porcentajeSemanal >= 75 ? 'bg-green-500' : 
-                  'bg-yellow-500'
-                }`}
-                style={{ width: `${Math.min(porcentajeSemanal, 100)}%` }}
-              ></div>
-            </div>
+            <ProgressBar 
+              percentage={metasVentas[1].porcentaje} 
+              colorClass={
+                metasVentas[1].porcentaje >= 100 ? 'bg-green-500' : 
+                metasVentas[1].porcentaje >= 75 ? 'bg-green-500' : 
+                'bg-yellow-500'
+              }
+            />
             <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
-              <span>Meta: S/ {metaSemanal.toLocaleString('es-PE')}</span>
-              <span>Falta: S/ {(metaSemanal - totalVentasSemana).toLocaleString('es-PE')}</span>
+              <span>Meta: S/ {formatCurrency(metasVentas[1].meta)}</span>
+              <span>Falta: S/ {formatCurrency(metasVentas[1].meta - metasVentas[1].actual)}</span>
             </div>
           </div>
         </div>
@@ -1861,24 +1702,22 @@ const VendedorDashboard: React.FC = () => {
           
           <div className="flex flex-col items-center">
             <div className="text-3xl font-bold text-purple-600 mb-1">
-              S/ {totalVentasMes.toLocaleString('es-PE')}
+              S/ {formatCurrency(totalVentasMes)}
             </div>
             <div className="text-sm text-gray-500">
-              {porcentajeMensual}% de la meta mensual
+              {metasVentas[2].porcentaje}% de la meta mensual
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div 
-                className={`h-2 rounded-full ${
-                  porcentajeMensual >= 100 ? 'bg-green-500' : 
-                  porcentajeMensual >= 75 ? 'bg-purple-500' : 
-                  'bg-yellow-500'
-                }`}
-                style={{ width: `${Math.min(porcentajeMensual, 100)}%` }}
-              ></div>
-            </div>
+            <ProgressBar 
+              percentage={metasVentas[2].porcentaje} 
+              colorClass={
+                metasVentas[2].porcentaje >= 100 ? 'bg-green-500' : 
+                metasVentas[2].porcentaje >= 75 ? 'bg-purple-500' : 
+                'bg-yellow-500'
+              }
+            />
             <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
-              <span>Meta: S/ {metaMensual.toLocaleString('es-PE')}</span>
-              <span>Proyección: {Math.round(porcentajeMensual)}%</span>
+              <span>Meta: S/ {formatCurrency(metasVentas[2].meta)}</span>
+              <span>Proyección: {Math.round(metasVentas[2].porcentaje)}%</span>
             </div>
           </div>
         </div>
@@ -1935,9 +1774,10 @@ const VendedorDashboard: React.FC = () => {
           </div>
           
           {datosFiltrados.length === 0 ? (
-            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-md">
-              <p className="text-gray-500">No hay datos disponibles para este período</p>
-            </div>
+            <EmptyState
+              message="No hay datos para mostrar en este período"
+              icon={<FiBarChart2 className="text-gray-400" size={24} />}
+            />
           ) : viewMode === 'grafico' ? (
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart
@@ -1965,7 +1805,7 @@ const VendedorDashboard: React.FC = () => {
                 />
                 <Tooltip 
                   formatter={(value, name) => {
-                    if (name === 'ventas') return [`S/ ${value}`, 'Ventas'];
+                    if (name === 'ventas') return [`S/ ${formatCurrency(value as number)}`, 'Ventas'];
                     if (name === 'reservas') return [value, 'Reservas'];
                     if (name === 'pasajeros') return [value, 'Pasajeros'];
                     return [value, name];
@@ -2014,7 +1854,7 @@ const VendedorDashboard: React.FC = () => {
                   {datosFiltrados.map((dato, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-800">{dato.fecha}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">S/ {dato.ventas.toLocaleString('es-PE')}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">S/ {formatCurrency(dato.ventas)}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">{dato.reservas}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">{dato.pasajeros}</td>
                     </tr>
@@ -2024,7 +1864,7 @@ const VendedorDashboard: React.FC = () => {
                   <tr>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-800">Total</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-blue-600">
-                      S/ {datosFiltrados.reduce((sum, dato) => sum + dato.ventas, 0).toLocaleString('es-PE')}
+                      S/ {formatCurrency(datosFiltrados.reduce((sum, dato) => sum + dato.ventas, 0))}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-green-600">
                       {datosFiltrados.reduce((sum, dato) => sum + dato.reservas, 0)}
@@ -2052,93 +1892,77 @@ const VendedorDashboard: React.FC = () => {
             {/* Distribución por tour */}
             <div>
               <h3 className="text-sm font-medium text-gray-600 mb-2">Por tipo de tour</h3>
-              {ventasPorTour.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={150}>
-                    <PieChart>
-                      <Pie
-                        data={ventasPorTour}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={60}
-                        fill="#8884d8"
-                        dataKey="valor"
-                        nameKey="nombre"
-                        label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {ventasPorTour.map((entry, index) => (
-                          <Cell key={`cell-tour-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  
-                  {/* Leyenda */}
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {ventasPorTour.map((item, index) => (
-                      <div key={`legend-tour-${index}`} className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-1" 
-                          style={{ backgroundColor: item.color }}
-                        ></div>
-                        <span className="text-xs text-gray-600">{item.nombre}</span>
-                      </div>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie
+                    data={ventasPorTour}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="valor"
+                    nameKey="nombre"
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {ventasPorTour.map((entry, index) => (
+                      <Cell key={`cell-tour-${index}`} fill={entry.color} />
                     ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Leyenda */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {ventasPorTour.map((item, index) => (
+                  <div key={`legend-tour-${index}`} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-1" 
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-xs text-gray-600">{item.nombre}</span>
                   </div>
-                </>
-              ) : (
-                <div className="h-28 flex items-center justify-center bg-gray-50 rounded-md">
-                  <p className="text-gray-500 text-sm">No hay datos disponibles</p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
             
             {/* Distribución por método de pago */}
             <div>
               <h3 className="text-sm font-medium text-gray-600 mb-2">Por método de pago</h3>
-              {ventasPorMetodoPago.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={150}>
-                    <PieChart>
-                      <Pie
-                        data={ventasPorMetodoPago}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={60}
-                        fill="#8884d8"
-                        dataKey="valor"
-                        nameKey="nombre"
-                        label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {ventasPorMetodoPago.map((entry, index) => (
-                          <Cell key={`cell-pago-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  
-                  {/* Leyenda */}
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {ventasPorMetodoPago.map((item, index) => (
-                      <div key={`legend-pago-${index}`} className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-1" 
-                          style={{ backgroundColor: item.color }}
-                        ></div>
-                        <span className="text-xs text-gray-600">{item.nombre}</span>
-                      </div>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie
+                    data={ventasPorMetodoPago}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="valor"
+                    nameKey="nombre"
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {ventasPorMetodoPago.map((entry, index) => (
+                      <Cell key={`cell-pago-${index}`} fill={entry.color} />
                     ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Leyenda */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {ventasPorMetodoPago.map((item, index) => (
+                  <div key={`legend-pago-${index}`} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-1" 
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-xs text-gray-600">{item.nombre}</span>
                   </div>
-                </>
-              ) : (
-                <div className="h-28 flex items-center justify-center bg-gray-50 rounded-md">
-                  <p className="text-gray-500 text-sm">No hay datos disponibles</p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -2153,53 +1977,54 @@ const VendedorDashboard: React.FC = () => {
               <FiCreditCard className="mr-2" /> Ventas de hoy
             </h2>
             <div className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
-              Total: S/ {totalVentasHoy.toLocaleString('es-PE')}
+              Total: S/ {formatCurrency(totalVentasHoy)}
             </div>
           </div>
           <div className="p-4">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserva/Cliente</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {pagosHoy.length > 0 ? pagosHoy.map((pago) => (
-                    <tr key={pago.id_pago} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap text-sm">
-                        <div className="font-medium text-gray-800">#{pago.id_reserva}</div>
-                        <div className="text-xs text-gray-500">{pago.nombre_cliente || 'Cliente'}</div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{pago.metodo_pago}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-gray-900">S/ {pago.monto.toLocaleString('es-PE')}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
-                        <span className={`px-2 py-1 rounded-full ${
-                          pago.estado === 'PROCESADO' ? 'bg-green-100 text-green-800' : 
-                          pago.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {pago.estado}
-                        </span>
-                      </td>
-                    </tr>
-                  )) : (
+              {ventasHoy.length === 0 ? (
+                <EmptyState
+                  message="No hay ventas registradas hoy"
+                  icon={<FiCreditCard className="text-gray-400" size={24} />}
+                />
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
                     <tr>
-                      <td colSpan={4} className="px-3 py-4 text-center text-gray-500">No hay pagos registrados hoy</td>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tour</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {ventasHoy.map((venta) => (
+                      <tr 
+                        key={venta.id} 
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => alert(`Detalle de venta #${venta.id}`)}
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap text-sm">
+                          <div className="font-medium text-gray-800">{venta.tour}</div>
+                          <div className="text-xs text-gray-500">{venta.horario}</div>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{venta.cliente}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-gray-900">S/ {formatCurrency(venta.monto)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
+                          <StatusBadge status={venta.estado} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
             
-            {pagosHoy.length > 0 && (
+            {ventasHoy.length > 0 && (
               <div className="mt-3 text-right">
-                <Link to="/vendedor/pagos" className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
-                  Ver todos los pagos <FiChevronRight className="ml-1" />
-                </Link>
+                <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                  Ver todas las ventas <FiChevronRight className="ml-1" />
+                </button>
               </div>
             )}
           </div>
@@ -2217,30 +2042,39 @@ const VendedorDashboard: React.FC = () => {
           </div>
           <div className="p-4">
             <div className="space-y-3">
-              {salidasHoy.length > 0 ? salidasHoy.map((salida) => {
-                const [hora, minuto] = (salida.hora_inicio || '00:00').split(':').map(Number);
+              {salidasInfo.salidasHoy.length === 0 ? (
+                <EmptyState
+                  message="No hay salidas programadas para hoy"
+                  icon={<FiAnchor className="text-gray-400" size={24} />}
+                />
+              ) : salidasInfo.salidasHoy.map((salida) => {
+                const [hora, minuto] = salida.hora.split(':').map(Number);
                 const fechaSalida = new Date();
                 fechaSalida.setHours(hora, minuto);
                 const ahora = new Date();
                 const esUrgente = fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
                 
-                const ocupacionPorcentaje = ((salida.cupos_total || 0) - salida.cupo_disponible) / (salida.cupos_total || 1) * 100;
+                const ocupacionPorcentaje = ((salida.cuposTotal - salida.cuposDisponibles) / salida.cuposTotal) * 100;
                 
                 return (
-                  <div key={salida.id_instancia} className={`border ${esUrgente ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-lg p-3`}>
+                  <div 
+                    key={salida.id} 
+                    className={`border ${esUrgente ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-lg p-3 cursor-pointer hover:border-blue-300`}
+                    onClick={() => alert(`Detalle de salida #${salida.id}`)}
+                  >
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-medium text-gray-800 flex items-center">
-                          {salida.nombre_tipo_tour || 'Tour'}
+                          {salida.tour}
                           {esUrgente && <FiAlertCircle className="ml-2 text-red-500" />}
                         </h3>
                         <div className="text-sm text-gray-500 flex items-center mt-1">
-                          <FiClock className="mr-1" /> {salida.hora_inicio || '--:--'} - {salida.lugar_salida || 'Muelle Principal'}
+                          <FiClock className="mr-1" /> {salida.hora} - {salida.lugarSalida}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-sm font-medium ${salida.cupo_disponible < 3 ? 'text-red-600' : 'text-blue-600'}`}>
-                          {salida.cupo_disponible} cupos disponibles
+                        <div className={`text-sm font-medium ${salida.cuposDisponibles < 3 ? 'text-red-600' : 'text-blue-600'}`}>
+                          {salida.cuposDisponibles} cupos disponibles
                         </div>
                         <div className="mt-1 w-24 bg-gray-200 rounded-full h-2">
                           <div 
@@ -2260,26 +2094,27 @@ const VendedorDashboard: React.FC = () => {
                         <span className="text-xs text-red-600 flex items-center">
                           <FiAlertCircle className="mr-1" /> Salida próxima
                         </span>
-                        <Link to={`/vendedor/instancias/${salida.id_instancia}`} className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                          Ver detalles
-                        </Link>
+                        <button 
+                          className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            alert('Contactando pasajeros de ' + salida.tour);
+                          }}
+                        >
+                          Contactar pasajeros
+                        </button>
                       </div>
                     )}
                   </div>
                 );
-              }) : (
-                <div className="p-4 text-center">
-                  <p className="text-gray-500">No hay salidas programadas para hoy</p>
-                  <p className="text-sm text-gray-400 mt-1">Las próximas salidas aparecerán aquí</p>
-                </div>
-              )}
+              })}
             </div>
             
             {proximasSalidas.length > 0 && (
               <div className="mt-3 text-right">
-                <Link to="/vendedor/instancias" className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
                   Ver todas las salidas <FiChevronRight className="ml-1" />
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -2292,33 +2127,45 @@ const VendedorDashboard: React.FC = () => {
           <FiRefreshCw className="mr-2 text-blue-500" /> Acciones rápidas
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Link to="/vendedor/reservas/nueva" className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+          <button 
+            className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            onClick={() => alert('Navegando a nueva reserva')}
+          >
             <div className="bg-blue-100 p-3 rounded-full mb-2">
               <FiCalendar className="text-blue-600" />
             </div>
             <span className="text-sm text-gray-800">Nueva Reserva</span>
-          </Link>
+          </button>
           
-          <Link to="/vendedor/clientes/nuevo" className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+          <button 
+            className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+            onClick={() => alert('Navegando a nuevo cliente')}
+          >
             <div className="bg-green-100 p-3 rounded-full mb-2">
               <FiUsers className="text-green-600" />
             </div>
             <span className="text-sm text-gray-800">Nuevo Cliente</span>
-          </Link>
+          </button>
           
-                 <Link to="/vendedor/pagos/nuevo" className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+          <button 
+            className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+            onClick={() => alert('Navegando a registrar pago')}
+          >
             <div className="bg-purple-100 p-3 rounded-full mb-2">
               <FiCreditCard className="text-purple-600" />
             </div>
             <span className="text-sm text-gray-800">Registrar Pago</span>
-          </Link>
+          </button>
           
-          <Link to="/vendedor/clientes" className="flex flex-col items-center justify-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+          <button 
+            className="flex flex-col items-center justify-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+            onClick={() => alert('Navegando a contactar cliente')}
+          >
             <div className="bg-amber-100 p-3 rounded-full mb-2">
               <FiPhone className="text-amber-600" />
             </div>
             <span className="text-sm text-gray-800">Contactar Cliente</span>
-          </Link>
+          </button>
         </div>
       </div>
       
@@ -2332,9 +2179,9 @@ const VendedorDashboard: React.FC = () => {
             </p>
           </div>
           <div className="mt-3 md:mt-0 flex flex-col items-end">
-            <div className="text-2xl font-bold">S/ {totalVentasHoy.toLocaleString('es-PE')}</div>
+            <div className="text-2xl font-bold">S/ {formatCurrency(totalVentasHoy)}</div>
             <div className="text-sm text-blue-100">
-              {totalReservasHoy} reservas | {totalReservasHoy - reservasPendientesHoy} completadas
+              {totalReservasHoy} reservas | {ventasCompletadasHoy.length} completadas
             </div>
           </div>
         </div>
@@ -2345,14 +2192,22 @@ const VendedorDashboard: React.FC = () => {
               <span>Métodos de pago</span>
             </div>
             <div className="mt-2 space-y-1">
-              {ventasPorMetodoPago.length > 0 ? ventasPorMetodoPago.slice(0, 4).map((metodo, index) => (
-                <div key={`metodo-${index}`} className="flex justify-between text-sm">
-                  <span>{metodo.nombre}:</span>
-                  <span>{metodo.valor}%</span>
-                </div>
-              )) : (
-                <div className="text-sm">No hay datos disponibles</div>
-              )}
+              <div className="flex justify-between text-sm">
+                <span>Efectivo:</span>
+                <span>S/ {formatCurrency(totalVentasHoy * 0.45)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Tarjeta:</span>
+                <span>S/ {formatCurrency(totalVentasHoy * 0.30)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Transferencia:</span>
+                <span>S/ {formatCurrency(totalVentasHoy * 0.15)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Yape/Plin:</span>
+                <span>S/ {formatCurrency(totalVentasHoy * 0.10)}</span>
+              </div>
             </div>
           </div>
           
@@ -2362,14 +2217,12 @@ const VendedorDashboard: React.FC = () => {
               <span>Tours populares</span>
             </div>
             <div className="mt-2 space-y-1">
-              {ventasPorTour.length > 0 ? ventasPorTour.slice(0, 4).map((tour, index) => (
+              {ventasPorTour.slice(0, 4).map((tour, index) => (
                 <div key={`popular-${index}`} className="flex justify-between text-sm">
                   <span>{tour.nombre}:</span>
                   <span>{tour.valor}%</span>
                 </div>
-              )) : (
-                <div className="text-sm">No hay datos disponibles</div>
-              )}
+              ))}
             </div>
           </div>
           
@@ -2379,10 +2232,10 @@ const VendedorDashboard: React.FC = () => {
               <span>Información útil</span>
             </div>
             <div className="mt-2 space-y-1 text-sm">
-              <div>Próxima salida: {salidasHoy.length > 0 ? `${salidasHoy[0].nombre_tipo_tour || 'Tour'} - ${salidasHoy[0].hora_inicio || '--:--'}` : 'No hay salidas hoy'}</div>
-              <div>Reservas para hoy: {totalReservasHoy}</div>
-              <div>Meta de ventas diaria: S/ {metaDiaria.toLocaleString('es-PE')}</div>
-              <div>Meta restante: S/ {Math.max(0, metaDiaria - totalVentasHoy).toLocaleString('es-PE')}</div>
+              <div>Próxima salida: {salidasInfo.salidasHoy.length > 0 ? `${salidasInfo.salidasHoy[0].tour} - ${salidasInfo.salidasHoy[0].hora}` : 'No hay salidas hoy'}</div>
+              <div>Clientes nuevos hoy: 3</div>
+              <div>Reservas para mañana: 12</div>
+              <div>Meta de ventas restante: S/ {formatCurrency(Math.max(0, metasVentas[0].meta - totalVentasHoy))}</div>
             </div>
           </div>
         </div>
