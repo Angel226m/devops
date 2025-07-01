@@ -1234,22 +1234,24 @@ const VendedorDashboard: React.FC = () => {
   
   // Función para cargar próximas salidas
   const cargarProximasSalidas = async () => {
-    try {
-      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      
-      // Usar el endpoint correcto para filtrar instancias de tour
-      const response = await axios.post(endpoints.instanciaTour.vendedorFiltrar, {
-        fecha_inicio: fechaHoy,
-        estado: 'PROGRAMADO'
-      });
-      
-      if (response.data && response.data.data) {
-        setProximasSalidas(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error al cargar próximas salidas:', error);
+  try {
+    const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+    const url = `${endpoints.instanciaTour.vendedorFiltrar}?fecha_inicio=${fechaHoy}&estado=PROGRAMADO`;
+    
+    console.log('🔍 Intentando cargar próximas salidas desde:', url);
+    
+    const response = await axios.get(url);
+    
+    console.log('✅ Datos de próximas salidas cargados:', response.data);
+    
+    if (response.data && response.data.data) {
+      setProximasSalidas(response.data.data);
     }
-  };
+  } catch (error) {
+    console.error('❌ Error al cargar próximas salidas:', error);
+    console.error('URL intentada:', `${endpoints.instanciaTour.vendedorFiltrar}?fecha_inicio=${format(new Date(), 'yyyy-MM-dd')}&estado=PROGRAMADO`);
+  }
+};
   
   // Función para generar estadísticas diarias a partir de las reservas
   const generarEstadisticasDiarias = (reservas: Reserva[]) => {
