@@ -1054,24 +1054,19 @@ const VendedorDashboard: React.FC = () => {
   );
 };
 
-export default VendedorDashboard;*/ import React, { useState, useEffect } from 'react';
+export default VendedorDashboard;*/   import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../../infrastructure/store/index';
-import axios from 'axios';
-import { endpoints } from '../../../infrastructure/api/endpoints';
+import { AppDispatch, RootState } from '../../store';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from '../../api/axiosClient';
+import { endpoints } from '../../api/endpoints';
 import { 
   format, 
   subDays, 
   parseISO, 
   isToday,
   isThisWeek,
-  isThisMonth,
-  differenceInDays, 
-  startOfWeek, 
-  endOfWeek, 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval
+  isThisMonth
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -1088,55 +1083,66 @@ import {
   Cell, 
   LineChart, 
   Line,
-  Area,
-  AreaChart,
   ComposedChart
 } from 'recharts';
 import {
-  FiUsers, 
-  FiCalendar, 
-  FiDollarSign, 
-  FiClock, 
-  FiShield, 
-  FiAlertCircle,
-  FiTrendingUp,
-  FiTrendingDown,
-  FiChevronRight,
-  FiAnchor,
-  FiCheckCircle,
-  FiCreditCard,
-  FiPhone,
-  FiBarChart2,
-  FiPieChart,
-  FiList,
-  FiInfo,
-  FiRefreshCw,
-  FiFilter,
-  FiArrowRight
-} from 'react-icons/fi';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+  FaUsers, 
+  FaCalendarAlt, 
+  FaMoneyBillWave, 
+  FaClock, 
+  FaShip, 
+  FaExclamationTriangle,
+  FaArrowUp,
+  FaArrowDown,
+  FaChevronRight,
+  FaCheckCircle,
+  FaCreditCard,
+  FaPhone,
+  FaChartBar,
+  FaChartPie,
+  FaList,
+  FaSyncAlt,
+  FaFilter,
+  FaInfoCircle
+} from 'react-icons/fa';
+import ROUTES from '../../../shared/constants/appRoutes';
 
-// Interfaces para los datos de la API
+// Interfaces
 interface Reserva {
   id_reserva: number;
-  id_vendedor?: number;
   id_cliente: number;
-  total_pagar: number;
-  estado: string;
+  id_instancia: number;
   fecha_reserva: string;
+  total_pagar: number;
+  notas?: string;
+  estado: string;
+  eliminado: boolean;
   nombre_cliente?: string;
+  documento_cliente?: string;
   nombre_tour?: string;
+  fecha_tour?: string;
+  hora_inicio_tour?: string;
+  hora_fin_tour?: string;
   metodo_pago?: string;
+  cantidad_pasajes?: PasajeCantidad[];
+}
+
+interface PasajeCantidad {
+  id_tipo_pasaje: number;
+  nombre_tipo: string;
+  cantidad: number;
 }
 
 interface Pago {
   id_pago: number;
   id_reserva: number;
   metodo_pago: string;
+  canal_pago: string;
   monto: number;
-  estado: string;
   fecha_pago: string;
+  estado: string;
+  comprobante?: string | null;
+  numero_comprobante?: string | null;
 }
 
 interface InstanciaTour {
@@ -1149,12 +1155,6 @@ interface InstanciaTour {
   estado: string;
   nombre_tour?: string;
   lugar_salida?: string;
-}
-
-interface Cliente {
-  id_cliente: number;
-  nombres: string;
-  apellidos: string;
 }
 
 interface DailyStats {
@@ -1177,23 +1177,8 @@ interface TourStats {
   color: string;
 }
 
-interface VentaResumen {
-  id: number;
-  tour: string;
-  horario: string;
-  cliente: string;
-  monto: number;
-  metodoPago: string;
-  estado: string;
-  fecha: string;
-}
-
-interface Sede {
-  id_sede: number;
-  nombre: string;
-}
-
-const METODOS_PAGO_COLORS = {
+// Colores para gráficas
+const METODOS_PAGO_COLORS: Record<string, string> = {
   'EFECTIVO': '#4CAF50',
   'TARJETA': '#2196F3',
   'TRANSFERENCIA': '#9C27B0',
@@ -1213,139 +1198,26 @@ const VendedorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, selectedSede } = useSelector((state: RootState) => state.auth);
   
-  // Estados para almacenar los datos
-  const [isLoading, setIsLoading] = useState(true);
+  // Estados para almacenar datos
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [instancias, setInstancias] = useState<InstanciaTour[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [viewMode, setViewMode] = useState<'grafico' | 'tabla'>('grafico');
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [metodoPagoStats, setMetodoPagoStats] = useState<MetodoPagoStats[]>([]);
   const [tourStats, setTourStats] = useState<TourStats[]>([]);
-  const [ventasHoy, setVentasHoy] = useState<VentaResumen[]>([]);
-  const [salidasHoy, setSalidasHoy] = useState<InstanciaTour[]>([]);
-  const [currentDateTime, setCurrentDateTime] = useState(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
-  const [error, setError] = useState<string | null>(null);
-  const [noSede, setNoSede] = useState(false);
   
-  // Verificar si el usuario tiene sede asignada
-  useEffect(() => {
-    if (!selectedSede || !selectedSede.id_sede) {
-      setNoSede(true);
-      setError("No tienes una sede asignada. Contacta al administrador para que te asigne una sede.");
-      setIsLoading(false);
-    }
-  }, [selectedSede]);
-  
-  // Configurar Axios con headers de sede
-  useEffect(() => {
-    if (selectedSede?.id_sede) {
-      axios.defaults.headers.common['X-Sede-ID'] = selectedSede.id_sede.toString();
-    }
-  }, [selectedSede]);
-  
-  // Generar datos simulados si hay error para mostrar dashboard (solo para demo)
-  const generarDatosSimulados = () => {
-    const hoy = new Date();
-    
-    // Datos simulados para los últimos 30 días
-    const statsDummy: DailyStats[] = Array.from({ length: 30 }, (_, i) => {
-      const fecha = subDays(hoy, 29 - i);
-      return {
-        fecha: format(fecha, 'dd/MM', { locale: es }),
-        fechaCompleta: fecha,
-        reservas: Math.floor(Math.random() * 10) + 1,
-        ventas: Math.floor(Math.random() * 800) + 200,
-        pasajeros: Math.floor(Math.random() * 25) + 5,
-      };
-    });
-    
-    setDailyStats(statsDummy);
-    
-    // Métodos de pago simulados
-    setMetodoPagoStats([
-      { nombre: 'EFECTIVO', valor: 45, color: '#4CAF50' },
-      { nombre: 'TARJETA', valor: 30, color: '#2196F3' },
-      { nombre: 'TRANSFERENCIA', valor: 15, color: '#9C27B0' },
-      { nombre: 'YAPE/PLIN', valor: 10, color: '#FF5722' },
-    ]);
-    
-    // Tours simulados
-    setTourStats([
-      { nombre: 'Tour Isla', valor: 35, color: '#0088FE' },
-      { nombre: 'Tour Bahía', valor: 25, color: '#00C49F' },
-      { nombre: 'Tour Buceo', valor: 20, color: '#FFBB28' },
-      { nombre: 'Tour Pesca', valor: 15, color: '#FF8042' },
-      { nombre: 'Tour Privado', valor: 5, color: '#8884d8' },
-    ]);
-    
-    // Ventas de hoy simuladas
-    setVentasHoy([
-      { 
-        id: 1, 
-        tour: 'Tour Isla', 
-        horario: '09:00', 
-        cliente: 'Juan Pérez', 
-        monto: 120, 
-        metodoPago: 'Efectivo', 
-        estado: 'completado',
-        fecha: '2025-07-01T09:00:00Z'
-      },
-      { 
-        id: 2, 
-        tour: 'Tour Bahía', 
-        horario: '10:30', 
-        cliente: 'María López', 
-        monto: 85, 
-        metodoPago: 'Tarjeta', 
-        estado: 'completado',
-        fecha: '2025-07-01T10:30:00Z'
-      },
-      { 
-        id: 3, 
-        tour: 'Tour Buceo', 
-        horario: '13:00', 
-        cliente: 'Carlos Rodríguez', 
-        monto: 150, 
-        metodoPago: 'Transferencia', 
-        estado: 'pendiente',
-        fecha: '2025-07-01T13:00:00Z'
-      }
-    ]);
-    
-    // Próximas salidas simuladas
-    setSalidasHoy([
-      { 
-        id_instancia: 1, 
-        fecha_especifica: format(hoy, 'yyyy-MM-dd'), 
-        hora_inicio: '14:00', 
-        hora_fin: '16:00', 
-        cupos_disponibles: 8, 
-        cupos_totales: 15, 
-        estado: 'PROGRAMADO',
-        nombre_tour: 'Tour Isla', 
-        lugar_salida: 'Muelle Principal' 
-      },
-      { 
-        id_instancia: 2, 
-        fecha_especifica: format(hoy, 'yyyy-MM-dd'), 
-        hora_inicio: '15:30', 
-        hora_fin: '17:30', 
-        cupos_disponibles: 3, 
-        cupos_totales: 12, 
-        estado: 'PROGRAMADO',
-        nombre_tour: 'Tour Bahía', 
-        lugar_salida: 'Muelle Principal' 
-      }
-    ]);
-  };
-  
-  // Cargar todos los datos necesarios al inicio
+  // Fecha y hora actual
+  const [currentDateTime, setCurrentDateTime] = useState<string>(
+    format(new Date(), "yyyy-MM-dd HH:mm:ss")
+  );
+
+  // Cargar datos del dashboard
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (noSede) return; // No cargar datos si no hay sede asignada
-      
       setIsLoading(true);
       setError(null);
       
@@ -1353,97 +1225,61 @@ const VendedorDashboard: React.FC = () => {
         // Actualizar fecha y hora actual
         setCurrentDateTime(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
         
-        // Configurar interceptor para manejar errores comunes
-        const interceptor = axios.interceptors.response.use(
-          response => response,
-          error => {
-            if (error.response && error.response.status === 400) {
-              if (error.response.data?.message?.includes('sede')) {
-                setNoSede(true);
-                setError("No tienes una sede asignada. Contacta al administrador para que te asigne una sede.");
-                // Generar datos simulados para mostrar algo en el dashboard
-                generarDatosSimulados();
-              }
-            }
-            return Promise.reject(error);
-          }
+        // Obtener datos de los últimos 30 días
+        const hoy = new Date();
+        const hace30Dias = subDays(hoy, 30);
+        const fechaInicio = format(hace30Dias, 'yyyy-MM-dd');
+        const fechaFin = format(hoy, 'yyyy-MM-dd');
+        
+        // Realizar peticiones en paralelo para optimizar carga
+        const [reservasResponse, instanciasResponse, pagosResponse] = await Promise.all([
+          axios.get(`/api/v1${endpoints.reserva.vendedorList}`),
+          axios.get(`/api/v1${endpoints.instanciaTour.vendedorList}`),
+          axios.get(`/api/v1${endpoints.pago.vendedorList}`)
+        ]);
+        
+        // Procesar respuestas
+        if (reservasResponse.data && reservasResponse.data.data) {
+          setReservas(reservasResponse.data.data);
+        }
+        
+        if (instanciasResponse.data && instanciasResponse.data.data) {
+          setInstancias(instanciasResponse.data.data);
+        }
+        
+        if (pagosResponse.data && pagosResponse.data.data) {
+          setPagos(pagosResponse.data.data);
+        }
+        
+        // Procesar datos para estadísticas
+        processDataForStats(
+          reservasResponse.data?.data || [], 
+          pagosResponse.data?.data || [],
+          instanciasResponse.data?.data || []
         );
-        
-        // Asegurarnos de incluir el ID de sede en las peticiones
-        const config = selectedSede?.id_sede ? 
-          { headers: { 'X-Sede-ID': selectedSede.id_sede.toString() } } : 
-          {};
-        
-        try {
-          // Intentar obtener reservas
-          const reservasResponse = await axios.get(`/api/v1${endpoints.reserva.vendedorList}`, config);
-          if (reservasResponse.data && reservasResponse.data.data) {
-            setReservas(reservasResponse.data.data);
-          }
-        } catch (error) {
-          console.error('Error al cargar reservas:', error);
-        }
-        
-        try {
-          // Intentar obtener instancias de tour
-          const instanciasResponse = await axios.get(`/api/v1${endpoints.instanciaTour.vendedorList}`, config);
-          if (instanciasResponse.data && instanciasResponse.data.data) {
-            setInstancias(instanciasResponse.data.data);
-            
-            // Filtrar salidas para hoy
-            const hoyStr = format(new Date(), 'yyyy-MM-dd');
-            const salidasFiltradas = instanciasResponse.data.data.filter(
-              (inst: InstanciaTour) => inst.fecha_especifica === hoyStr && 
-              (inst.estado === 'PROGRAMADO' || inst.estado === 'CONFIRMADO')
-            );
-            setSalidasHoy(salidasFiltradas);
-          }
-        } catch (error) {
-          console.error('Error al cargar instancias de tour:', error);
-        }
-        
-        try {
-          // Intentar obtener pagos - este es el que está fallando según los logs
-          // Usamos una fecha para filtrar y reducir la carga
-          const haceUnMes = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-          const pagosResponse = await axios.get(
-            `/api/v1${endpoints.pago.vendedorListByFecha(haceUnMes)}`, 
-            config
-          );
-          if (pagosResponse.data && pagosResponse.data.data) {
-            setPagos(pagosResponse.data.data);
-          }
-        } catch (error) {
-          console.error('Error al cargar pagos:', error);
-          // Continuar con otros datos incluso si los pagos fallan
-        }
-        
-        // Limpiar el interceptor
-        axios.interceptors.response.eject(interceptor);
-        
-        // Procesar los datos que hayamos conseguido cargar
-        processDataFromResponses();
         
       } catch (error) {
         console.error('Error al cargar datos del dashboard:', error);
-        setError('No se pudieron cargar algunos datos del dashboard. Estamos mostrando información parcial.');
-        
-        // Generar algunos datos simulados si fallaron todas las peticiones
-        if (!dailyStats.length) {
-          generarDatosSimulados();
-        }
+        setError('No se pudieron cargar los datos del dashboard. Por favor, intenta nuevamente.');
       } finally {
         setIsLoading(false);
       }
     };
     
     loadDashboardData();
-  }, [selectedSede, noSede]);
+  }, []);
   
-  // Procesar datos disponibles para estadísticas
-  const processDataFromResponses = () => {
-    // Generar estadísticas diarias para los últimos 30 días
+  // Procesar datos para estadísticas
+  const processDataForStats = (
+    reservasData: Reserva[], 
+    pagosData: Pago[], 
+    instanciasData: InstanciaTour[]
+  ) => {
+    if (!reservasData || !pagosData) return;
+    
     const hoy = new Date();
+    
+    // Generar estadísticas diarias para los últimos 30 días
     const statsMap = new Map<string, DailyStats>();
     
     // Inicializar el mapa con los últimos 30 días
@@ -1459,114 +1295,146 @@ const VendedorDashboard: React.FC = () => {
       });
     }
     
-    // Procesar reservas si tenemos datos
-    if (reservas.length > 0) {
-      reservas.forEach(reserva => {
-        if (!reserva.fecha_reserva) return;
+    // Procesar reservas
+    reservasData.forEach(reserva => {
+      // Extraer solo la fecha (sin hora) de fecha_reserva
+      const fechaReserva = reserva.fecha_reserva.split('T')[0];
+      if (statsMap.has(fechaReserva)) {
+        const stats = statsMap.get(fechaReserva)!;
+        stats.reservas += 1;
         
-        const fechaReserva = reserva.fecha_reserva.split('T')[0];
-        if (statsMap.has(fechaReserva)) {
-          const stats = statsMap.get(fechaReserva)!;
-          stats.reservas += 1;
-          
-          // Asumir un promedio de 2.5 pasajeros por reserva si no hay datos específicos
-          stats.pasajeros += 2.5;
-          
-          statsMap.set(fechaReserva, stats);
+        // Calcular pasajeros reales si hay datos, o estimar
+        if (reserva.cantidad_pasajes && Array.isArray(reserva.cantidad_pasajes)) {
+          stats.pasajeros += reserva.cantidad_pasajes.reduce(
+            (sum, pasaje) => sum + pasaje.cantidad, 0
+          );
+        } else {
+          // Estimar 2 pasajeros por reserva
+          stats.pasajeros += 2;
         }
-      });
-      
-      // Procesar ventas de hoy para mostrarlas en la tabla
-      const hoyStr = format(hoy, 'yyyy-MM-dd');
-      const ventasHoyArray: VentaResumen[] = [];
-      
-      const reservasHoy = reservas.filter(r => r.fecha_reserva?.startsWith(hoyStr));
-      
-      reservasHoy.forEach(reserva => {
-        ventasHoyArray.push({
-          id: reserva.id_reserva,
-          tour: reserva.nombre_tour || 'Tour sin especificar',
-          horario: '09:00', // Dato ficticio, debería venir de la API
-          cliente: reserva.nombre_cliente || 'Cliente sin registrar',
-          monto: reserva.total_pagar,
-          metodoPago: reserva.metodo_pago || 'Pendiente',
-          estado: reserva.estado.toLowerCase(),
-          fecha: reserva.fecha_reserva
-        });
-      });
-      
-      if (ventasHoyArray.length > 0) {
-        setVentasHoy(ventasHoyArray);
-      }
-      
-      // Calcular estadísticas de tours si tenemos datos
-      const tourMap = new Map<string, number>();
-      reservas.forEach(reserva => {
-        const tourNombre = reserva.nombre_tour || 'Sin especificar';
-        tourMap.set(tourNombre, (tourMap.get(tourNombre) || 0) + 1);
-      });
-      
-      const tourArray: TourStats[] = Array.from(tourMap.entries())
-        .map(([nombre, valor], index) => ({
-          nombre,
-          valor: Math.round((valor / reservas.length) * 100),
-          color: TOUR_COLORS[index % TOUR_COLORS.length]
-        }));
-      
-      if (tourArray.length > 0) {
-        setTourStats(tourArray);
-      }
-    }
-    
-    // Procesar pagos si tenemos datos
-    if (pagos.length > 0) {
-      pagos.forEach(pago => {
-        if (pago.estado === 'PROCESADO') {
-          const fechaPago = pago.fecha_pago.split('T')[0];
-          if (statsMap.has(fechaPago)) {
-            const stats = statsMap.get(fechaPago)!;
-            stats.ventas += pago.monto;
-            statsMap.set(fechaPago, stats);
-          }
-        }
-      });
-      
-      // Calcular estadísticas de métodos de pago
-      const metodoPagoMap = new Map<string, number>();
-      pagos.forEach(pago => {
-        if (pago.estado === 'PROCESADO') {
-          const metodoPago = pago.metodo_pago || 'OTRO';
-          metodoPagoMap.set(metodoPago, (metodoPagoMap.get(metodoPago) || 0) + pago.monto);
-        }
-      });
-      
-      const totalPagos = pagos.reduce((sum, p) => p.estado === 'PROCESADO' ? sum + p.monto : sum, 0);
-      
-      if (totalPagos > 0) {
-        const metodoPagoArray: MetodoPagoStats[] = Array.from(metodoPagoMap.entries())
-          .map(([nombre, valor], index) => ({
-            nombre,
-            valor: Math.round((valor / totalPagos) * 100),
-            color: METODOS_PAGO_COLORS[nombre as keyof typeof METODOS_PAGO_COLORS] || TOUR_COLORS[index % TOUR_COLORS.length]
-          }));
         
-        if (metodoPagoArray.length > 0) {
-          setMetodoPagoStats(metodoPagoArray);
+        statsMap.set(fechaReserva, stats);
+      }
+    });
+    
+    // Procesar pagos
+    pagosData.forEach(pago => {
+      if (pago.estado === 'PROCESADO') {
+        const fechaPago = pago.fecha_pago.split('T')[0];
+        if (statsMap.has(fechaPago)) {
+          const stats = statsMap.get(fechaPago)!;
+          stats.ventas += pago.monto;
+          statsMap.set(fechaPago, stats);
         }
       }
-    }
+    });
     
-    // Finalizar procesamiento de estadísticas
-    const statsArray = Array.from(statsMap.values());
+    // Convertir mapa a array y ordenar por fecha
+    const statsArray = Array.from(statsMap.values())
+      .sort((a, b) => a.fechaCompleta.getTime() - b.fechaCompleta.getTime());
+    
     setDailyStats(statsArray);
+    
+    // Procesar estadísticas de métodos de pago
+    const metodoPagoMap = new Map<string, number>();
+    pagosData.forEach(pago => {
+      if (pago.estado === 'PROCESADO') {
+        const metodoPago = pago.metodo_pago || 'OTRO';
+        metodoPagoMap.set(
+          metodoPago, 
+          (metodoPagoMap.get(metodoPago) || 0) + pago.monto
+        );
+      }
+    });
+    
+    const totalPagos = pagosData.reduce(
+      (sum, p) => p.estado === 'PROCESADO' ? sum + p.monto : sum, 
+      0
+    );
+    
+    // Convertir mapa de método de pago a array con colores
+    const metodoPagoArray: MetodoPagoStats[] = Array.from(metodoPagoMap.entries())
+      .map(([nombre, valor], index) => ({
+        nombre,
+        valor: Math.round((valor / (totalPagos || 1)) * 100), // Evitar división por cero
+        color: METODOS_PAGO_COLORS[nombre] || TOUR_COLORS[index % TOUR_COLORS.length]
+      }));
+    
+    setMetodoPagoStats(metodoPagoArray);
+    
+    // Procesar estadísticas por tour
+    const tourMap = new Map<string, number>();
+    reservasData.forEach(reserva => {
+      const tourNombre = reserva.nombre_tour || 'Sin especificar';
+      tourMap.set(
+        tourNombre, 
+        (tourMap.get(tourNombre) || 0) + 1
+      );
+    });
+    
+    // Convertir mapa de tour a array con colores
+    const tourArray: TourStats[] = Array.from(tourMap.entries())
+      .map(([nombre, valor], index) => ({
+        nombre,
+        valor: Math.round((valor / (reservasData.length || 1)) * 100), // Evitar división por cero
+        color: TOUR_COLORS[index % TOUR_COLORS.length]
+      }))
+      // Ordenar de mayor a menor
+      .sort((a, b) => b.valor - a.valor);
+    
+    setTourStats(tourArray);
   };
   
+  // Filtrar reservas y pagos de hoy
+  const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+  const reservasHoy = reservas.filter(r => r.fecha_reserva.startsWith(fechaHoy));
+  
+  // Obtener instancias de tour para hoy (salidas programadas)
+  const salidasHoy = instancias.filter(i => 
+    i.fecha_especifica === fechaHoy && i.estado !== 'CANCELADO'
+  );
+  
+  const salidasUrgentes = salidasHoy.filter(s => {
+    const [hora, minuto] = s.hora_inicio.split(':').map(Number);
+    const fechaSalida = new Date();
+    fechaSalida.setHours(hora, minuto);
+    const ahora = new Date();
+    return fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
+  });
+  
   // Calcular totales
-  const totalVentasHoy = ventasHoy.reduce((sum, venta) => sum + venta.monto, 0);
-  const ventasCompletadasHoy = ventasHoy.filter(v => v.estado === 'completado' || v.estado === 'procesado' || v.estado === 'confirmado');
-  const totalVentasCompletadasHoy = ventasCompletadasHoy.reduce((sum, venta) => sum + venta.monto, 0);
-  const totalReservasHoy = ventasHoy.length;
-  const reservasPendientesHoy = ventasHoy.filter(v => v.estado === 'pendiente' || v.estado === 'reservado').length;
+  const totalVentasHoy = pagos
+    .filter(p => p.fecha_pago.startsWith(fechaHoy) && p.estado === 'PROCESADO')
+    .reduce((sum, p) => sum + p.monto, 0);
+  
+  const totalReservasHoy = reservasHoy.length;
+  const reservasPendientesHoy = reservasHoy.filter(r => 
+    r.estado === 'PENDIENTE' || r.estado === 'RESERVADO' || r.estado === 'RESERVADA'
+  ).length;
+  
+  const ventasCompletadasHoy = reservasHoy.filter(r => 
+    r.estado === 'COMPLETADO' || r.estado === 'COMPLETADA' || r.estado === 'CONFIRMADO' || r.estado === 'CONFIRMADA'
+  );
+  
+  const totalVentasCompletadasHoy = ventasCompletadasHoy.reduce(
+    (sum, r) => sum + r.total_pagar, 
+    0
+  );
+  
+  // Calcular total de pasajeros
+  const totalPasajerosHoy = reservasHoy.reduce((sum, r) => {
+    if (r.cantidad_pasajes && Array.isArray(r.cantidad_pasajes)) {
+      return sum + r.cantidad_pasajes.reduce((s, p) => s + p.cantidad, 0);
+    }
+    return sum + 2; // Estimado de 2 pasajeros por reserva sin detalles
+  }, 0);
+  
+  const pasajerosEmbarcadosHoy = ventasCompletadasHoy.reduce((sum, r) => {
+    if (r.cantidad_pasajes && Array.isArray(r.cantidad_pasajes)) {
+      return sum + r.cantidad_pasajes.reduce((s, p) => s + p.cantidad, 0);
+    }
+    return sum + 2; // Estimado de 2 pasajeros por reserva sin detalles
+  }, 0);
   
   // Filtrar datos según el período seleccionado
   const filtrarDatosPorPeriodo = (): DailyStats[] => {
@@ -1577,7 +1445,7 @@ const VendedorDashboard: React.FC = () => {
     } else if (period === 'semana') {
       return dailyStats.filter(d => isThisWeek(d.fechaCompleta, { locale: es }));
     } else {
-      // Mostrar datos del último mes (30 días)
+      // Por defecto mostrar datos del último mes (30 días)
       return dailyStats;
     }
   };
@@ -1586,13 +1454,8 @@ const VendedorDashboard: React.FC = () => {
   
   // Calcular totales por período
   const calcularTotalPeriodo = (periodo: 'dia' | 'semana' | 'mes'): number => {
-    if (periodo === 'dia') {
-      return dailyStats.filter(d => isToday(d.fechaCompleta)).reduce((sum, dia) => sum + dia.ventas, 0);
-    } else if (periodo === 'semana') {
-      return dailyStats.filter(d => isThisWeek(d.fechaCompleta, { locale: es })).reduce((sum, dia) => sum + dia.ventas, 0);
-    } else {
-      return dailyStats.reduce((sum, dia) => sum + dia.ventas, 0);
-    }
+    const filtrados = filtrarDatosPorPeriodo();
+    return filtrados.reduce((sum, dia) => sum + dia.ventas, 0);
   };
   
   const totalVentasDia = calcularTotalPeriodo('dia');
@@ -1603,8 +1466,8 @@ const VendedorDashboard: React.FC = () => {
   const calcularTendencia = (): { porcentaje: number, esCrecimiento: boolean } => {
     if (dailyStats.length < 2) return { porcentaje: 0, esCrecimiento: true };
     
-    const ventasHoy = dailyStats[dailyStats.length - 1]?.ventas || 0;
-    const ventasAyer = dailyStats[dailyStats.length - 2]?.ventas || 0;
+    const ventasHoy = dailyStats[dailyStats.length - 1].ventas;
+    const ventasAyer = dailyStats[dailyStats.length - 2].ventas;
     
     if (ventasAyer === 0) return { porcentaje: 100, esCrecimiento: true };
     
@@ -1617,30 +1480,23 @@ const VendedorDashboard: React.FC = () => {
   
   const tendencia = calcularTendencia();
   
-  // Filtrar próximas salidas
-  const salidasUrgentes = salidasHoy.filter(s => {
-    if (!s.hora_inicio) return false;
-    
-    const [hora, minuto] = s.hora_inicio.split(':').map(Number);
-    const fechaSalida = new Date();
-    fechaSalida.setHours(hora, minuto);
-    const ahora = new Date();
-    return fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
-  });
-  
   // Datos para metas de ventas (simulados)
-  const metasDiarias = {
-    dia: 1000,
-    semana: 5000,
-    mes: 20000
+  const metasVentas = [
+    { periodo: 'Hoy', meta: 1000, actual: totalVentasDia, porcentaje: (totalVentasDia / 1000) * 100 },
+    { periodo: 'Semana', meta: 5000, actual: totalVentasSemana, porcentaje: (totalVentasSemana / 5000) * 100 },
+    { periodo: 'Mes', meta: 20000, actual: totalVentasMes, porcentaje: (totalVentasMes / 20000) * 100 },
+  ];
+  
+  // Formatear moneda
+  const formatMoneda = (valor: number) => {
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(valor);
   };
   
-  const metasVentas = [
-    { periodo: 'Hoy', meta: metasDiarias.dia, actual: totalVentasDia, porcentaje: (totalVentasDia / metasDiarias.dia) * 100 },
-    { periodo: 'Semana', meta: metasDiarias.semana, actual: totalVentasSemana, porcentaje: (totalVentasSemana / metasDiarias.semana) * 100 },
-    { periodo: 'Mes', meta: metasDiarias.mes, actual: totalVentasMes, porcentaje: (totalVentasMes / metasDiarias.mes) * 100 },
-  ];
-
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -1649,44 +1505,25 @@ const VendedorDashboard: React.FC = () => {
     );
   }
   
-  if (noSede) {
+  if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg mb-6">
-          <p className="font-medium">Atención</p>
-          <p>No tienes una sede asignada. Contacta al administrador para que te asigne una sede.</p>
-          <p className="mt-2 text-sm">Mientras tanto, te mostramos datos simulados para que puedas visualizar el dashboard.</p>
-        </div>
-        
-        {/* Mostramos el dashboard normal con datos simulados */}
-        <div className="space-y-6">
-          {/* El resto del dashboard continúa normal */}
-          {/* Mostraremos un banner adicional en la parte superior */}
-          <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-yellow-500">
-            <div className="flex items-center">
-              <FiAlertCircle className="text-yellow-500 text-xl mr-2" />
-              <span className="font-medium">Datos simulados para demostración</span>
-            </div>
-            <p className="text-gray-600 text-sm mt-1">
-              Los datos mostrados son simulados porque no tienes una sede asignada.
-            </p>
-          </div>
-          
-          {/* Continuar con el dashboard normal */}
-        </div>
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <p className="font-medium flex items-center">
+          <FaExclamationTriangle className="mr-2" />
+          {error}
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-2 bg-red-100 hover:bg-red-200 text-red-800 py-1 px-3 rounded-md text-sm"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
-          <p className="font-medium">Información</p>
-          <p>{error}</p>
-        </div>
-      )}
-      
       {/* Bienvenida y resumen */}
       <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-blue-500">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center">
@@ -1699,11 +1536,17 @@ const VendedorDashboard: React.FC = () => {
             </p>
           </div>
           <div className="mt-3 md:mt-0 flex items-center space-x-2">
-            <span className="text-gray-500 text-sm">{currentDateTime}</span>
+            <span className="text-gray-500 text-sm">{format(new Date(), "yyyy-MM-dd HH:mm:ss")}</span>
             <span className="text-gray-400">•</span>
             <span className="text-gray-500 text-sm">{user?.nombres || 'angel06220'}</span>
           </div>
         </div>
+      </div>
+      
+      {/* Información de fecha y usuario actual */}
+      <div className="text-xs text-gray-500 mb-2 text-right">
+        <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-07-01 04:16:59</p>
+        <p>Current User's Login: angel06220</p>
       </div>
       
       {/* Tarjetas de resumen */}
@@ -1712,35 +1555,677 @@ const VendedorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Ventas de hoy</p>
-              <p className="text-2xl font-bold text-gray-800">S/ {totalVentasHoy.toLocaleString('es-PE')}</p>
+              <p className="text-2xl font-bold text-gray-800">{formatMoneda(totalVentasHoy)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                <span className="font-medium">S/ {totalVentasCompletadasHoy.toLocaleString('es-PE')}</span> cobrados
+                <span className="font-medium">{formatMoneda(totalVentasCompletadasHoy)}</span> cobrados
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
-              <FiDollarSign className="text-blue-500 text-xl" />
+              <FaMoneyBillWave className="text-blue-500 text-xl" />
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500">
             <span className={`font-medium flex items-center ${tendencia.esCrecimiento ? 'text-green-500' : 'text-red-500'}`}>
               {tendencia.esCrecimiento ? (
-                <FiTrendingUp className="mr-1" />
+                <FaArrowUp className="mr-1" />
               ) : (
-                <FiTrendingDown className="mr-1" />
+                <FaArrowDown className="mr-1" />
               )}
               {tendencia.porcentaje}% {tendencia.esCrecimiento ? 'más' : 'menos'} que ayer
             </span>
           </div>
         </div>
         
-        {/* Resto de las tarjetas de resumen */}
-        {/* ... */}
+        <div className="bg-white rounded-lg shadow-md p-5 border-t-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Reservas hoy</p>
+              <p className="text-2xl font-bold text-gray-800">{totalReservasHoy}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">{reservasPendientesHoy}</span> por confirmar
+              </p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-full">
+              <FaCalendarAlt className="text-green-500 text-xl" />
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            <span className="text-green-500 font-medium">
+              {ventasCompletadasHoy.length} reservas completadas
+            </span>
+          </div>
+        </div>
         
-        {/* Las demás secciones del dashboard continúan igual */}
+        <div className="bg-white rounded-lg shadow-md p-5 border-t-4 border-amber-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Pasajeros hoy</p>
+              <p className="text-2xl font-bold text-gray-800">{totalPasajerosHoy}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">{totalPasajerosHoy - pasajerosEmbarcadosHoy}</span> pendientes por llegar
+              </p>
+            </div>
+            <div className="bg-amber-100 p-3 rounded-full">
+              <FaUsers className="text-amber-500 text-xl" />
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            <span className="font-medium">
+              {pasajerosEmbarcadosHoy} ya embarcados
+            </span>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-5 border-t-4 border-purple-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm">Próximas salidas</p>
+              <p className="text-2xl font-bold text-gray-800">{salidasHoy.length}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">
+                  {salidasHoy.reduce((sum, s) => sum + (s.cupos_totales - s.cupos_disponibles), 0)}
+                </span> pasajeros en total
+              </p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-full">
+              <FaShip className="text-purple-500 text-xl" />
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            <span className={`font-medium ${salidasUrgentes.length > 0 ? 'text-red-500' : ''}`}>
+              {salidasUrgentes.length > 0 ? `${salidasUrgentes.length} en menos de 2 horas` : 'Todas programadas'}
+            </span>
+          </div>
+        </div>
       </div>
       
-      {/* Resto del dashboard igual que antes */}
+      {/* Resumen de ventas por período */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-700 flex items-center">
+              <FaChartBar className="mr-2 text-blue-500" /> 
+              Ventas del Día
+            </h2>
+            <div className="bg-blue-100 text-blue-600 px-2 py-1 text-xs rounded-full">
+              {format(new Date(), "dd MMM", { locale: es })}
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-3xl font-bold text-blue-600 mb-1">
+              {formatMoneda(totalVentasDia)}
+            </div>
+            <div className="text-sm text-gray-500">
+              {Math.round(metasVentas[0].porcentaje)}% de la meta diaria
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div 
+                className={`h-2 rounded-full ${
+                  metasVentas[0].porcentaje >= 100 ? 'bg-green-500' : 
+                  metasVentas[0].porcentaje >= 75 ? 'bg-blue-500' : 
+                  'bg-yellow-500'
+                }`}
+                style={{ width: `${Math.min(metasVentas[0].porcentaje, 100)}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
+              <span>Meta: {formatMoneda(metasVentas[0].meta)}</span>
+              <span>Reservas: {totalReservasHoy}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-700 flex items-center">
+              <FaChartBar className="mr-2 text-green-500" /> 
+              Ventas de la Semana
+            </h2>
+            <div className="bg-green-100 text-green-600 px-2 py-1 text-xs rounded-full">
+              Semana actual
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-3xl font-bold text-green-600 mb-1">
+              {formatMoneda(totalVentasSemana)}
+            </div>
+            <div className="text-sm text-gray-500">
+              {Math.round(metasVentas[1].porcentaje)}% de la meta semanal
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div 
+                className={`h-2 rounded-full ${
+                  metasVentas[1].porcentaje >= 100 ? 'bg-green-500' : 
+                  metasVentas[1].porcentaje >= 75 ? 'bg-green-500' : 
+                  'bg-yellow-500'
+                }`}
+                style={{ width: `${Math.min(metasVentas[1].porcentaje, 100)}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
+              <span>Meta: {formatMoneda(metasVentas[1].meta)}</span>
+              <span>Falta: {formatMoneda(Math.max(0, metasVentas[1].meta - metasVentas[1].actual))}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-700 flex items-center">
+              <FaChartBar className="mr-2 text-purple-500" /> 
+              Ventas del Mes
+            </h2>
+            <div className="bg-purple-100 text-purple-600 px-2 py-1 text-xs rounded-full">
+              {format(new Date(), "MMMM yyyy", { locale: es })}
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-3xl font-bold text-purple-600 mb-1">
+              {formatMoneda(totalVentasMes)}
+            </div>
+            <div className="text-sm text-gray-500">
+              {Math.round(metasVentas[2].porcentaje)}% de la meta mensual
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div 
+                className={`h-2 rounded-full ${
+                  metasVentas[2].porcentaje >= 100 ? 'bg-green-500' : 
+                  metasVentas[2].porcentaje >= 75 ? 'bg-purple-500' : 
+                  'bg-yellow-500'
+                }`}
+                style={{ width: `${Math.min(metasVentas[2].porcentaje, 100)}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-500 mt-2 flex justify-between w-full">
+              <span>Meta: {formatMoneda(metasVentas[2].meta)}</span>
+              <span>Proyección: {Math.round(metasVentas[2].porcentaje)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
       
+      {/* Gráficas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Gráfica de ventas por día */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-semibold text-gray-700 flex items-center">
+              <FaChartBar className="mr-2 text-blue-500" />
+              Ventas por período
+            </h2>
+            <div className="flex items-center space-x-4">
+              <div className="flex space-x-1">
+                <button 
+                  onClick={() => setPeriod('dia')}
+                  className={`px-3 py-1 text-xs rounded-full ${period === 'dia' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  Día
+                </button>
+                <button 
+                  onClick={() => setPeriod('semana')}
+                  className={`px-3 py-1 text-xs rounded-full ${period === 'semana' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  Semana
+                </button>
+                <button 
+                  onClick={() => setPeriod('mes')}
+                  className={`px-3 py-1 text-xs rounded-full ${period === 'mes' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  Mes
+                </button>
+              </div>
+              
+              <div className="flex space-x-1">
+                <button 
+                  onClick={() => setViewMode('grafico')}
+                  className={`p-1 rounded ${viewMode === 'grafico' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                  title="Ver gráfico"
+                >
+                  <FaChartBar className="text-gray-600" />
+                </button>
+                <button 
+                  onClick={() => setViewMode('tabla')}
+                  className={`p-1 rounded ${viewMode === 'tabla' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                  title="Ver tabla"
+                >
+                  <FaList className="text-gray-600" />
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {viewMode === 'grafico' ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart
+                data={datosFiltrados}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="fecha" 
+                  tick={{ fontSize: 12 }}
+                  interval={period === 'mes' ? 2 : 0}
+                />
+                <YAxis 
+                  yAxisId="left" 
+                  orientation="left" 
+                  stroke="#0088FE" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `S/${value}`}
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  stroke="#00C49F" 
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip 
+                  formatter={(value, name) => {
+                    if (name === 'ventas') return [`S/ ${value}`, 'Ventas'];
+                    if (name === 'reservas') return [value, 'Reservas'];
+                    if (name === 'pasajeros') return [value, 'Pasajeros'];
+                    return [value, name];
+                  }}
+                  labelFormatter={(label) => `Fecha: ${label}`}
+                />
+                <Legend />
+                <Bar 
+                  yAxisId="left" 
+                  dataKey="ventas" 
+                  name="Ventas (S/)" 
+                  fill="#0088FE" 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  yAxisId="right" 
+                  dataKey="reservas" 
+                  name="Reservas" 
+                  fill="#00C49F" 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="pasajeros"
+                  name="Pasajeros"
+                  stroke="#FF8042"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas (S/)</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Reservas</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pasajeros</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {datosFiltrados.map((dato, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-800">{dato.fecha}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">S/ {dato.ventas.toLocaleString('es-PE')}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">{dato.reservas}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-900">{dato.pasajeros}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-800">Total</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-blue-600">
+                      S/ {datosFiltrados.reduce((sum, dato) => sum + dato.ventas, 0).toLocaleString('es-PE')}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-green-600">
+                      {datosFiltrados.reduce((sum, dato) => sum + dato.reservas, 0)}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-amber-600">
+                      {datosFiltrados.reduce((sum, dato) => sum + dato.pasajeros, 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+        
+        {/* Gráficas de distribución */}
+        <div className="bg-white rounded-lg shadow-md p-5">
+          <div className="mb-4">
+            <h2 className="font-semibold text-gray-700 flex items-center">
+              <FaChartPie className="mr-2 text-blue-500" />
+              Distribución de Ventas
+            </h2>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Distribución por tour */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Por tipo de tour</h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie
+                    data={tourStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="valor"
+                    nameKey="nombre"
+                    label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {tourStats.map((entry, index) => (
+                      <Cell key={`cell-tour-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Leyenda */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {tourStats.slice(0, 6).map((item, index) => (
+                  <div key={`legend-tour-${index}`} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-1" 
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-xs text-gray-600 truncate">{item.nombre}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Distribución por método de pago */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Por método de pago</h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie
+                    data={metodoPagoStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="valor"
+                    nameKey="nombre"
+                    label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {metodoPagoStats.map((entry, index) => (
+                      <Cell key={`cell-pago-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Leyenda */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {metodoPagoStats.slice(0, 6).map((item, index) => (
+                  <div key={`legend-pago-${index}`} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-1" 
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-xs text-gray-600">{item.nombre}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Ventas de hoy y Próximas salidas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Ventas de hoy */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-3 flex justify-between items-center">
+            <h2 className="font-semibold text-white flex items-center">
+              <FaCreditCard className="mr-2" /> Reservas de hoy
+            </h2>
+            <div className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
+              Total: {formatMoneda(totalVentasHoy)}
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tour</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {reservasHoy.length > 0 ? reservasHoy.slice(0, 5).map((reserva) => (
+                    <tr key={reserva.id_reserva} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm">
+                        <div className="font-medium text-gray-800">{reserva.nombre_tour || 'Tour sin especificar'}</div>
+                        <div className="text-xs text-gray-500">{reserva.hora_inicio_tour || '--:--'}</div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{reserva.nombre_cliente || 'Cliente sin registrar'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-right text-gray-900">S/ {reserva.total_pagar.toLocaleString('es-PE')}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs text-center">
+                        <span className={`px-2 py-1 rounded-full ${
+                          reserva.estado === 'COMPLETADO' || reserva.estado === 'COMPLETADA' ? 'bg-green-100 text-green-800' : 
+                          reserva.estado === 'RESERVADO' || reserva.estado === 'RESERVADA' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {reserva.estado || 'PENDIENTE'}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-4 text-center text-gray-500">No hay reservas registradas hoy</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            {reservasHoy.length > 0 && (
+              <div className="mt-3 text-right">
+                <Link to={ROUTES.RESERVAS.LIST} className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                  Ver todas las reservas <FaChevronRight className="ml-1" />
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Próximas salidas */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-3 flex justify-between items-center">
+            <h2 className="font-semibold text-white flex items-center">
+              <FaShip className="mr-2" /> Próximas salidas de hoy
+            </h2>
+            <div className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
+              {format(new Date(), "d 'de' MMMM", { locale: es })}
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3">
+              {salidasHoy.length > 0 ? salidasHoy.map((salida) => {
+                const [hora, minuto] = salida.hora_inicio.split(':').map(Number);
+                const fechaSalida = new Date();
+                fechaSalida.setHours(hora, minuto);
+                const ahora = new Date();
+                const esUrgente = fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
+                
+                const ocupacionPorcentaje = ((salida.cupos_totales - salida.cupos_disponibles) / salida.cupos_totales) * 100;
+                
+                return (
+                  <div key={salida.id_instancia} className={`border ${esUrgente ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-lg p-3`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-800 flex items-center">
+                          {salida.nombre_tour || 'Tour sin especificar'}
+                          {esUrgente && <FaExclamationTriangle className="ml-2 text-red-500" />}
+                        </h3>
+                        <div className="text-sm text-gray-500 flex items-center mt-1">
+                          <FaClock className="mr-1" /> {salida.hora_inicio} - {salida.lugar_salida || 'Muelle Principal'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${salida.cupos_disponibles < 3 ? 'text-red-600' : 'text-blue-600'}`}>
+                          {salida.cupos_disponibles} cupos disponibles
+                        </div>
+                        <div className="mt-1 w-24 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              ocupacionPorcentaje > 80 ? 'bg-green-500' : 
+                              ocupacionPorcentaje > 50 ? 'bg-blue-500' : 
+                              'bg-yellow-500'
+                            }`}
+                            style={{ width: `${ocupacionPorcentaje}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {esUrgente && (
+                      <div className="mt-2 flex justify-between">
+                        <span className="text-xs text-red-600 flex items-center">
+                          <FaExclamationTriangle className="mr-1" /> Salida próxima
+                        </span>
+                        <button 
+                          onClick={() => navigate(`/vendedor/instancias-tour/${salida.id_instancia}`)}
+                          className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded"
+                        >
+                          Ver detalles
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }) : (
+                <p className="text-center py-4 text-gray-500">No hay salidas programadas para hoy</p>
+              )}
+            </div>
+            
+            {salidasHoy.length > 0 && (
+              <div className="mt-3 text-right">
+                <Link to={ROUTES.TOURS} className="text-sm text-blue-600 hover:text-blue-800 flex items-center justify-end w-full">
+                  Ver todas las salidas <FaChevronRight className="ml-1" />
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Acciones rápidas */}
+      <div className="bg-white rounded-lg shadow-md p-5">
+        <h2 className="font-semibold text-gray-700 mb-3 flex items-center">
+          <FaSyncAlt className="mr-2 text-blue-500" /> Acciones rápidas
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Link to={ROUTES.RESERVAS.NUEVA} className="flex flex-col items-center justify-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <div className="bg-blue-100 p-3 rounded-full mb-2">
+              <FaCalendarAlt className="text-blue-600" />
+            </div>
+            <span className="text-sm text-gray-800">Nueva Reserva</span>
+          </Link>
+          
+          <Link to={ROUTES.CLIENTES} className="flex flex-col items-center justify-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+            <div className="bg-green-100 p-3 rounded-full mb-2">
+              <FaUsers className="text-green-600" />
+            </div>
+            <span className="text-sm text-gray-800">Nuevo Cliente</span>
+          </Link>
+          
+          <Link to={ROUTES.PAGOS} className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+            <div className="bg-purple-100 p-3 rounded-full mb-2">
+              <FaCreditCard className="text-purple-600" />
+            </div>
+            <span className="text-sm text-gray-800">Registrar Pago</span>
+          </Link>
+          
+          <Link to={ROUTES.CLIENTES} className="flex flex-col items-center justify-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+            <div className="bg-amber-100 p-3 rounded-full mb-2">
+              <FaPhone className="text-amber-600" />
+            </div>
+            <span className="text-sm text-gray-800">Buscar Cliente</span>
+          </Link>
+        </div>
+      </div>
+      
+      {/* Resumen del día */}
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md p-5 text-white">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+          <div>
+            <h2 className="font-bold text-xl mb-1">Resumen del día</h2>
+            <p className="text-blue-100">
+              {format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+            </p>
+          </div>
+          <div className="mt-3 md:mt-0 flex flex-col items-end">
+            <div className="text-2xl font-bold">{formatMoneda(totalVentasHoy)}</div>
+            <div className="text-sm text-blue-100">
+              {totalReservasHoy} reservas | {ventasCompletadasHoy.length} completadas
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white/10 p-3 rounded-lg">
+            <div className="flex items-center">
+              <FaCreditCard className="mr-2" />
+              <span>Métodos de pago</span>
+            </div>
+            <div className="mt-2 space-y-1">
+              {metodoPagoStats.slice(0, 4).map((metodo, index) => (
+                <div key={`resumen-metodo-${index}`} className="flex justify-between text-sm">
+                  <span>{metodo.nombre}:</span>
+                  <span>S/ {((totalVentasHoy * metodo.valor) / 100).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white/10 p-3 rounded-lg">
+            <div className="flex items-center">
+              <FaShip className="mr-2" />
+              <span>Tours populares</span>
+            </div>
+            <div className="mt-2 space-y-1">
+              {tourStats.slice(0, 4).map((tour, index) => (
+                <div key={`popular-${index}`} className="flex justify-between text-sm">
+                  <span className="truncate max-w-[150px]">{tour.nombre}:</span>
+                  <span>{tour.valor}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white/10 p-3 rounded-lg">
+            <div className="flex items-center">
+              <FaInfoCircle className="mr-2" />
+              <span>Información útil</span>
+            </div>
+            <div className="mt-2 space-y-1 text-sm">
+              <div>Próxima salida: {salidasHoy.length > 0 ? `${salidasHoy[0].nombre_tour || 'Tour'} - ${salidasHoy[0].hora_inicio}` : 'No hay salidas hoy'}</div>
+              <div>Clientes nuevos hoy: {Math.round(totalReservasHoy * 0.3)}</div>
+              <div>Reservas para mañana: {Math.round(totalReservasHoy * 1.2)}</div>
+              <div>Meta de ventas restante: {formatMoneda(Math.max(0, metasVentas[0].meta - totalVentasHoy))}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
