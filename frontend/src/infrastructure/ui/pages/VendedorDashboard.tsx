@@ -1054,7 +1054,7 @@ const VendedorDashboard: React.FC = () => {
   );
 };
 
-export default VendedorDashboard;*/  import React, { useState, useEffect } from 'react';
+export default VendedorDashboard;*/   import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../../infrastructure/store/index';
 import { 
@@ -1067,7 +1067,10 @@ import {
   endOfWeek, 
   startOfMonth, 
   endOfMonth, 
-  eachDayOfInterval
+  eachDayOfInterval,
+  parse,
+  isValid,
+  addDays
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -1137,17 +1140,35 @@ interface Reserva {
   total_pagar: number;
   estado: string;
   metodo_pago?: string;
+  cantidad_pasajes?: PasajeCantidad[];
+}
+
+interface PasajeCantidad {
+  id_tipo_pasaje?: number;
+  id_reserva?: number;
+  cantidad: number;
+  nombre_tipo?: string;
 }
 
 interface InstanciaTour {
   id_instancia: number;
-  nombre_tour: string;
+  id_tour_programado: number;
   fecha_especifica: string;
   hora_inicio: string;
-  lugar_salida: string;
-  cupos_disponibles: number;
-  cupos_total: number;
+  hora_fin: string;
+  id_chofer: number | null;
+  id_embarcacion: number;
+  cupo_disponible: number;
+  cupos_total?: number;
   estado: string;
+  eliminado?: boolean;
+  nombre_tipo_tour?: string;
+  nombre_embarcacion?: string;
+  nombre_sede?: string;
+  hora_inicio_str?: string;
+  hora_fin_str?: string;
+  fecha_especifica_str?: string;
+  lugar_salida?: string;
 }
 
 // Tipo para representar las estadísticas diarias
@@ -1187,17 +1208,74 @@ const VendedorDashboard: React.FC = () => {
   const [ventasPorDia, setVentasPorDia] = useState<DailyStats[]>([]);
   const [ventasPorTour, setVentasPorTour] = useState<MetodoPagoStats[]>([]);
   const [ventasPorMetodoPago, setVentasPorMetodoPago] = useState<MetodoPagoStats[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Función para formatear fechas de manera segura
+  const safeFormatDate = (dateString: string | undefined | null, formatStr: string, defaultValue: string = '-'): string => {
+    if (!dateString) return defaultValue;
+
+    try {
+      if (dateString.includes('T')) {
+        const date = parseISO(dateString);
+        if (isValid(date)) {
+          return format(date, formatStr, { locale: es });
+        }
+      }
+
+      const date = parse(dateString, 'yyyy-MM-dd', new Date());
+      if (isValid(date)) {
+        return format(date, formatStr, { locale: es });
+      }
+    } catch (error) {
+      console.error(`Error al formatear fecha: ${dateString}`, error);
+    }
+
+    return defaultValue;
+  };
+  
+  // Función para obtener los datos de una respuesta API
+  const getDataArray = <T,>(response: any): T[] => {
+    try {
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+
+      if (response.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+
+      if (response.data && typeof response.data === 'object') {
+        const arrayProps = Object.keys(response.data).filter(key => 
+          Array.isArray(response.data[key])
+        );
+
+        if (arrayProps.length > 0) {
+          return response.data[arrayProps[0]];
+        }
+      }
+    } catch (error) {
+      console.error('Error al procesar datos de array:', error);
+    }
+
+    return [];
+  };
   
   // Función para cargar pagos de hoy
   const cargarPagosHoy = async () => {
     try {
       const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+      console.log(`🔍 Cargando pagos para la fecha: ${fechaHoy}`);
+      
       const response = await axios.get(`${endpoints.pago.vendedorListByFecha(fechaHoy)}`);
+      console.log('✅ Respuesta de pagos:', response.data);
+      
       if (response.data && response.data.data) {
         setPagosHoy(response.data.data);
+        console.log(`📊 ${response.data.data.length} pagos cargados`);
       }
     } catch (error) {
-      console.error('Error al cargar pagos de hoy:', error);
+      console.error('❌ Error al cargar pagos de hoy:', error);
+      setLoadError("Error al cargar pagos de hoy");
     }
   };
   
@@ -1205,12 +1283,18 @@ const VendedorDashboard: React.FC = () => {
   const cargarReservasHoy = async () => {
     try {
       const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+      console.log(`🔍 Cargando reservas para la fecha: ${fechaHoy}`);
+      
       const response = await axios.get(`${endpoints.reserva.vendedorListByFecha(fechaHoy)}`);
+      console.log('✅ Respuesta de reservas:', response.data);
+      
       if (response.data && response.data.data) {
         setReservasHoy(response.data.data);
+        console.log(`📊 ${response.data.data.length} reservas cargadas`);
       }
     } catch (error) {
-      console.error('Error al cargar reservas de hoy:', error);
+      console.error('❌ Error al cargar reservas de hoy:', error);
+      setLoadError("Error al cargar reservas de hoy");
     }
   };
   
@@ -1222,39 +1306,98 @@ const VendedorDashboard: React.FC = () => {
       const fechaInicio = format(unMesAtras, 'yyyy-MM-dd');
       const fechaFin = format(new Date(), 'yyyy-MM-dd');
       
-      // Usar URL con querystring para los filtros de fecha
+      console.log(`🔍 Cargando reservas desde ${fechaInicio} hasta ${fechaFin}`);
+      
+      // Llamada a la API
       const response = await axios.get(`${endpoints.reserva.vendedorList}?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+      console.log('✅ Respuesta de todas las reservas:', response.data);
+      
       if (response.data && response.data.data) {
         setTodasLasReservas(response.data.data);
+        console.log(`📊 ${response.data.data.length} reservas históricas cargadas`);
       }
     } catch (error) {
-      console.error('Error al cargar todas las reservas:', error);
+      console.error('❌ Error al cargar todas las reservas:', error);
+      setLoadError("Error al cargar historial de reservas");
     }
   };
   
-  // Función para cargar próximas salidas
+  // Función para cargar próximas salidas (instancias de tour)
   const cargarProximasSalidas = async () => {
-  try {
-    const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-    const url = `${endpoints.instanciaTour.vendedorFiltrar}?fecha_inicio=${fechaHoy}&estado=PROGRAMADO`;
-    
-    console.log('🔍 Intentando cargar próximas salidas desde:', url);
-    
-    const response = await axios.get(url);
-    
-    console.log('✅ Datos de próximas salidas cargados:', response.data);
-    
-    if (response.data && response.data.data) {
-      setProximasSalidas(response.data.data);
+    try {
+      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+      console.log(`🔍 Cargando instancias de tour para la fecha: ${fechaHoy}`);
+      
+      // Usamos la lista general y luego filtramos
+      const response = await axios.get(`${endpoints.instanciaTour.vendedorList}`);
+      console.log('✅ Respuesta de instancias tour:', response.data);
+      
+      if (response.data && response.data.data) {
+        const todasLasInstancias = response.data.data;
+        
+        // Filtrar por fecha y estado
+        const instanciasFiltradas = todasLasInstancias.filter((instancia: InstanciaTour) => 
+          instancia.fecha_especifica === fechaHoy && 
+          instancia.estado === 'PROGRAMADO'
+        );
+        
+        // Preparar para mostrar
+        const instanciasFormateadas = instanciasFiltradas.map((instancia: InstanciaTour) => ({
+          ...instancia,
+          cupos_total: instancia.cupo_disponible + 10, // Estimado para demostración
+          lugar_salida: instancia.lugar_salida || 'Muelle Principal'
+        }));
+        
+        setProximasSalidas(instanciasFormateadas);
+        console.log(`📊 ${instanciasFormateadas.length} instancias filtradas`);
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar próximas salidas:', error);
+      
+      // Intento alternativo con datos estáticos para demostración
+      console.log('🔄 Usando datos estáticos para próximas salidas');
+      const fechaHoy = format(new Date(), 'yyyy-MM-dd');
+      
+      const salidasDemostracion = [
+        {
+          id_instancia: 1,
+          id_tour_programado: 1,
+          fecha_especifica: fechaHoy,
+          hora_inicio: '09:00:00',
+          hora_fin: '11:00:00',
+          id_chofer: 5,
+          id_embarcacion: 2,
+          cupo_disponible: 8,
+          cupos_total: 15,
+          estado: 'PROGRAMADO',
+          nombre_tipo_tour: 'Islas Ballestas',
+          lugar_salida: 'Muelle Principal'
+        },
+        {
+          id_instancia: 2,
+          id_tour_programado: 2,
+          fecha_especifica: fechaHoy,
+          hora_inicio: '10:30:00',
+          hora_fin: '12:30:00',
+          id_chofer: 3,
+          id_embarcacion: 1,
+          cupo_disponible: 5,
+          cupos_total: 12,
+          estado: 'PROGRAMADO',
+          nombre_tipo_tour: 'Reserva de Paracas',
+          lugar_salida: 'Muelle Secundario'
+        }
+      ];
+      
+      setProximasSalidas(salidasDemostracion);
+      setLoadError("Error al cargar datos de próximas salidas");
     }
-  } catch (error) {
-    console.error('❌ Error al cargar próximas salidas:', error);
-    console.error('URL intentada:', `${endpoints.instanciaTour.vendedorFiltrar}?fecha_inicio=${format(new Date(), 'yyyy-MM-dd')}&estado=PROGRAMADO`);
-  }
-};
+  };
   
   // Función para generar estadísticas diarias a partir de las reservas
-  const generarEstadisticasDiarias = (reservas: Reserva[]) => {
+  const generarEstadisticasDiarias = useCallback((reservas: Reserva[]) => {
+    console.log('🔄 Generando estadísticas diarias a partir de reservas');
+    
     const hoy = new Date();
     const ultimoMes = Array.from({ length: 30 }, (_, i) => {
       const fecha = subDays(hoy, 29 - i);
@@ -1262,13 +1405,26 @@ const VendedorDashboard: React.FC = () => {
       
       // Filtrar reservas de esta fecha
       const reservasDelDia = reservas.filter(r => {
-        const fechaReserva = r.fecha_tour ? r.fecha_tour.split('/').reverse().join('-') : '';
+        // Convertir formato DD/MM/YYYY a YYYY-MM-DD para comparar
+        const fechaReserva = r.fecha_tour ? 
+          r.fecha_tour.split('/').reverse().join('-') : '';
+        
         return fechaReserva === fechaFormato;
       });
       
-      // Calcular valores
+      // Calcular estadísticas
       const totalVentas = reservasDelDia.reduce((sum, r) => sum + r.total_pagar, 0);
-      const totalPasajeros = reservasDelDia.length * 2; // Estimación: 2 pasajeros por reserva en promedio
+      
+      // Calcular total de pasajeros
+      let totalPasajeros = 0;
+      reservasDelDia.forEach(r => {
+        if (r.cantidad_pasajes && Array.isArray(r.cantidad_pasajes)) {
+          totalPasajeros += r.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
+        } else {
+          // Si no hay detalle de pasajes, estimar 2 por reserva
+          totalPasajeros += 2;
+        }
+      });
       
       return {
         fecha: format(fecha, 'dd/MM', { locale: es }),
@@ -1280,10 +1436,13 @@ const VendedorDashboard: React.FC = () => {
     });
     
     setVentasPorDia(ultimoMes);
-  };
+    console.log(`📊 Estadísticas generadas para ${ultimoMes.length} días`);
+  }, []);
   
   // Función para generar estadísticas de tours a partir de las reservas
-  const generarEstadisticasTours = (reservas: Reserva[]) => {
+  const generarEstadisticasTours = useCallback((reservas: Reserva[]) => {
+    console.log('🔄 Generando estadísticas por tour');
+    
     // Agrupar por nombre de tour
     const tourCounts: {[key: string]: number} = {};
     let totalReservas = 0;
@@ -1295,17 +1454,21 @@ const VendedorDashboard: React.FC = () => {
     });
     
     // Convertir a porcentajes
-    const resultado: MetodoPagoStats[] = Object.entries(tourCounts).map(([nombre, cantidad], index) => ({
-      nombre,
-      valor: Math.round((cantidad / totalReservas) * 100),
-      color: colorsPie[index % colorsPie.length]
-    }));
+    const resultado: MetodoPagoStats[] = Object.entries(tourCounts)
+      .map(([nombre, cantidad], index) => ({
+        nombre,
+        valor: totalReservas > 0 ? Math.round((cantidad / totalReservas) * 100) : 0,
+        color: colorsPie[index % colorsPie.length]
+      }));
     
     setVentasPorTour(resultado);
-  };
+    console.log(`📊 Estadísticas generadas para ${resultado.length} tipos de tours`);
+  }, []);
   
   // Función para generar estadísticas de métodos de pago
-  const generarEstadisticasMetodosPago = (pagos: Pago[]) => {
+  const generarEstadisticasMetodosPago = useCallback((pagos: Pago[]) => {
+    console.log('🔄 Generando estadísticas por método de pago');
+    
     // Agrupar por método de pago
     const metodoPagoCounts: {[key: string]: number} = {};
     let totalPagos = 0;
@@ -1319,23 +1482,31 @@ const VendedorDashboard: React.FC = () => {
     });
     
     // Convertir a porcentajes
-    const resultado: MetodoPagoStats[] = Object.entries(metodoPagoCounts).map(([nombre, cantidad], index) => ({
-      nombre,
-      valor: Math.round((cantidad / totalPagos) * 100) || 0,
-      color: colorsPie[index % colorsPie.length]
-    }));
+    const resultado: MetodoPagoStats[] = Object.entries(metodoPagoCounts)
+      .map(([nombre, cantidad], index) => ({
+        nombre,
+        valor: totalPagos > 0 ? Math.round((cantidad / totalPagos) * 100) : 0,
+        color: colorsPie[index % colorsPie.length]
+      }));
     
     setVentasPorMetodoPago(resultado);
-  };
+    console.log(`📊 Estadísticas generadas para ${resultado.length} métodos de pago`);
+  }, []);
   
   // Cargar todos los datos
   useEffect(() => {
     const loadDashboardData = async () => {
+      console.log('🔄 Iniciando carga de datos del dashboard');
       setIsLoading(true);
+      setLoadError(null);
+      
       try {
         // Establecer fecha y hora actual
         setCurrentDateTime(format(new Date(), 'yyyy-MM-dd HH:mm:ss'));
         setCurrentUser(user?.nombres || 'Usuario');
+        
+        console.log('👤 Usuario actual:', user?.nombres);
+        console.log('📍 Sede seleccionada:', selectedSede?.nombre);
         
         // Cargar datos en paralelo
         await Promise.all([
@@ -1345,15 +1516,17 @@ const VendedorDashboard: React.FC = () => {
           cargarProximasSalidas()
         ]);
         
+        console.log('✅ Todos los datos cargados correctamente');
       } catch (error) {
-        console.error('Error al cargar datos del dashboard:', error);
+        console.error('❌ Error general al cargar datos del dashboard:', error);
+        setLoadError("Error al cargar datos. Por favor, intente recargar la página.");
       } finally {
         setIsLoading(false);
       }
     };
     
     loadDashboardData();
-  }, [user]);
+  }, [user, selectedSede]);
   
   // Generar estadísticas cuando cambian los datos
   useEffect(() => {
@@ -1361,13 +1534,13 @@ const VendedorDashboard: React.FC = () => {
       generarEstadisticasDiarias(todasLasReservas);
       generarEstadisticasTours(todasLasReservas);
     }
-  }, [todasLasReservas]);
+  }, [todasLasReservas, generarEstadisticasDiarias, generarEstadisticasTours]);
   
   useEffect(() => {
     if (pagosHoy.length > 0) {
       generarEstadisticasMetodosPago(pagosHoy);
     }
-  }, [pagosHoy]);
+  }, [pagosHoy, generarEstadisticasMetodosPago]);
   
   // Calcular estadísticas
   const totalVentasHoy = pagosHoy
@@ -1375,8 +1548,17 @@ const VendedorDashboard: React.FC = () => {
     .reduce((sum, pago) => sum + pago.monto, 0);
     
   const totalReservasHoy = reservasHoy.length;
-  const reservasPendientesHoy = reservasHoy.filter(r => r.estado === 'PENDIENTE').length;
-  const totalPasajerosHoy = reservasHoy.length * 2; // Estimación: 2 pasajeros por reserva
+  const reservasPendientesHoy = reservasHoy.filter(r => r.estado === 'PENDIENTE' || r.estado === 'RESERVADO').length;
+  
+  // Calcular total de pasajeros
+  const totalPasajerosHoy = reservasHoy.reduce((total, reserva) => {
+    if (reserva.cantidad_pasajes && Array.isArray(reserva.cantidad_pasajes)) {
+      return total + reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
+    } else {
+      // Si no hay detalle de pasajes, estimar 2 por reserva
+      return total + 2;
+    }
+  }, 0);
   
   // Filtrar datos según el período seleccionado
   const filtrarDatosPorPeriodo = (): DailyStats[] => {
@@ -1431,7 +1613,7 @@ const VendedorDashboard: React.FC = () => {
   const hoyString = format(new Date(), 'yyyy-MM-dd');
   const salidasHoy = proximasSalidas.filter(s => s.fecha_especifica === hoyString);
   const salidasUrgentes = salidasHoy.filter(s => {
-    const [hora, minuto] = s.hora_inicio.split(':').map(Number);
+    const [hora, minuto] = (s.hora_inicio || '00:00:00').split(':').map(Number);
     const fechaSalida = new Date();
     fechaSalida.setHours(hora, minuto);
     const ahora = new Date();
@@ -1446,6 +1628,11 @@ const VendedorDashboard: React.FC = () => {
   const porcentajeDiario = Math.round((totalVentasDia / metaDiaria) * 100);
   const porcentajeSemanal = Math.round((totalVentasSemana / metaSemanal) * 100);
   const porcentajeMensual = Math.round((totalVentasMes / metaMensual) * 100);
+  
+  // Función para recargar datos manualmente
+  const handleReloadData = () => {
+    window.location.reload();
+  };
   
   if (isLoading) {
     return (
@@ -1472,9 +1659,32 @@ const VendedorDashboard: React.FC = () => {
             <span className="text-gray-500 text-sm">{currentDateTime}</span>
             <span className="text-gray-400">•</span>
             <span className="text-gray-500 text-sm">{currentUser}</span>
+            <button 
+              onClick={handleReloadData}
+              className="ml-2 text-blue-500 hover:text-blue-700"
+              title="Recargar datos"
+            >
+              <FiRefreshCw />
+            </button>
           </div>
         </div>
       </div>
+      
+      {/* Mensaje de error si lo hay */}
+      {loadError && (
+        <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FiAlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {loadError}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1550,7 +1760,7 @@ const VendedorDashboard: React.FC = () => {
               <p className="text-2xl font-bold text-gray-800">{salidasHoy.length}</p>
               <p className="text-xs text-gray-500 mt-1">
                 <span className="font-medium">
-                  {salidasHoy.reduce((sum, s) => sum + (s.cupos_total - s.cupos_disponibles), 0)}
+                  {salidasHoy.reduce((sum, s) => sum + ((s.cupos_total || 0) - s.cupo_disponible), 0)}
                 </span> pasajeros en total
               </p>
             </div>
@@ -1724,7 +1934,11 @@ const VendedorDashboard: React.FC = () => {
             </div>
           </div>
           
-          {viewMode === 'grafico' ? (
+          {datosFiltrados.length === 0 ? (
+            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-md">
+              <p className="text-gray-500">No hay datos disponibles para este período</p>
+            </div>
+          ) : viewMode === 'grafico' ? (
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart
                 data={datosFiltrados}
@@ -1838,77 +2052,93 @@ const VendedorDashboard: React.FC = () => {
             {/* Distribución por tour */}
             <div>
               <h3 className="text-sm font-medium text-gray-600 mb-2">Por tipo de tour</h3>
-              <ResponsiveContainer width="100%" height={150}>
-                <PieChart>
-                  <Pie
-                    data={ventasPorTour}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={60}
-                    fill="#8884d8"
-                    dataKey="valor"
-                    nameKey="nombre"
-                    label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  >
-                    {ventasPorTour.map((entry, index) => (
-                      <Cell key={`cell-tour-${index}`} fill={entry.color} />
+              {ventasPorTour.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <PieChart>
+                      <Pie
+                        data={ventasPorTour}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={60}
+                        fill="#8884d8"
+                        dataKey="valor"
+                        nameKey="nombre"
+                        label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {ventasPorTour.map((entry, index) => (
+                          <Cell key={`cell-tour-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Leyenda */}
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {ventasPorTour.map((item, index) => (
+                      <div key={`legend-tour-${index}`} className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-1" 
+                          style={{ backgroundColor: item.color }}
+                        ></div>
+                        <span className="text-xs text-gray-600">{item.nombre}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              {/* Leyenda */}
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {ventasPorTour.map((item, index) => (
-                  <div key={`legend-tour-${index}`} className="flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-1" 
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span className="text-xs text-gray-600">{item.nombre}</span>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="h-28 flex items-center justify-center bg-gray-50 rounded-md">
+                  <p className="text-gray-500 text-sm">No hay datos disponibles</p>
+                </div>
+              )}
             </div>
             
             {/* Distribución por método de pago */}
             <div>
               <h3 className="text-sm font-medium text-gray-600 mb-2">Por método de pago</h3>
-              <ResponsiveContainer width="100%" height={150}>
-                <PieChart>
-                  <Pie
-                    data={ventasPorMetodoPago}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={60}
-                    fill="#8884d8"
-                    dataKey="valor"
-                    nameKey="nombre"
-                    label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  >
-                    {ventasPorMetodoPago.map((entry, index) => (
-                      <Cell key={`cell-pago-${index}`} fill={entry.color} />
+              {ventasPorMetodoPago.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <PieChart>
+                      <Pie
+                        data={ventasPorMetodoPago}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={60}
+                        fill="#8884d8"
+                        dataKey="valor"
+                        nameKey="nombre"
+                        label={({ nombre, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {ventasPorMetodoPago.map((entry, index) => (
+                          <Cell key={`cell-pago-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Leyenda */}
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {ventasPorMetodoPago.map((item, index) => (
+                      <div key={`legend-pago-${index}`} className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-1" 
+                          style={{ backgroundColor: item.color }}
+                        ></div>
+                        <span className="text-xs text-gray-600">{item.nombre}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              {/* Leyenda */}
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {ventasPorMetodoPago.map((item, index) => (
-                  <div key={`legend-pago-${index}`} className="flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-1" 
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span className="text-xs text-gray-600">{item.nombre}</span>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="h-28 flex items-center justify-center bg-gray-50 rounded-md">
+                  <p className="text-gray-500 text-sm">No hay datos disponibles</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1988,29 +2218,29 @@ const VendedorDashboard: React.FC = () => {
           <div className="p-4">
             <div className="space-y-3">
               {salidasHoy.length > 0 ? salidasHoy.map((salida) => {
-                const [hora, minuto] = salida.hora_inicio.split(':').map(Number);
+                const [hora, minuto] = (salida.hora_inicio || '00:00').split(':').map(Number);
                 const fechaSalida = new Date();
                 fechaSalida.setHours(hora, minuto);
                 const ahora = new Date();
                 const esUrgente = fechaSalida.getTime() - ahora.getTime() < 2 * 60 * 60 * 1000; // 2 horas
                 
-                const ocupacionPorcentaje = ((salida.cupos_total - salida.cupos_disponibles) / salida.cupos_total) * 100;
+                const ocupacionPorcentaje = ((salida.cupos_total || 0) - salida.cupo_disponible) / (salida.cupos_total || 1) * 100;
                 
                 return (
                   <div key={salida.id_instancia} className={`border ${esUrgente ? 'border-red-200 bg-red-50' : 'border-gray-200'} rounded-lg p-3`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-medium text-gray-800 flex items-center">
-                          {salida.nombre_tour}
+                          {salida.nombre_tipo_tour || 'Tour'}
                           {esUrgente && <FiAlertCircle className="ml-2 text-red-500" />}
                         </h3>
                         <div className="text-sm text-gray-500 flex items-center mt-1">
-                          <FiClock className="mr-1" /> {salida.hora_inicio} - {salida.lugar_salida || 'Lugar principal'}
+                          <FiClock className="mr-1" /> {salida.hora_inicio || '--:--'} - {salida.lugar_salida || 'Muelle Principal'}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-sm font-medium ${salida.cupos_disponibles < 3 ? 'text-red-600' : 'text-blue-600'}`}>
-                          {salida.cupos_disponibles} cupos disponibles
+                        <div className={`text-sm font-medium ${salida.cupo_disponible < 3 ? 'text-red-600' : 'text-blue-600'}`}>
+                          {salida.cupo_disponible} cupos disponibles
                         </div>
                         <div className="mt-1 w-24 bg-gray-200 rounded-full h-2">
                           <div 
@@ -2038,7 +2268,10 @@ const VendedorDashboard: React.FC = () => {
                   </div>
                 );
               }) : (
-                <p className="text-center py-4 text-gray-500">No hay salidas programadas para hoy</p>
+                <div className="p-4 text-center">
+                  <p className="text-gray-500">No hay salidas programadas para hoy</p>
+                  <p className="text-sm text-gray-400 mt-1">Las próximas salidas aparecerán aquí</p>
+                </div>
               )}
             </div>
             
@@ -2073,7 +2306,7 @@ const VendedorDashboard: React.FC = () => {
             <span className="text-sm text-gray-800">Nuevo Cliente</span>
           </Link>
           
-          <Link to="/vendedor/pagos/nuevo" className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                 <Link to="/vendedor/pagos/nuevo" className="flex flex-col items-center justify-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
             <div className="bg-purple-100 p-3 rounded-full mb-2">
               <FiCreditCard className="text-purple-600" />
             </div>
@@ -2112,13 +2345,12 @@ const VendedorDashboard: React.FC = () => {
               <span>Métodos de pago</span>
             </div>
             <div className="mt-2 space-y-1">
-              {ventasPorMetodoPago.slice(0, 4).map((metodo, index) => (
+              {ventasPorMetodoPago.length > 0 ? ventasPorMetodoPago.slice(0, 4).map((metodo, index) => (
                 <div key={`metodo-${index}`} className="flex justify-between text-sm">
                   <span>{metodo.nombre}:</span>
                   <span>{metodo.valor}%</span>
                 </div>
-              ))}
-              {ventasPorMetodoPago.length === 0 && (
+              )) : (
                 <div className="text-sm">No hay datos disponibles</div>
               )}
             </div>
@@ -2130,13 +2362,12 @@ const VendedorDashboard: React.FC = () => {
               <span>Tours populares</span>
             </div>
             <div className="mt-2 space-y-1">
-              {ventasPorTour.slice(0, 4).map((tour, index) => (
+              {ventasPorTour.length > 0 ? ventasPorTour.slice(0, 4).map((tour, index) => (
                 <div key={`popular-${index}`} className="flex justify-between text-sm">
                   <span>{tour.nombre}:</span>
                   <span>{tour.valor}%</span>
                 </div>
-              ))}
-              {ventasPorTour.length === 0 && (
+              )) : (
                 <div className="text-sm">No hay datos disponibles</div>
               )}
             </div>
@@ -2148,7 +2379,7 @@ const VendedorDashboard: React.FC = () => {
               <span>Información útil</span>
             </div>
             <div className="mt-2 space-y-1 text-sm">
-              <div>Próxima salida: {salidasHoy.length > 0 ? `${salidasHoy[0].nombre_tour} - ${salidasHoy[0].hora_inicio}` : 'No hay salidas hoy'}</div>
+              <div>Próxima salida: {salidasHoy.length > 0 ? `${salidasHoy[0].nombre_tipo_tour || 'Tour'} - ${salidasHoy[0].hora_inicio || '--:--'}` : 'No hay salidas hoy'}</div>
               <div>Reservas para hoy: {totalReservasHoy}</div>
               <div>Meta de ventas diaria: S/ {metaDiaria.toLocaleString('es-PE')}</div>
               <div>Meta restante: S/ {Math.max(0, metaDiaria - totalVentasHoy).toLocaleString('es-PE')}</div>
