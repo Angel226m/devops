@@ -1236,8 +1236,13 @@ const VendedorDashboard: React.FC = () => {
   const cargarProximasSalidas = async () => {
     try {
       const fechaHoy = format(new Date(), 'yyyy-MM-dd');
-      // Asumiendo que hay un endpoint para instancias por fecha y estado
-      const response = await axios.get(`/api/v1/instancias?fecha_inicio=${fechaHoy}&estado=PROGRAMADO`);
+      
+      // Usar el endpoint correcto para filtrar instancias de tour
+      const response = await axios.post(endpoints.instanciaTour.vendedorFiltrar, {
+        fecha_inicio: fechaHoy,
+        estado: 'PROGRAMADO'
+      });
+      
       if (response.data && response.data.data) {
         setProximasSalidas(response.data.data);
       }
