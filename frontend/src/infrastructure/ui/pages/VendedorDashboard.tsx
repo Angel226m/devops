@@ -1054,7 +1054,7 @@ const VendedorDashboard: React.FC = () => {
   );
 };
 
-export default VendedorDashboard;*/   
+export default VendedorDashboard;*/    
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AppDispatch, RootState } from '../../store';
@@ -1106,7 +1106,6 @@ import {
   FaFilter,
   FaInfoCircle
 } from 'react-icons/fa';
-import ROUTES from '../../../shared/constants/appRoutes';
 
 // Interfaces
 interface Reserva {
@@ -1232,11 +1231,11 @@ const VendedorDashboard: React.FC = () => {
         const fechaInicio = format(hace30Dias, 'yyyy-MM-dd');
         const fechaFin = format(hoy, 'yyyy-MM-dd');
         
-        // Realizar peticiones en paralelo para optimizar carga
+        // Realizar peticiones en paralelo para optimizar carga - CORREGIDO URL
         const [reservasResponse, instanciasResponse, pagosResponse] = await Promise.all([
-          axios.get(`/api/v1${endpoints.reserva.vendedorList}`),
-          axios.get(`/api/v1${endpoints.instanciaTour.vendedorList}`),
-          axios.get(`/api/v1${endpoints.pago.vendedorList}`)
+          axios.get(`/vendedor/reservas`),
+          axios.get(`/vendedor/instancias-tour`),
+          axios.get(`/vendedor/pagos`)
         ]);
         
         // Procesar respuestas
@@ -1527,7 +1526,7 @@ const VendedorDashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Información de fecha y usuario actual */}
       <div className="text-xs text-gray-500 mb-2 text-right">
-        <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-07-01 04:34:09</p>
+        <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-07-01 04:45:20</p>
         <p>Current User's Login: angel06220</p>
       </div>
     
