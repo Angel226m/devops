@@ -68,7 +68,8 @@ if [ $? -eq 0 ]; then
     
     # Limpieza de backups antiguos en B2 (mantener solo 7)
     log_message "Listando backups en B2 para limpieza..."
-    B2_FILES=$(b2 ls --long $B2_BUCKET backups | grep -E 'sistema_tours_[0-9]{4}-[0-9]{2}-[0-9]{2}.*\.sql\.gz' | sort -r)
+    # Corregido: usar file-versions en lugar de ls
+    B2_FILES=$(b2 list-file-versions $B2_BUCKET "backups/" 100 | grep -E 'sistema_tours_[0-9]{4}-[0-9]{2}-[0-9]{2}.*\.sql\.gz' | sort -r)
     
     # Contar el número de archivos
     FILE_COUNT=$(echo "$B2_FILES" | wc -l)
@@ -77,13 +78,15 @@ if [ $? -eq 0 ]; then
     if [ "$FILE_COUNT" -gt 7 ]; then
       # Obtener los archivos a eliminar (mantener los 7 más recientes)
       FILES_TO_DELETE=$(echo "$B2_FILES" | tail -n +8)
+      DELETE_COUNT=$(echo "$FILES_TO_DELETE" | wc -l)
       
-      log_message "Eliminando $(echo "$FILES_TO_DELETE" | wc -l) backups antiguos de B2..."
+      log_message "Eliminando $DELETE_COUNT backups antiguos de B2..."
       echo "$FILES_TO_DELETE" | while read -r line; do
-        FILE_NAME=$(echo $line | awk '{print $6}')
-        if [ ! -z "$FILE_NAME" ]; then
+        FILE_NAME=$(echo $line | awk '{print $1}')
+        FILE_ID=$(echo $line | awk '{print $2}')
+        if [ ! -z "$FILE_NAME" ] && [ ! -z "$FILE_ID" ]; then
           log_message "Eliminando $FILE_NAME de B2..."
-          b2 delete-file-version "backups/$FILE_NAME"
+          b2 delete-file-version "$FILE_NAME" "$FILE_ID"
         fi
       done
     else
