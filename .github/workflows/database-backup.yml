@@ -2,7 +2,7 @@ name: Database Backup
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # Ejecuta a la 1:00 AM UTC todos los días
+     - cron: '29 4 * * *'  # 11:29 PM hora Perú = 4:29 AM UTC
   workflow_dispatch:  # Permite la ejecución manual
 
 jobs:
