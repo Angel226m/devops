@@ -97,24 +97,33 @@ services:
       - frontend
       - paginawebbtour
       - backend
+      
+  # Cambio: Usando una imagen que ya tiene Python instalado
   backup:
-    image: alpine:latest
+    image: python:3.10-alpine
     container_name: db-backup
     volumes:
       - ./scripts:/scripts
       - ./backups:/backups
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - POSTGRES_CONTAINER=sistema-tours-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+      - POSTGRES_DB=sistema_tours
       - B2_KEY_ID=c331dab6a0c1
-      - B2_APP_KEY=tu_application_key_aqui
-      - B2_BUCKET=nombre_de_tu_bucket
+      - B2_APP_KEY=0052d6ba43deba114f2a4f83dda099d5f3d4a01f07
+      - B2_BUCKET=backup_ocean_tours
     command: >
-      sh -c "apk add --no-cache bash docker-cli python3 py3-pip &&
+      sh -c "apk add --no-cache bash docker-cli postgresql-client &&
              pip install b2 &&
+             mkdir -p /backups &&
              chmod +x /scripts/backup-postgres-to-b2.sh &&
-             echo '0 1 * * * /scripts/backup-postgres-to-b2.sh' > /etc/crontabs/root &&
-             crond -f"
-    restart: unless-stopped    
+             echo '0 1 * * * /scripts/backup-postgres-to-b2.sh > /backups/cron.log 2>&1' > /etc/crontabs/root &&
+             crond -f -d 8"
+    restart: unless-stopped
+    networks:
+      - backend-network
 
 volumes:
   postgres_data:
