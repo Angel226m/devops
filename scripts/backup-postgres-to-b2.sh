@@ -12,7 +12,8 @@ B2_KEY_ID=c331dab6a0c1
 B2_APP_KEY=0052d6ba43deba114f2a4f83dda099d5f3d4a01f07
 B2_BUCKET=OceanTours
 
-DATE=$(date +%Y-%m-%d)
+# Usar fecha con hora para tener backups más específicos
+DATE=$(date +%Y-%m-%d_%H%M%S)
 BACKUP_DIR="/backups"
 BACKUP_FILE="$BACKUP_DIR/sistema_tours_$DATE.sql.gz"
 LOG_FILE="$BACKUP_DIR/backup_log.txt"
@@ -26,22 +27,27 @@ log_message() {
   echo "$(date +"%Y-%m-%d %H:%M:%S"): $1" | tee -a $LOG_FILE
 }
 
-log_message "Iniciando proceso de respaldo completo (estructura + datos)..."
+log_message "==================================================="
+log_message "Iniciando proceso de respaldo completo (formato SQL plano)"
 log_message "Usando contenedor: $POSTGRES_CONTAINER, usuario: $POSTGRES_USER, base de datos: $POSTGRES_DB"
-log_message "Buckblaze bucket: $B2_BUCKET"
+log_message "Bucket Backblaze B2: $B2_BUCKET"
 
-# Ejecutar pg_dump con opciones para asegurar que se incluyan todos los datos
-# --format=custom: formato personalizado que incluye todo
-# --blobs: incluir objetos binarios grandes
-# --verbose: mostrar mensajes detallados
-# --no-owner: sin información de propietario para permitir restauraciones en cualquier DB
-log_message "Ejecutando pg_dump con opciones completas..."
-docker exec $POSTGRES_CONTAINER pg_dump -U $POSTGRES_USER --format=custom --blobs --no-owner --verbose $POSTGRES_DB | gzip > $BACKUP_FILE
+# Ejecutar pg_dump con opciones para formato SQL plano
+log_message "Ejecutando pg_dump con formato SQL plano..."
+docker exec $POSTGRES_CONTAINER pg_dump -U $POSTGRES_USER \
+  --create \
+  --clean \
+  --if-exists \
+  --inserts \
+  --column-inserts \
+  --no-owner \
+  --verbose \
+  $POSTGRES_DB | gzip > $BACKUP_FILE
 
 # Verificar si el backup fue exitoso
 if [ $? -eq 0 ]; then
   BACKUP_SIZE=$(du -h $BACKUP_FILE | cut -f1)
-  log_message "Backup exitoso: $BACKUP_FILE (Tamaño: $BACKUP_SIZE)"
+  log_message "✅ Backup exitoso: $BACKUP_FILE (Tamaño: $BACKUP_SIZE)"
   
   # Autorizar con B2
   log_message "Autorizando con Backblaze B2..."
@@ -54,7 +60,7 @@ if [ $? -eq 0 ]; then
   
   # Verificar si la subida fue exitosa
   if [ $? -eq 0 ]; then
-    log_message "Backup subido correctamente a B2: $B2_PATH"
+    log_message "✅ Backup subido correctamente a B2: $B2_PATH"
     
     # Limpieza de backups antiguos (local)
     log_message "Eliminando backups locales antiguos (más de 7 días)..."
@@ -62,7 +68,7 @@ if [ $? -eq 0 ]; then
     
     # Limpieza de backups antiguos en B2 (mantener solo 7)
     log_message "Listando backups en B2 para limpieza..."
-    B2_FILES=$(b2 ls --long $B2_BUCKET backups | grep -E 'sistema_tours_[0-9]{4}-[0-9]{2}-[0-9]{2}.sql.gz' | sort -r)
+    B2_FILES=$(b2 ls --long $B2_BUCKET backups | grep -E 'sistema_tours_[0-9]{4}-[0-9]{2}-[0-9]{2}.*\.sql\.gz' | sort -r)
     
     # Contar el número de archivos
     FILE_COUNT=$(echo "$B2_FILES" | wc -l)
@@ -84,10 +90,11 @@ if [ $? -eq 0 ]; then
       log_message "No hay necesidad de eliminar backups antiguos en B2 (solo hay $FILE_COUNT)"
     fi
   else
-    log_message "ERROR: Falló la subida a B2"
+    log_message "❌ ERROR: Falló la subida a B2"
   fi
 else
-  log_message "ERROR: Falló la creación del backup"
+  log_message "❌ ERROR: Falló la creación del backup"
 fi
 
 log_message "Proceso de respaldo completado"
+log_message "==================================================="

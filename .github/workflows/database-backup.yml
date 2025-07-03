@@ -2,7 +2,7 @@ name: Database Backup
 
 on:
   schedule:
-       - cron: '57 5 * * *'  # Ejecuta todos los días a las 12:29 a.m. hora Perú (05:29 UTC)
+    - cron: '11 6 * * *'  # Ejecuta todos los días a la 1:00 AM hora Perú (06:00 UTC)
   workflow_dispatch:  # Permite la ejecución manual
 
 jobs:
@@ -26,4 +26,4 @@ jobs:
       
     - name: Ejecutar backup en servidor
       run: |
-        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd /home/${{ secrets.SERVER_USER }}/sistema-tours && bash scripts/backup-postgres-to-b2.sh"
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd /home/root/sistema-tours && docker exec db-backup /scripts/backup-postgres-to-b2.sh"
