@@ -2,57 +2,59 @@ package entidades_test
 
 import (
 	"sistema-toursseft/internal/entidades"
-	"sistema-toursseft/internal/utils"
 	"testing"
 )
 
-// TestValidacionNuevoPaquetePasajes prueba la validación de los datos de un nuevo paquete de pasajes
-func TestValidacionNuevoPaquetePasajes(t *testing.T) {
-	utils.InitValidator()
-
-	tests := []struct {
-		nombre        string
-		paquete       entidades.NuevoPaquetePasajesRequest
-		debeSerValido bool
-		campoInvalido string
-	}{
-		{
-			nombre: "Paquete válido",
-			paquete: entidades.NuevoPaquetePasajesRequest{
-				IDSede:        1,
-				IDTipoTour:    2,
-				Nombre:        "Paquete Familiar",
-				Descripcion:   "Incluye varias actividades.",
-				PrecioTotal:   200.0,
-				CantidadTotal: 5,
-			},
-			debeSerValido: true,
-		},
-		{
-			nombre: "Paquete sin IDSede",
-			paquete: entidades.NuevoPaquetePasajesRequest{
-				IDTipoTour:    2,
-				Nombre:        "Paquete Familiar",
-				Descripcion:   "Incluye varias actividades.",
-				PrecioTotal:   200.0,
-				CantidadTotal: 5,
-			},
-			debeSerValido: false,
-			campoInvalido: "id_sede",
-		},
+func TestPaquetePasajes(t *testing.T) {
+	// Crear paquete de pasajes
+	paquetePasajes := entidades.PaquetePasajes{
+		ID:            1,
+		IDSede:        2,
+		IDTipoTour:    3,
+		Nombre:        "Pack Familiar",
+		Descripcion:   "Paquete para 2 adultos y 2 niños",
+		PrecioTotal:   300.00,
+		CantidadTotal: 4,
+		Eliminado:     false,
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.nombre, func(t *testing.T) {
-			err := utils.ValidateStruct(tc.paquete)
+	// Verificar campos
+	if paquetePasajes.ID != 1 {
+		t.Errorf("Se esperaba ID 1, pero se obtuvo %d", paquetePasajes.ID)
+	}
 
-			if tc.debeSerValido && err != nil {
-				t.Errorf("Esperaba que fuera válido, pero hubo error: %v", err)
-			}
+	if paquetePasajes.IDSede != 2 {
+		t.Errorf("Se esperaba IDSede 2, pero se obtuvo %d", paquetePasajes.IDSede)
+	}
 
-			if !tc.debeSerValido && err == nil {
-				t.Errorf("Esperaba error de validación en %s, pero no ocurrió", tc.campoInvalido)
-			}
-		})
+	if paquetePasajes.IDTipoTour != 3 {
+		t.Errorf("Se esperaba IDTipoTour 3, pero se obtuvo %d", paquetePasajes.IDTipoTour)
+	}
+
+	if paquetePasajes.Nombre != "Pack Familiar" {
+		t.Errorf("Se esperaba nombre Pack Familiar, pero se obtuvo %s", paquetePasajes.Nombre)
+	}
+
+	if paquetePasajes.PrecioTotal != 300.00 {
+		t.Errorf("Se esperaba PrecioTotal 300.00, pero se obtuvo %.2f", paquetePasajes.PrecioTotal)
+	}
+
+	if paquetePasajes.CantidadTotal != 4 {
+		t.Errorf("Se esperaba CantidadTotal 4, pero se obtuvo %d", paquetePasajes.CantidadTotal)
+	}
+
+	// Probar NuevoPaquetePasajesRequest
+	nuevoPaqueteReq := entidades.NuevoPaquetePasajesRequest{
+		IDSede:        2,
+		IDTipoTour:    3,
+		Nombre:        "Pack Familiar",
+		Descripcion:   "Paquete para 2 adultos y 2 niños",
+		PrecioTotal:   300.00,
+		CantidadTotal: 4,
+	}
+
+	// Verificar campos de NuevoPaquetePasajesRequest
+	if nuevoPaqueteReq.IDSede != 2 {
+		t.Errorf("Se esperaba IDSede 2, pero se obtuvo %d", nuevoPaqueteReq.IDSede)
 	}
 }

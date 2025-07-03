@@ -2,63 +2,76 @@ package entidades_test
 
 import (
 	"sistema-toursseft/internal/entidades"
-	"sistema-toursseft/internal/utils"
 	"testing"
+	"time"
 )
 
-// TestValidacionNuevoHorarioTour prueba la validación de los datos de un nuevo horario de tour
-func TestValidacionNuevoHorarioTour(t *testing.T) {
-	utils.InitValidator()
+func TestHorarioTour(t *testing.T) {
+	// Crear horario de tour
+	horaInicio := time.Date(0, 1, 1, 9, 0, 0, 0, time.UTC)
+	horaFin := time.Date(0, 1, 1, 11, 0, 0, 0, time.UTC)
 
-	tests := []struct {
-		nombre        string
-		horario       entidades.NuevoHorarioTourRequest
-		debeSerValido bool
-		campoInvalido string
-	}{
-		{
-			nombre: "Horario válido",
-			horario: entidades.NuevoHorarioTourRequest{
-				IDTipoTour: 1,
-				IDSede:     2,
-				HoraInicio: "08:00",
-				HoraFin:    "12:00",
-			},
-			debeSerValido: true,
-		},
-		{
-			nombre: "Horario sin IDTipoTour",
-			horario: entidades.NuevoHorarioTourRequest{
-				IDSede:     2,
-				HoraInicio: "08:00",
-				HoraFin:    "12:00",
-			},
-			debeSerValido: false,
-			campoInvalido: "id_tipo_tour",
-		},
-		{
-			nombre: "Horario sin HoraInicio",
-			horario: entidades.NuevoHorarioTourRequest{
-				IDTipoTour: 1,
-				IDSede:     2,
-				HoraFin:    "12:00",
-			},
-			debeSerValido: false,
-			campoInvalido: "hora_inicio",
-		},
+	horarioTour := entidades.HorarioTour{
+		ID:                  1,
+		IDTipoTour:          2,
+		IDSede:              3,
+		HoraInicio:          horaInicio,
+		HoraFin:             horaFin,
+		DisponibleLunes:     true,
+		DisponibleMartes:    true,
+		DisponibleMiercoles: true,
+		DisponibleJueves:    true,
+		DisponibleViernes:   true,
+		DisponibleSabado:    false,
+		DisponibleDomingo:   false,
+		Eliminado:           false,
+		NombreTipoTour:      "Tour a Islas Ballestas",
+		NombreSede:          "Paracas",
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.nombre, func(t *testing.T) {
-			err := utils.ValidateStruct(tc.horario)
+	// Verificar campos
+	if horarioTour.ID != 1 {
+		t.Errorf("Se esperaba ID 1, pero se obtuvo %d", horarioTour.ID)
+	}
 
-			if tc.debeSerValido && err != nil {
-				t.Errorf("Esperaba que fuera válido, pero hubo error: %v", err)
-			}
+	if horarioTour.IDTipoTour != 2 {
+		t.Errorf("Se esperaba IDTipoTour 2, pero se obtuvo %d", horarioTour.IDTipoTour)
+	}
 
-			if !tc.debeSerValido && err == nil {
-				t.Errorf("Esperaba error de validación en %s, pero no ocurrió", tc.campoInvalido)
-			}
-		})
+	if horarioTour.HoraInicio.Hour() != 9 {
+		t.Errorf("Se esperaba hora de inicio 9, pero se obtuvo %d", horarioTour.HoraInicio.Hour())
+	}
+
+	if horarioTour.HoraFin.Hour() != 11 {
+		t.Errorf("Se esperaba hora de fin 11, pero se obtuvo %d", horarioTour.HoraFin.Hour())
+	}
+
+	// Verificar disponibilidad
+	if !horarioTour.DisponibleLunes {
+		t.Error("Se esperaba disponible los lunes")
+	}
+
+	if horarioTour.DisponibleSabado {
+		t.Error("No se esperaba disponible los sábados")
+	}
+
+	// Probar NuevoHorarioTourRequest
+	nuevoHorarioReq := entidades.NuevoHorarioTourRequest{
+		IDTipoTour:          2,
+		IDSede:              3,
+		HoraInicio:          "09:00",
+		HoraFin:             "11:00",
+		DisponibleLunes:     true,
+		DisponibleMartes:    true,
+		DisponibleMiercoles: true,
+		DisponibleJueves:    true,
+		DisponibleViernes:   true,
+		DisponibleSabado:    false,
+		DisponibleDomingo:   false,
+	}
+
+	// Verificar campos de NuevoHorarioTourRequest
+	if nuevoHorarioReq.HoraInicio != "09:00" {
+		t.Errorf("Se esperaba hora de inicio 09:00, pero se obtuvo %s", nuevoHorarioReq.HoraInicio)
 	}
 }

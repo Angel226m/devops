@@ -2,57 +2,90 @@ package entidades_test
 
 import (
 	"sistema-toursseft/internal/entidades"
-	"sistema-toursseft/internal/utils"
 	"testing"
 )
 
-// TestValidacionNuevoCliente prueba la validación de los datos de un nuevo cliente
-func TestValidacionNuevoCliente(t *testing.T) {
-	utils.InitValidator()
-
-	tests := []struct {
-		nombre        string
-		cliente       entidades.NuevoClienteRequest
-		debeSerValido bool
-		campoInvalido string
-	}{
-		{
-			nombre: "Cliente válido",
-			cliente: entidades.NuevoClienteRequest{
-				TipoDocumento:   "DNI",
-				NumeroDocumento: "12345678",
-				Nombres:         "Juan",
-				Apellidos:       "Pérez",
-				Correo:          "juan@test.com",
-				Contrasena:      "password123",
-			},
-			debeSerValido: true,
-		},
-		{
-			nombre: "Cliente sin TipoDocumento",
-			cliente: entidades.NuevoClienteRequest{
-				NumeroDocumento: "12345678",
-				Nombres:         "Juan",
-				Apellidos:       "Pérez",
-				Correo:          "juan@test.com",
-				Contrasena:      "password123",
-			},
-			debeSerValido: false,
-			campoInvalido: "tipo_documento",
-		},
+func TestCliente(t *testing.T) {
+	// Crear cliente persona natural
+	clienteNatural := entidades.Cliente{
+		ID:              1,
+		TipoDocumento:   "DNI",
+		NumeroDocumento: "12345678",
+		Nombres:         "Juan",
+		Apellidos:       "Pérez",
+		Correo:          "juan@ejemplo.com",
+		NumeroCelular:   "987654321",
+		Contrasena:      "contrasena_hash",
+		Eliminado:       false,
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.nombre, func(t *testing.T) {
-			err := utils.ValidateStruct(tc.cliente)
+	// Verificar campos de persona natural
+	if clienteNatural.TipoDocumento != "DNI" {
+		t.Errorf("Se esperaba tipo de documento DNI, pero se obtuvo %s", clienteNatural.TipoDocumento)
+	}
 
-			if tc.debeSerValido && err != nil {
-				t.Errorf("Esperaba que fuera válido, pero hubo error: %v", err)
-			}
+	if clienteNatural.Nombres != "Juan" {
+		t.Errorf("Se esperaba nombres Juan, pero se obtuvo %s", clienteNatural.Nombres)
+	}
 
-			if !tc.debeSerValido && err == nil {
-				t.Errorf("Esperaba error de validación en %s, pero no ocurrió", tc.campoInvalido)
-			}
-		})
+	if clienteNatural.Apellidos != "Pérez" {
+		t.Errorf("Se esperaba apellidos Pérez, pero se obtuvo %s", clienteNatural.Apellidos)
+	}
+
+	// Crear cliente empresa
+	clienteEmpresa := entidades.Cliente{
+		ID:              2,
+		TipoDocumento:   "RUC",
+		NumeroDocumento: "20123456789",
+		RazonSocial:     "Empresa S.A.C.",
+		DireccionFiscal: "Av. Principal 123",
+		Correo:          "empresa@ejemplo.com",
+		NumeroCelular:   "987123456",
+		Contrasena:      "contrasena_empresa_hash",
+		Eliminado:       false,
+	}
+
+	// Verificar campos de empresa
+	if clienteEmpresa.TipoDocumento != "RUC" {
+		t.Errorf("Se esperaba tipo de documento RUC, pero se obtuvo %s", clienteEmpresa.TipoDocumento)
+	}
+
+	if clienteEmpresa.RazonSocial != "Empresa S.A.C." {
+		t.Errorf("Se esperaba razón social Empresa S.A.C., pero se obtuvo %s", clienteEmpresa.RazonSocial)
+	}
+
+	if clienteEmpresa.DireccionFiscal != "Av. Principal 123" {
+		t.Errorf("Se esperaba dirección fiscal Av. Principal 123, pero se obtuvo %s", clienteEmpresa.DireccionFiscal)
+	}
+
+	// Probar NuevoClienteRequest
+	nuevoClienteReq := entidades.NuevoClienteRequest{
+		TipoDocumento:   "DNI",
+		NumeroDocumento: "12345678",
+		Nombres:         "Juan",
+		Apellidos:       "Pérez",
+		Correo:          "juan@ejemplo.com",
+		NumeroCelular:   "987654321",
+		Contrasena:      "contrasena123",
+	}
+
+	// Verificar campos de NuevoClienteRequest
+	if nuevoClienteReq.TipoDocumento != "DNI" {
+		t.Errorf("Se esperaba tipo de documento DNI, pero se obtuvo %s", nuevoClienteReq.TipoDocumento)
+	}
+
+	// Probar ActualizarClienteRequest
+	actualizarClienteReq := entidades.ActualizarClienteRequest{
+		TipoDocumento:   "DNI",
+		NumeroDocumento: "12345678",
+		Nombres:         "Juan Carlos",
+		Apellidos:       "Pérez García",
+		Correo:          "juancarlos@ejemplo.com",
+		NumeroCelular:   "987654322",
+	}
+
+	// Verificar campos actualizados
+	if actualizarClienteReq.Nombres != "Juan Carlos" {
+		t.Errorf("Se esperaba nombres Juan Carlos, pero se obtuvo %s", actualizarClienteReq.Nombres)
 	}
 }

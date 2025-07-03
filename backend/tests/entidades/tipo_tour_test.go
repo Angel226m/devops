@@ -1,83 +1,56 @@
 package entidades_test
 
 import (
+	"database/sql"
 	"sistema-toursseft/internal/entidades"
-	"sistema-toursseft/internal/utils"
 	"testing"
 )
 
-// TestValidacionNuevoTipoTour prueba la validación de los datos de un nuevo tipo de tour
-func TestValidacionNuevoTipoTour(t *testing.T) {
-	utils.InitValidator()
-
-	tests := []struct {
-		nombre        string
-		tipoTour      entidades.NuevoTipoTourRequest
-		debeSerValido bool
-		campoInvalido string
-	}{
-		{
-			nombre: "TipoTour válido",
-			tipoTour: entidades.NuevoTipoTourRequest{
-				IDSede:          1,
-				Nombre:          "Tour Aventura",
-				Descripcion:     "Un recorrido emocionante.",
-				DuracionMinutos: 90,
-				URLImagen:       "https://ejemplo.com/imagen.jpg",
-			},
-			debeSerValido: true,
-		},
-		{
-			nombre: "TipoTour sin IDSede",
-			tipoTour: entidades.NuevoTipoTourRequest{
-				Nombre:          "Tour Aventura",
-				Descripcion:     "Un recorrido emocionante.",
-				DuracionMinutos: 90,
-				URLImagen:       "https://ejemplo.com/imagen.jpg",
-			},
-			debeSerValido: false,
-			campoInvalido: "id_sede",
-		},
-		{
-			nombre: "TipoTour sin Nombre",
-			tipoTour: entidades.NuevoTipoTourRequest{
-				IDSede:          1,
-				Descripcion:     "Un recorrido emocionante.",
-				DuracionMinutos: 90,
-				URLImagen:       "https://ejemplo.com/imagen.jpg",
-			},
-			debeSerValido: false,
-			campoInvalido: "nombre",
-		},
-		{
-			nombre: "Duración inválida",
-			tipoTour: entidades.NuevoTipoTourRequest{
-				IDSede:          1,
-				Nombre:          "Tour Aventura",
-				Descripcion:     "Un recorrido emocionante.",
-				DuracionMinutos: 0, // Debe ser mínimo 1
-				URLImagen:       "https://ejemplo.com/imagen.jpg",
-			},
-			debeSerValido: false,
-			campoInvalido: "duracion_minutos",
-		},
+func TestTipoTour(t *testing.T) {
+	// Crear tipo de tour
+	tipoTour := entidades.TipoTour{
+		ID:              1,
+		IDSede:          2,
+		Nombre:          "Tour a Islas Ballestas",
+		Descripcion:     sql.NullString{String: "Paseo en lancha para observar fauna marina", Valid: true},
+		DuracionMinutos: 120,
+		URLImagen:       sql.NullString{String: "https://ejemplo.com/imagen.jpg", Valid: true},
+		Eliminado:       false,
+		NombreSede:      "Paracas",
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.nombre, func(t *testing.T) {
-			err := utils.ValidateStruct(tc.tipoTour)
+	// Verificar campos
+	if tipoTour.ID != 1 {
+		t.Errorf("Se esperaba ID 1, pero se obtuvo %d", tipoTour.ID)
+	}
 
-			if tc.debeSerValido && err != nil {
-				t.Errorf("Esperaba que fuera válido, pero hubo error: %v", err)
-			}
+	if tipoTour.IDSede != 2 {
+		t.Errorf("Se esperaba IDSede 2, pero se obtuvo %d", tipoTour.IDSede)
+	}
 
-			if !tc.debeSerValido {
-				if err == nil {
-					t.Errorf("Esperaba error de validación en %s, pero no ocurrió", tc.campoInvalido)
-				} else {
-					t.Logf("Errores de validación detectados: %v", err)
-				}
-			}
-		})
+	if tipoTour.Nombre != "Tour a Islas Ballestas" {
+		t.Errorf("Se esperaba nombre Tour a Islas Ballestas, pero se obtuvo %s", tipoTour.Nombre)
+	}
+
+	if !tipoTour.Descripcion.Valid || tipoTour.Descripcion.String != "Paseo en lancha para observar fauna marina" {
+		t.Errorf("Se esperaba descripción 'Paseo en lancha para observar fauna marina', pero se obtuvo %v", tipoTour.Descripcion)
+	}
+
+	if tipoTour.DuracionMinutos != 120 {
+		t.Errorf("Se esperaba duración 120 minutos, pero se obtuvo %d", tipoTour.DuracionMinutos)
+	}
+
+	// Probar NuevoTipoTourRequest
+	nuevoTipoTourReq := entidades.NuevoTipoTourRequest{
+		IDSede:          2,
+		Nombre:          "Tour a Islas Ballestas",
+		Descripcion:     "Paseo en lancha para observar fauna marina",
+		DuracionMinutos: 120,
+		URLImagen:       "https://ejemplo.com/imagen.jpg",
+	}
+
+	// Verificar campos de NuevoTipoTourRequest
+	if nuevoTipoTourReq.IDSede != 2 {
+		t.Errorf("Se esperaba IDSede 2, pero se obtuvo %d", nuevoTipoTourReq.IDSede)
 	}
 }

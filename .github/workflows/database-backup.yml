@@ -1,0 +1,29 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # Ejecuta a la 1:00 AM UTC todos los días
+  workflow_dispatch:  # Permite la ejecución manual
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: Configurar SSH
+      run: |
+        mkdir -p ~/.ssh/
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+      
+    - name: Verificar conexión SSH
+      run: |
+        ssh -v -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'Conexión SSH exitosa'"
+      
+    - name: Ejecutar backup en servidor
+      run: |
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd /home/${{ secrets.SERVER_USER }}/sistema-tours && bash scripts/backup-postgres-to-b2.sh"

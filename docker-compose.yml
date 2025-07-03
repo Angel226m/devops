@@ -97,6 +97,24 @@ services:
       - frontend
       - paginawebbtour
       - backend
+  backup:
+    image: alpine:latest
+    container_name: db-backup
+    volumes:
+      - ./scripts:/scripts
+      - ./backups:/backups
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - B2_KEY_ID=c331dab6a0c1
+      - B2_APP_KEY=tu_application_key_aqui
+      - B2_BUCKET=nombre_de_tu_bucket
+    command: >
+      sh -c "apk add --no-cache bash docker-cli python3 py3-pip &&
+             pip install b2 &&
+             chmod +x /scripts/backup-postgres-to-b2.sh &&
+             echo '0 1 * * * /scripts/backup-postgres-to-b2.sh' > /etc/crontabs/root &&
+             crond -f"
+    restart: unless-stopped    
 
 volumes:
   postgres_data:
