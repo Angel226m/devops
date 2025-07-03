@@ -26,13 +26,17 @@ log_message() {
   echo "$(date +"%Y-%m-%d %H:%M:%S"): $1" | tee -a $LOG_FILE
 }
 
-log_message "Iniciando proceso de respaldo..."
+log_message "Iniciando proceso de respaldo completo (estructura + datos)..."
 log_message "Usando contenedor: $POSTGRES_CONTAINER, usuario: $POSTGRES_USER, base de datos: $POSTGRES_DB"
 log_message "Buckblaze bucket: $B2_BUCKET"
 
-# Ejecutar pg_dump dentro del contenedor de PostgreSQL
-log_message "Ejecutando pg_dump..."
-docker exec $POSTGRES_CONTAINER pg_dump -U $POSTGRES_USER $POSTGRES_DB | gzip > $BACKUP_FILE
+# Ejecutar pg_dump con opciones para asegurar que se incluyan todos los datos
+# --format=custom: formato personalizado que incluye todo
+# --blobs: incluir objetos binarios grandes
+# --verbose: mostrar mensajes detallados
+# --no-owner: sin información de propietario para permitir restauraciones en cualquier DB
+log_message "Ejecutando pg_dump con opciones completas..."
+docker exec $POSTGRES_CONTAINER pg_dump -U $POSTGRES_USER --format=custom --blobs --no-owner --verbose $POSTGRES_DB | gzip > $BACKUP_FILE
 
 # Verificar si el backup fue exitoso
 if [ $? -eq 0 ]; then
