@@ -3,20 +3,15 @@
 # Script para realizar backups de PostgreSQL y subirlos a Backblaze B2
 # Retiene backups por 7 días
 
-# Configuración
-#!/bin/bash
+# Configuración (variables directas)
+POSTGRES_CONTAINER=sistema-tours-db
+POSTGRES_USER=postgres
+POSTGRES_DB=sistema_tours
 
-# Cargar variables de entorno desde .env (si existe)
-ENV_PATH="$(dirname "$0")/.env"
-if [ -f "$ENV_PATH" ]; then
-  set -o allexport
-  source "$ENV_PATH"
-  set +o allexport
-else
-  echo "⚠️ No se encontró archivo .env en $ENV_PATH. Variables deben estar definidas manualmente."
-fi
+B2_KEY_ID=c331dab6a0c1
+B2_APP_KEY=0052d6ba43deba114f2a4f83dda099d5f3d4a01f07
+B2_BUCKET=OceanTours
 
-# Resto del script...
 DATE=$(date +%Y-%m-%d)
 BACKUP_DIR="/backups"
 BACKUP_FILE="$BACKUP_DIR/sistema_tours_$DATE.sql.gz"
@@ -32,22 +27,11 @@ log_message() {
 }
 
 log_message "Iniciando proceso de respaldo..."
-
-# Verificar variables de entorno
-if [ -z "$POSTGRES_CONTAINER" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_DB" ]; then
-  log_message "ADVERTENCIA: Variables de entorno para PostgreSQL no configuradas, usando valores predeterminados"
-  POSTGRES_CONTAINER="sistema-tours-db"
-  POSTGRES_USER="postgres"
-  POSTGRES_DB="sistema_tours"
-fi
-
-if [ -z "$B2_KEY_ID" ] || [ -z "$B2_APP_KEY" ] || [ -z "$B2_BUCKET" ]; then
-  log_message "ERROR: Variables de entorno para Backblaze B2 no configuradas"
-  exit 1
-fi
+log_message "Usando contenedor: $POSTGRES_CONTAINER, usuario: $POSTGRES_USER, base de datos: $POSTGRES_DB"
+log_message "Buckblaze bucket: $B2_BUCKET"
 
 # Ejecutar pg_dump dentro del contenedor de PostgreSQL
-log_message "Ejecutando pg_dump desde el contenedor $POSTGRES_CONTAINER..."
+log_message "Ejecutando pg_dump..."
 docker exec $POSTGRES_CONTAINER pg_dump -U $POSTGRES_USER $POSTGRES_DB | gzip > $BACKUP_FILE
 
 # Verificar si el backup fue exitoso
