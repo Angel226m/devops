@@ -4,6 +4,19 @@
 # Retiene backups por 7 días
 
 # Configuración
+#!/bin/bash
+
+# Cargar variables de entorno desde .env (si existe)
+ENV_PATH="$(dirname "$0")/.env"
+if [ -f "$ENV_PATH" ]; then
+  set -o allexport
+  source "$ENV_PATH"
+  set +o allexport
+else
+  echo "⚠️ No se encontró archivo .env en $ENV_PATH. Variables deben estar definidas manualmente."
+fi
+
+# Resto del script...
 DATE=$(date +%Y-%m-%d)
 BACKUP_DIR="/backups"
 BACKUP_FILE="$BACKUP_DIR/sistema_tours_$DATE.sql.gz"
