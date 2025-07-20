@@ -394,7 +394,7 @@ const LoginPage: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="text-2xl font-bold text-white mt-2"
           >
-            <span className="text-blue-100">Ocean</span>
+            <span className="text-blue-100">NAYARAK</span>
             <span>Tours</span>
           </motion.h1>
           <motion.p 
