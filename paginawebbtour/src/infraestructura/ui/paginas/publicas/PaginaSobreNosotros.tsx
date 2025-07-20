@@ -775,7 +775,7 @@ const PaginaSobreNosotros = () => {
               Más de dos décadas de excelencia
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Desde nuestros humildes inicios en 2003, NAYARAK TOURSha evolucionado para convertirse en la empresa líder en tours marítimos en Pisco, manteniendo siempre nuestra pasión por el océano y el compromiso con nuestras comunidades.
+              Desde nuestros humildes inicios en 2003, NAYARAK TOURS ha evolucionado para convertirse en la empresa líder en tours marítimos en Pisco, manteniendo siempre nuestra pasión por el océano y el compromiso con nuestras comunidades.
             </p>
           </motion.div>
           

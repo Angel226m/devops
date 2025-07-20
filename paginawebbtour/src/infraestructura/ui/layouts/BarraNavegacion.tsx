@@ -450,7 +450,7 @@ const BarraNavegacion = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <span className="text-2xl font-bold text-white">
-              <span className="bg-cyan-500 dark:bg-cyan-600 px-3 py-1 rounded-l-full">Ocean</span>
+              <span className="bg-cyan-500 dark:bg-cyan-600 px-3 py-1 rounded-l-full">NAYARAK</span>
               <span className="bg-ocean-600 dark:bg-ocean-700 px-3 py-1 rounded-r-full ml-[-5px]">Tours</span>
             </span>
           </Link>
