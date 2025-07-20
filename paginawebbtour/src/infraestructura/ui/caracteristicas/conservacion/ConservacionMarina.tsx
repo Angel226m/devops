@@ -115,7 +115,7 @@ const ConservacionMarina: React.FC = () => {
               </div>
               <div className="h-64 md:h-80">
                 <img 
-                  src="https://resonanciacientifica.coscyt.mx/wp-content/uploads/2022/06/word-image-787-1.png" 
+                  src="https://image.salmonexpert.cl/1190519.webp?imageId=1190519&width=960&height=622&format=jpg" 
                   alt="Lobos Marinos Sudamericanos" 
                   className="w-full h-full object-cover"
                 />
