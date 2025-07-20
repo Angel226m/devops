@@ -189,7 +189,7 @@ const PaginaConservacion = () => {
     },
     lobos: {
       titulo: 'Lobos Marinos Sudamericanos',
-      imagen: 'https://images.unsplash.com/photo-1557127275-f8b5ba93e24e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80',
+      imagen: 'https://image.salmonexpert.cl/1190519.webp?imageId=1190519&width=960&height=622&format=jpg',
       descripcion: 'Los lobos marinos (Otaria flavescens) forman grandes colonias en las Islas Ballestas. Estas colonias son vitales para el ecosistema marino y constituyen uno de los principales atractivos de la reserva protegida por SERNANP.',
       protocolos: [
         'Mantenemos distancias adecuadas de las colonias según normativa vigente',
