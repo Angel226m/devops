@@ -82,6 +82,10 @@ import NuevaReservaPage from './infrastructure/ui/pages/NuevaReservaPage';
 import ReservaDetail from './infrastructure/ui/features/reserva/ReservaDetail';
 import ReservaForm from './infrastructure/ui/features/reserva/ReservaForm';
 import ReservaList from './infrastructure/ui/features/reserva/ReservaList';
+
+
+import ReservaAdmin from './infrastructure/ui/pages/ReservaAdmin';
+
 // Componente para rutas protegidas con verificación de sesión mejorada
 const ProtectedRoute: React.FC<{ 
   children: React.ReactElement, 
@@ -321,7 +325,11 @@ const App: React.FC = () => {
           <Route path="tours/nuevo" element={<TourProgramadoForm />} />
           <Route path="tours/editar/:id" element={<TourProgramadoForm isEditing={true} />} />
           <Route path="tours/:id" element={<TourProgramadoDetail />} />
-          
+              {/* NUEVAS RUTAS PARA RESERVAS EN ADMIN */}
+          <Route path="reservas" element={<ReservaAdmin />} />
+          <Route path="reservas/nueva" element={<ReservaForm isEditing={false} />} />
+          <Route path="reservas/editar/:id" element={<ReservaForm isEditing={true} />} />
+          <Route path="reservas/:id" element={<ReservaDetail />} />
           {/* Redirección a dashboard si no se especifica subruta */}
           <Route path="" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
           <Route path="*" element={<NotFoundPage />} />

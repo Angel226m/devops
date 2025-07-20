@@ -182,17 +182,17 @@ const AdminLayout: React.FC = () => {
               </NavLink>
             </li>
             <li>
-              <NavLink 
-                to="/admin/reservas" 
-                className={({isActive}) => 
-                  `flex items-center px-3 py-2 text-sm rounded-md hover:bg-blue-700 hover:text-white ${
-                    isActive ? 'bg-blue-700 text-white' : 'text-white'
-                  }`
-                }
-              >
-                <FiCalendar className="h-4 w-4 mr-3" />
-                Reservas
-              </NavLink>
+                <NavLink 
+    to="/admin/reservas" 
+    className={({isActive}) => 
+      `flex items-center px-3 py-2 text-sm rounded-md hover:bg-blue-700 hover:text-white ${
+        isActive ? 'bg-blue-700 text-white' : 'text-white'
+      }`
+    }
+  >
+    <FiCalendar className="h-4 w-4 mr-3" />
+    Reservas
+  </NavLink>
             </li>
           </ul>
         </nav>

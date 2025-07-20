@@ -75,7 +75,18 @@ export const ROUTES = {
         DETAIL: (id: string | number) => `/admin/paquetes-pasajes/${id}`,
       }
     },
-    
+    // Nuevas rutas para reservas en administración
+    RESERVAS: {
+      LIST: '/admin/reservas',
+      NEW: '/admin/reservas/nueva',
+      EDIT: (id: string | number) => `/admin/reservas/editar/${id}`,
+      DETAIL: (id: string | number) => `/admin/reservas/${id}`,
+      REPORTES: '/admin/reservas/reportes',
+    },
+    // Otras rutas de administración...
+
+
+      
   
   
   },
