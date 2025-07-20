@@ -25,8 +25,8 @@ const Logo = () => {
       </motion.div>
       <div>
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-          <span className="text-ocean-500 dark:text-ocean-400">Ocean</span>
-          <span>Tours</span>
+          <span className="text-ocean-500 dark:text-ocean-400">NAYARAK</span>
+          <span>Tours</span> 
         </h1>
         <p className="text-xs text-gray-600 dark:text-gray-400">Pisco, Perú</p>
       </div>

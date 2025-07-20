@@ -45,7 +45,7 @@ const AdminLayout: React.FC = () => {
           <div className="flex items-center">
             <FiAnchor className="h-8 w-8 mr-2" />
             <div>
-              <h2 className="text-xl font-bold">OceanTours</h2>
+              <h2 className="text-xl font-bold">NAYARAKTOURS</h2>
               <p className="text-xs text-blue-300">Panel de Administración</p>
             </div>
           </div>

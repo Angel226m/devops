@@ -73,7 +73,7 @@ const OceanLogo = () => {
           transition={{ duration: 0.8 }}
           className="text-3xl font-bold text-gray-800"
         >
-          <span className="text-cyan-600">Ocean</span>
+          <span className="text-cyan-600">NAYARAK</span>
           <span>Tours</span>
         </motion.h1>
         <motion.p 
