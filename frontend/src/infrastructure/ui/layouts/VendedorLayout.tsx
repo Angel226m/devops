@@ -264,7 +264,7 @@ const VendedorLayout: React.FC = () => {
         <div className="p-4 border-b border-blue-700 flex items-center space-x-2">
           <FiAnchor className="text-white text-xl" />
           <div>
-            <h2 className="text-lg font-bold">Ocean Tours</h2>
+            <h2 className="text-lg font-bold">NAYARAK TOURS</h2>
             <p className="text-xs text-blue-200">Panel de Ventas</p>
           </div>
         </div>

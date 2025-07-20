@@ -41,7 +41,7 @@ const ConservacionMarina: React.FC = () => {
             {t('conservacion.titulo', 'Conservación y Protección Marina')}
           </motion.h2>
           <motion.p variants={itemVariants} className="text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            {t('conservacion.subtitulo', 'En Ocean Tours, implementamos protocolos rigurosos para preservar el ecosistema marino de Paracas y las Islas Ballestas, controlando el impacto de nuestras visitas y protegiendo la fauna local.')}
+            {t('conservacion.subtitulo', 'En NAYARAK TOURS, implementamos protocolos rigurosos para preservar el ecosistema marino de Paracas y las Islas Ballestas, controlando el impacto de nuestras visitas y protegiendo la fauna local.')}
           </motion.p>
         </motion.div>
 

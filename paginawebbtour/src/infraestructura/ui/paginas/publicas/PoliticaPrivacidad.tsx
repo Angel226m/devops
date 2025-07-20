@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const PoliticaPrivacidad: React.FC = () => {
   useEffect(() => {
     // Actualizar el título de la página
-    document.title = "Política de Privacidad - Ocean Tours";
+    document.title = "Política de Privacidad - NAYARAK TOURS";
     
     // Desplazar al inicio de la página
     window.scrollTo(0, 0);
@@ -22,7 +22,7 @@ const PoliticaPrivacidad: React.FC = () => {
 
           <div className="prose prose-blue max-w-none">
             <p>
-              En Ocean Tours, valoramos y respetamos su privacidad. Esta Política de Privacidad explica cómo recopilamos, utilizamos, compartimos y protegemos su información personal cuando utiliza nuestro sitio web y servicios de reserva.
+              En NAYARAK TOURS, valoramos y respetamos su privacidad. Esta Política de Privacidad explica cómo recopilamos, utilizamos, compartimos y protegemos su información personal cuando utiliza nuestro sitio web y servicios de reserva.
             </p>
             <p>
               Al utilizar nuestro sitio web y servicios, usted acepta las prácticas descritas en esta Política de Privacidad.
@@ -218,7 +218,7 @@ const PoliticaPrivacidad: React.FC = () => {
               No somos responsables de las prácticas de privacidad o el contenido de estos sitios web. Le recomendamos que revise las políticas de privacidad de cualquier sitio web que visite desde nuestro sitio.
             </p>
             <p>
-              La inclusión de cualquier enlace no implica respaldo o aprobación del sitio vinculado por parte de Ocean Tours.
+              La inclusión de cualquier enlace no implica respaldo o aprobación del sitio vinculado por parte de NAYARAK TOURS.
             </p>
 
             <h2>11. Cookies y Tecnologías Similares</h2>
@@ -266,7 +266,7 @@ const PoliticaPrivacidad: React.FC = () => {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} Ocean Tours. Todos los derechos reservados.
+              © {new Date().getFullYear()} NAYARAK TOURS. Todos los derechos reservados.
             </p>
           </div>
         </div>

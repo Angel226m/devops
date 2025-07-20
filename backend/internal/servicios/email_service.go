@@ -43,7 +43,7 @@ func NewEmailService() (*EmailService, error) {
 
 	fromName := os.Getenv("EMAIL_FROM_NAME")
 	if fromName == "" {
-		fromName = "Ocean Tours" // Nombre de remitente
+		fromName = "NAYARAK TOURS" // Nombre de remitente
 	}
 
 	clienteAppURL := os.Getenv("CLIENTE_APP_URL")
@@ -89,7 +89,7 @@ func (s *EmailService) EnviarCorreoRecuperacionContrasena(email, token, nombreDe
 	from := fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail)
 
 	// Construir el asunto
-	subject := "Recuperación de contraseña - Ocean Tours"
+	subject := "Recuperación de contraseña - NAYARAK TOURS"
 
 	// Construir el cuerpo HTML
 	htmlBody := fmt.Sprintf(`
@@ -126,7 +126,7 @@ func (s *EmailService) EnviarCorreoRecuperacionContrasena(email, token, nombreDe
 				<div class="footer">
 					<p>Este es un correo automático, por favor no respondas a este mensaje.</p>
 					<p>Fecha y hora: %s</p>
-					<p>&copy; %d Ocean Tours</p>
+					<p>&copy; %d NAYARAK TOURS</p>
 				</div>
 			</div>
 		</body>

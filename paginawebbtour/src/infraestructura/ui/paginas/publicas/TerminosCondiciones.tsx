@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const PaginaTerminosCondiciones: React.FC = () => {
   useEffect(() => {
     // Actualizar el título de la página
-    document.title = "Términos y Condiciones - Ocean Tours";
+    document.title = "Términos y Condiciones - NAYARAK TOURS";
     
     // Desplazar al inicio de la página
     window.scrollTo(0, 0);
@@ -22,14 +22,14 @@ const PaginaTerminosCondiciones: React.FC = () => {
 
           <div className="prose prose-blue max-w-none">
             <p>
-              Bienvenido a Ocean Tours. Estos términos y condiciones rigen el uso de nuestro sitio web y servicios de reservas.
+              Bienvenido a NAYARAK TOURS. Estos términos y condiciones rigen el uso de nuestro sitio web y servicios de reservas.
               Al acceder a nuestro sitio web y utilizar nuestros servicios, usted acepta cumplir con estos términos y condiciones en su totalidad.
               Si no está de acuerdo con estos términos y condiciones, por favor, no utilice nuestro sitio web ni nuestros servicios.
             </p>
 
             <h2>1. Definiciones</h2>
             <p>
-              <strong>"Nosotros", "nos", "nuestro"</strong> se refiere a Ocean Tours, una empresa registrada en Perú.
+              <strong>"Nosotros", "nos", "nuestro"</strong> se refiere a NAYARAK TOURS, una empresa registrada en Perú.
               <br />
               <strong>"Sitio web"</strong> se refiere a https://reservas.angelproyect.com/ y todos sus subdominios.
               <br />

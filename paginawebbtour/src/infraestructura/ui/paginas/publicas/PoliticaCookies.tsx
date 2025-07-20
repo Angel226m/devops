@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const PoliticaCookies: React.FC = () => {
   useEffect(() => {
     // Actualizar el título de la página
-    document.title = "Política de Cookies - Ocean Tours";
+    document.title = "Política de Cookies - NAYARAK TOURS";
     
     // Desplazar al inicio de la página
     window.scrollTo(0, 0);
@@ -22,7 +22,7 @@ const PoliticaCookies: React.FC = () => {
 
           <div className="prose prose-blue max-w-none">
             <p>
-              Esta Política de Cookies explica cómo Ocean Tours ("nosotros", "nos", "nuestro") utiliza cookies y tecnologías similares en nuestro sitio web https://reservas.angelproyect.com/ y cualquier otro sitio web operado por nosotros (colectivamente, el "Sitio").
+              Esta Política de Cookies explica cómo NAYARAK TOURS ("nosotros", "nos", "nuestro") utiliza cookies y tecnologías similares en nuestro sitio web https://reservas.angelproyect.com/ y cualquier otro sitio web operado por nosotros (colectivamente, el "Sitio").
             </p>
             <p>
               Le recomendamos que lea esta política junto con nuestra <Link to="/privacidad" className="text-blue-600 hover:underline">Política de Privacidad</Link>, que explica cómo utilizamos la información personal.
@@ -308,7 +308,7 @@ const PoliticaCookies: React.FC = () => {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} Ocean Tours. Todos los derechos reservados.
+              © {new Date().getFullYear()} NAYARAK TOURS. Todos los derechos reservados.
             </p>
           </div>
         </div>

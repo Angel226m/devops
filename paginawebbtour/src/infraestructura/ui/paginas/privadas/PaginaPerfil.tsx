@@ -1106,7 +1106,7 @@ const PaginaPerfil = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-8 text-center text-sm text-gray-500"
           >
-            <p>© {new Date().getFullYear()} Ocean Tours. Última actualización: {new Date().toLocaleDateString()}</p>
+            <p>© {new Date().getFullYear()} NAYARAK TOURS. Última actualización: {new Date().toLocaleDateString()}</p>
           </motion.div>
         </motion.div>
       </div>

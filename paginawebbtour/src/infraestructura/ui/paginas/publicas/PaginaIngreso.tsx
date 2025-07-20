@@ -183,7 +183,7 @@ const PaginaIngreso = () => {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <p className="text-center text-xs text-gray-500">
-            © {new Date().getFullYear()} Ocean Tours. Todos los derechos reservados.
+            © {new Date().getFullYear()} NAYARAK TOURS. Todos los derechos reservados.
           </p>
         </motion.div>
       </div>

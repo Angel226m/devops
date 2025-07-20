@@ -536,7 +536,7 @@ const PaginaConservacion = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="text-xl text-gray-700 leading-relaxed"
             >
-              En Ocean Tours, creemos que el turismo responsable debe contribuir a la preservación de los ecosistemas marinos y el bienestar de las comunidades locales.
+              En NAYARAK TOURS, creemos que el turismo responsable debe contribuir a la preservación de los ecosistemas marinos y el bienestar de las comunidades locales.
             </motion.p>
           </div>
         </div>
