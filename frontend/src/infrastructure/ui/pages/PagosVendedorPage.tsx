@@ -1,3 +1,4 @@
+ 
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
@@ -103,26 +104,25 @@ const PagosVendedorPage: React.FC = () => {
           throw new Error("Usuario no tiene sede asignada");
         }
         
-        // Extraer solo el ID de la sede si es un objeto
-        const sedeId = typeof selectedSede === 'object' ? selectedSede.id_sede : selectedSede;
-        
-        // Intentar obtener los pagos usando la ruta correcta: pagos/sede/:idSede
+        // Usar la ruta general de pagos que automáticamente filtra por la sede del vendedor
         try {
-          const response = await axios.get(endpoints.pago.vendedorListBySede(sedeId), {
-            params: {
-              fecha_inicio: dateRange.startDate,
-              fecha_fin: dateRange.endDate
-            }
-          });
+          // Usamos el endpoint vendedorList en lugar de vendedorListBySede
+          const response = await axios.get(endpoints.pago.vendedorList);
           
           if (response.data && response.data.data) {
             setPagos(response.data.data);
           } else {
             setPagos([]);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error al cargar pagos:', error);
-          setApiError("Error al cargar pagos de la sede. Se están mostrando datos de ejemplo.");
+          
+          if (error.response && error.response.data && error.response.data.message) {
+            setApiError(error.response.data.message);
+          } else {
+            setApiError("Error al cargar pagos. Se están mostrando datos de ejemplo.");
+          }
+          
           setPagos(loadSampleData());
         }
         
@@ -195,15 +195,15 @@ const PagosVendedorPage: React.FC = () => {
   };
   
   const filteredPagos = pagos.filter(pago => 
-    pago.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pago.tour.toLowerCase().includes(searchTerm.toLowerCase())
+    pago.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pago.tour?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Calcular totales para las tarjetas de resumen
   const totales = {
-    efectivo: pagos.filter(p => p.metodo_pago === 'Efectivo').reduce((sum, p) => sum + p.monto, 0),
-    tarjeta: pagos.filter(p => p.metodo_pago === 'Tarjeta').reduce((sum, p) => sum + p.monto, 0),
-    transferencia: pagos.filter(p => p.metodo_pago === 'Transferencia').reduce((sum, p) => sum + p.monto, 0),
+    efectivo: pagos.filter(p => p.metodo_pago === 'Efectivo' || p.metodo_pago === 'EFECTIVO').reduce((sum, p) => sum + p.monto, 0),
+    tarjeta: pagos.filter(p => p.metodo_pago === 'Tarjeta' || p.metodo_pago === 'TARJETA').reduce((sum, p) => sum + p.monto, 0),
+    transferencia: pagos.filter(p => p.metodo_pago === 'Transferencia' || p.metodo_pago === 'TRANSFERENCIA').reduce((sum, p) => sum + p.monto, 0),
     total: pagos.reduce((sum, p) => sum + p.monto, 0)
   };
   
@@ -490,9 +490,12 @@ const PagosVendedorPage: React.FC = () => {
                       required
                     >
                       <option value="">Seleccionar método</option>
-                      <option value="Efectivo">Efectivo</option>
-                      <option value="Tarjeta">Tarjeta</option>
-                      <option value="Transferencia">Transferencia</option>
+                      <option value="EFECTIVO">Efectivo</option>
+                      <option value="TARJETA">Tarjeta</option>
+                      <option value="TRANSFERENCIA">Transferencia</option>
+                      <option value="YAPE">Yape</option>
+                      <option value="PLIN">Plin</option>
+                      <option value="DEPOSITO">Depósito</option>
                     </select>
                   </div>
                   <div>
@@ -502,9 +505,10 @@ const PagosVendedorPage: React.FC = () => {
                       required
                     >
                       <option value="">Seleccionar canal</option>
-                      <option value="Oficina">Oficina</option>
-                      <option value="Web">Web</option>
-                      <option value="Banco">Banco</option>
+                      <option value="LOCAL">Oficina</option>
+                      <option value="WEB">Web</option>
+                      <option value="APP">App</option>
+                      <option value="TELEFONO">Teléfono</option>
                     </select>
                   </div>
                   <div>
