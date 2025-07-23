@@ -267,7 +267,6 @@ func main() {
 	rutas.SetupRoutes(
 		router,
 		cfg,
-		db,
 		authController,
 		usuarioController,
 		idiomaController,
