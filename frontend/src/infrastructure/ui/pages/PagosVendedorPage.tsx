@@ -380,10 +380,7 @@ const PagosVendedorPage: React.FC = () => {
     <div className="py-6 px-4 space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto">
         {/* Información de fecha y usuario actual */}
-        <div className="text-xs text-gray-500 mb-2 text-right">
-          <p>Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {getCurrentDateTimeUTC()}</p>
-          <p>Current User's Login: {user?.nombres || 'Angel226m'}</p>
-        </div>
+         
         
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">Gestión de Pagos</h1>
