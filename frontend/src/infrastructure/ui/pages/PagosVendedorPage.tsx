@@ -44,6 +44,51 @@ const PagosVendedorPage: React.FC = () => {
     return now.toISOString().replace('T', ' ').substring(0, 19);
   };
   
+  // Cargar datos de ejemplo cuando hay un error
+  const loadSampleData = () => {
+    return [
+      { 
+        id_pago: 1,
+        id_reserva: 101,
+        cliente: 'Juan Pérez', 
+        tour: 'Islas Ballestas', 
+        fecha_pago: '2025-06-09', 
+        metodo_pago: 'Efectivo', 
+        canal_pago: 'Oficina',
+        monto: 150.00,
+        estado: 'PROCESADO',
+        comprobante: 'Boleta',
+        numero_comprobante: 'B-001-123'
+      },
+      { 
+        id_pago: 2, 
+        id_reserva: 102,
+        cliente: 'María López', 
+        tour: 'Reserva de Paracas', 
+        fecha_pago: '2025-06-08', 
+        metodo_pago: 'Tarjeta', 
+        canal_pago: 'Web',
+        monto: 100.00,
+        estado: 'PROCESADO',
+        comprobante: 'Factura',
+        numero_comprobante: 'F-001-456'
+      },
+      { 
+        id_pago: 3, 
+        id_reserva: 103,
+        cliente: 'Carlos Rodríguez', 
+        tour: 'Islas Ballestas', 
+        fecha_pago: '2025-06-07', 
+        metodo_pago: 'Transferencia', 
+        canal_pago: 'Banco',
+        monto: 200.00,
+        estado: 'PENDIENTE',
+        comprobante: 'Pendiente',
+        numero_comprobante: null
+      }
+    ];
+  };
+  
   useEffect(() => {
     const fetchPagos = async () => {
       try {
@@ -58,86 +103,44 @@ const PagosVendedorPage: React.FC = () => {
         // Extraer solo el ID de la sede si es un objeto
         const sedeId = typeof selectedSede === 'object' ? selectedSede.id_sede : selectedSede;
         
-        // Usar la ruta correcta de la API según la información del router
-        // Primero intentamos con la ruta básica
-        try {
-          const response = await axios.get(endpoints.pago.vendedorList, {
-            params: {
-              fecha_inicio: dateRange.startDate,
-              fecha_fin: dateRange.endDate
-              // No enviamos id_sede como parámetro, pues parece que la API no lo espera
-            }
-          });
-          
-          if (response.data && response.data.data) {
-            setPagos(response.data.data);
-          } else {
-            setPagos([]);
+        // Obtener los pagos - Por ahora usamos datos de ejemplo ya que la API está dando errores
+        setApiError("La API de pagos está devolviendo errores (400 Bad Request). Se están mostrando datos de ejemplo.");
+        setPagos(loadSampleData());
+        
+        /* Intentos a la API que no funcionan:
+        
+        // Intento 1: Ruta simple sin parámetros adicionales
+        const response = await axios.get('/api/v1/vendedor/pagos');
+        
+        // Intento 2: Ruta con filtro de fechas
+        const response = await axios.get('/api/v1/vendedor/pagos', {
+          params: {
+            fecha_inicio: dateRange.startDate,
+            fecha_fin: dateRange.endDate
           }
-        } catch (error) {
-          console.error('Error en primera ruta, intentando con ruta alternativa');
-          
-          // Si falla, intentamos con la ruta específica de sede
-          const response = await axios.get(`/api/v1/vendedor/pagos/sede/${sedeId}`, {
-            params: {
-              fecha_inicio: dateRange.startDate,
-              fecha_fin: dateRange.endDate
-            }
-          });
-          
-          if (response.data && response.data.data) {
-            setPagos(response.data.data);
-          } else {
-            setPagos([]);
+        });
+        
+        // Intento 3: Ruta específica de sede 
+        const response = await axios.get(`/api/v1/vendedor/pagos/sede/${sedeId}`, {
+          params: {
+            fecha_inicio: dateRange.startDate,
+            fecha_fin: dateRange.endDate
           }
+        });
+        
+        if (response.data && response.data.data) {
+          setPagos(response.data.data);
+        } else {
+          setPagos([]);
         }
+        */
         
       } catch (error: any) {
         console.error('Error al cargar pagos:', error);
         setApiError(error.response?.data?.message || error.message || 'Error al cargar los pagos');
         
         // Usar datos de ejemplo en caso de error
-        setPagos([
-          { 
-            id_pago: 1,
-            id_reserva: 101,
-            cliente: 'Juan Pérez', 
-            tour: 'Islas Ballestas', 
-            fecha_pago: '2025-06-09', 
-            metodo_pago: 'Efectivo', 
-            canal_pago: 'Oficina',
-            monto: 150.00,
-            estado: 'PROCESADO',
-            comprobante: 'Boleta',
-            numero_comprobante: 'B-001-123'
-          },
-          { 
-            id_pago: 2, 
-            id_reserva: 102,
-            cliente: 'María López', 
-            tour: 'Reserva de Paracas', 
-            fecha_pago: '2025-06-08', 
-            metodo_pago: 'Tarjeta', 
-            canal_pago: 'Web',
-            monto: 100.00,
-            estado: 'PROCESADO',
-            comprobante: 'Factura',
-            numero_comprobante: 'F-001-456'
-          },
-          { 
-            id_pago: 3, 
-            id_reserva: 103,
-            cliente: 'Carlos Rodríguez', 
-            tour: 'Islas Ballestas', 
-            fecha_pago: '2025-06-07', 
-            metodo_pago: 'Transferencia', 
-            canal_pago: 'Banco',
-            monto: 200.00,
-            estado: 'PENDIENTE',
-            comprobante: 'Pendiente',
-            numero_comprobante: null
-          }
-        ]);
+        setPagos(loadSampleData());
       } finally {
         setLoading(false);
       }
@@ -287,12 +290,12 @@ const PagosVendedorPage: React.FC = () => {
         
         {/* Mensaje de error de API */}
         {apiError && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
+          <div className="mt-4 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg flex items-start">
             <FaExclamationTriangle className="mt-1 mr-3 flex-shrink-0" />
             <div>
-              <p className="font-medium">Error al cargar los pagos</p>
+              <p className="font-medium">Aviso</p>
               <p className="mt-1">{apiError}</p>
-              <p className="mt-2 text-sm">Se están mostrando datos de ejemplo. Por favor, asegúrate de tener una sede asignada y contacta al administrador si el problema persiste.</p>
+              <p className="mt-2 text-sm">Se están mostrando datos de ejemplo hasta que se corrija el problema con la API.</p>
             </div>
           </div>
         )}
