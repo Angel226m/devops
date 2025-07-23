@@ -58,30 +58,38 @@ const PagosVendedorPage: React.FC = () => {
         // Extraer solo el ID de la sede si es un objeto
         const sedeId = typeof selectedSede === 'object' ? selectedSede.id_sede : selectedSede;
         
-        // Intentar cargar pagos por sede primero
-        let response;
+        // Usar la ruta correcta de la API según la información del router
+        // Primero intentamos con la ruta básica
         try {
-          response = await axios.get(endpoints.pago.vendedorListBySede(sedeId), {
+          const response = await axios.get(endpoints.pago.vendedorList, {
             params: {
               fecha_inicio: dateRange.startDate,
               fecha_fin: dateRange.endDate
+              // No enviamos id_sede como parámetro, pues parece que la API no lo espera
             }
           });
+          
+          if (response.data && response.data.data) {
+            setPagos(response.data.data);
+          } else {
+            setPagos([]);
+          }
         } catch (error) {
-          // Si falla, intentar con el endpoint general
-          response = await axios.get(endpoints.pago.vendedorList, {
+          console.error('Error en primera ruta, intentando con ruta alternativa');
+          
+          // Si falla, intentamos con la ruta específica de sede
+          const response = await axios.get(`/api/v1/vendedor/pagos/sede/${sedeId}`, {
             params: {
-              id_sede: sedeId,
               fecha_inicio: dateRange.startDate,
               fecha_fin: dateRange.endDate
             }
           });
-        }
-        
-        if (response.data && response.data.data) {
-          setPagos(response.data.data);
-        } else {
-          setPagos([]);
+          
+          if (response.data && response.data.data) {
+            setPagos(response.data.data);
+          } else {
+            setPagos([]);
+          }
         }
         
       } catch (error: any) {
