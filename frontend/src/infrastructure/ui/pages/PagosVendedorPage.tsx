@@ -7,7 +7,7 @@ import Table from '../components/Table';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
-import { FaMoneyBillWave, FaSearch, FaPrint, FaFileInvoice, FaFilter, FaEye, FaPlus } from 'react-icons/fa';
+import { FaMoneyBillWave, FaSearch, FaPrint, FaFileInvoice, FaFilter, FaEye, FaPlus, FaExclamationTriangle } from 'react-icons/fa';
 
 interface Pago {
   id_pago: number;
@@ -32,6 +32,7 @@ const PagosVendedorPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPago, setSelectedPago] = useState<Pago | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -47,68 +48,89 @@ const PagosVendedorPage: React.FC = () => {
     const fetchPagos = async () => {
       try {
         setLoading(true);
+        setApiError(null);
         
-        // Aquí iría la llamada real a la API
-        const response = await axios.get(endpoints.pago.vendedorList, {
-          params: {
-            id_sede: selectedSede,
-            fecha_inicio: dateRange.startDate,
-            fecha_fin: dateRange.endDate
-          }
-        });
+        // Verificar si hay sede seleccionada
+        if (!selectedSede) {
+          throw new Error("Usuario no tiene sede asignada");
+        }
+        
+        // Extraer solo el ID de la sede si es un objeto
+        const sedeId = typeof selectedSede === 'object' ? selectedSede.id_sede : selectedSede;
+        
+        // Intentar cargar pagos por sede primero
+        let response;
+        try {
+          response = await axios.get(endpoints.pago.vendedorListBySede(sedeId), {
+            params: {
+              fecha_inicio: dateRange.startDate,
+              fecha_fin: dateRange.endDate
+            }
+          });
+        } catch (error) {
+          // Si falla, intentar con el endpoint general
+          response = await axios.get(endpoints.pago.vendedorList, {
+            params: {
+              id_sede: sedeId,
+              fecha_inicio: dateRange.startDate,
+              fecha_fin: dateRange.endDate
+            }
+          });
+        }
         
         if (response.data && response.data.data) {
           setPagos(response.data.data);
         } else {
-          // Si no hay respuesta de la API, usar datos de ejemplo para desarrollo
-          setTimeout(() => {
-            setPagos([
-              { 
-                id_pago: 1,
-                id_reserva: 101,
-                cliente: 'Juan Pérez', 
-                tour: 'Islas Ballestas', 
-                fecha_pago: '2025-06-09', 
-                metodo_pago: 'Efectivo', 
-                canal_pago: 'Oficina',
-                monto: 150.00,
-                estado: 'PROCESADO',
-                comprobante: 'Boleta',
-                numero_comprobante: 'B-001-123'
-              },
-              { 
-                id_pago: 2, 
-                id_reserva: 102,
-                cliente: 'María López', 
-                tour: 'Reserva de Paracas', 
-                fecha_pago: '2025-06-08', 
-                metodo_pago: 'Tarjeta', 
-                canal_pago: 'Web',
-                monto: 100.00,
-                estado: 'PROCESADO',
-                comprobante: 'Factura',
-                numero_comprobante: 'F-001-456'
-              },
-              { 
-                id_pago: 3, 
-                id_reserva: 103,
-                cliente: 'Carlos Rodríguez', 
-                tour: 'Islas Ballestas', 
-                fecha_pago: '2025-06-07', 
-                metodo_pago: 'Transferencia', 
-                canal_pago: 'Banco',
-                monto: 200.00,
-                estado: 'PENDIENTE',
-                comprobante: 'Pendiente',
-                numero_comprobante: null
-              }
-            ]);
-            setLoading(false);
-          }, 1000);
+          setPagos([]);
         }
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error al cargar pagos:', error);
+        setApiError(error.response?.data?.message || error.message || 'Error al cargar los pagos');
+        
+        // Usar datos de ejemplo en caso de error
+        setPagos([
+          { 
+            id_pago: 1,
+            id_reserva: 101,
+            cliente: 'Juan Pérez', 
+            tour: 'Islas Ballestas', 
+            fecha_pago: '2025-06-09', 
+            metodo_pago: 'Efectivo', 
+            canal_pago: 'Oficina',
+            monto: 150.00,
+            estado: 'PROCESADO',
+            comprobante: 'Boleta',
+            numero_comprobante: 'B-001-123'
+          },
+          { 
+            id_pago: 2, 
+            id_reserva: 102,
+            cliente: 'María López', 
+            tour: 'Reserva de Paracas', 
+            fecha_pago: '2025-06-08', 
+            metodo_pago: 'Tarjeta', 
+            canal_pago: 'Web',
+            monto: 100.00,
+            estado: 'PROCESADO',
+            comprobante: 'Factura',
+            numero_comprobante: 'F-001-456'
+          },
+          { 
+            id_pago: 3, 
+            id_reserva: 103,
+            cliente: 'Carlos Rodríguez', 
+            tour: 'Islas Ballestas', 
+            fecha_pago: '2025-06-07', 
+            metodo_pago: 'Transferencia', 
+            canal_pago: 'Banco',
+            monto: 200.00,
+            estado: 'PENDIENTE',
+            comprobante: 'Pendiente',
+            numero_comprobante: null
+          }
+        ]);
+      } finally {
         setLoading(false);
       }
     };
@@ -142,6 +164,30 @@ const PagosVendedorPage: React.FC = () => {
     }).format(valor);
   };
   
+  // Formatear fecha
+  const formatearFecha = (fecha: string): string => {
+    if (!fecha) return 'No especificada';
+    
+    // Si ya viene en formato DD/MM/YYYY
+    if (fecha.includes('/')) {
+      return fecha;
+    }
+    
+    try {
+      const date = new Date(fecha);
+      if (isNaN(date.getTime())) {
+        return fecha; // Devolver el string original si no es una fecha válida
+      }
+      return date.toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return fecha;
+    }
+  };
+  
   const filteredPagos = pagos.filter(pago => 
     pago.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pago.tour.toLowerCase().includes(searchTerm.toLowerCase())
@@ -158,7 +204,7 @@ const PagosVendedorPage: React.FC = () => {
   const columns = [
     { header: 'Cliente', accessor: 'cliente' },
     { header: 'Tour', accessor: 'tour' },
-    { header: 'Fecha', accessor: 'fecha_pago' },
+    { header: 'Fecha', accessor: (row: Pago) => formatearFecha(row.fecha_pago) },
     { header: 'Método', accessor: 'metodo_pago' },
     { header: 'Canal', accessor: 'canal_pago' },
     { header: 'Monto', accessor: (row: Pago) => formatMoneda(row.monto) },
@@ -230,6 +276,18 @@ const PagosVendedorPage: React.FC = () => {
             <FaPlus /> Registrar Pago
           </Button>
         </div>
+        
+        {/* Mensaje de error de API */}
+        {apiError && (
+          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
+            <FaExclamationTriangle className="mt-1 mr-3 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Error al cargar los pagos</p>
+              <p className="mt-1">{apiError}</p>
+              <p className="mt-2 text-sm">Se están mostrando datos de ejemplo. Por favor, asegúrate de tener una sede asignada y contacta al administrador si el problema persiste.</p>
+            </div>
+          </div>
+        )}
         
         {/* Tarjetas de resumen */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -325,7 +383,7 @@ const PagosVendedorPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500">Fecha:</p>
-                    <p className="font-medium">{selectedPago.fecha_pago}</p>
+                    <p className="font-medium">{formatearFecha(selectedPago.fecha_pago)}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Monto:</p>
