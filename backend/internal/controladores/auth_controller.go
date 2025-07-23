@@ -421,6 +421,7 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 */
 
 // CheckStatus verifica si el usuario tiene una sesión válida
+// CheckStatus verifica si el usuario tiene una sesión válida
 func (c *AuthController) CheckStatus(ctx *gin.Context) {
 	// Logs para depuración
 	fmt.Println("Ejecutando CheckStatus")
@@ -444,11 +445,87 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 		return
 	}
 
-	// CORRECCIÓN: NO sobrescribir el rol, usar el de la BD
+	// CORRECCIÓN: Detectar y corregir discrepancia de rol
+	var rolCorregido bool = false
 	if roleExists && usuario.Rol != userRole.(string) {
 		fmt.Printf("CheckStatus: Detectada discrepancia en rol: BD = %s, Token = %s\n",
 			usuario.Rol, userRole.(string))
-		// Solo registramos la discrepancia, NO modificamos el rol
+
+		// Corregir generando nuevos tokens con el rol correcto de la BD
+		sedeID, sedeExists := ctx.Get("sedeID")
+
+		// Verificar el estado actual del refresh token para mantener su configuración
+		refreshToken, _ := ctx.Cookie("refresh_token")
+		var isRememberMe bool
+		if refreshToken != "" {
+			claims, _ := utils.GetRefreshTokenClaims(refreshToken, ctx.MustGet("config").(*config.Config))
+			if claims != nil {
+				issuedAt := claims.IssuedAt.Time
+				expiresAt := claims.ExpiresAt.Time
+				isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+			}
+		}
+
+		// Generar nuevos tokens con el rol correcto de la BD
+		var token, newRefreshToken string
+
+		// Generar tokens según el rol correcto y la sede
+		if usuario.Rol == "ADMIN" && sedeExists && sedeID.(int) > 0 {
+			// Admin con sede seleccionada
+			token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(
+				userID.(int), sedeID.(int), isRememberMe)
+			fmt.Printf("CheckStatus: Generando tokens para ADMIN con sede %d\n", sedeID.(int))
+		} else if usuario.Rol != "ADMIN" && usuario.IdSede != nil {
+			// Usuario no admin con su sede asignada
+			token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(
+				userID.(int), *usuario.IdSede, isRememberMe)
+			fmt.Printf("CheckStatus: Generando tokens para %s con sede %d\n",
+				usuario.Rol, *usuario.IdSede)
+		} else {
+			// Usuario sin sede (ADMIN sin sede seleccionada)
+			token, newRefreshToken, err = c.authService.GenerateTokensWithoutDb(
+				userID.(int), usuario.Rol, isRememberMe)
+			fmt.Printf("CheckStatus: Generando tokens para %s sin sede\n", usuario.Rol)
+		}
+
+		if err != nil {
+			fmt.Printf("CheckStatus: Error al generar nuevos tokens: %v\n", err)
+			// Continuar con el rol incorrecto, pero al menos intentamos corregirlo
+		} else {
+			// Actualizar cookies con los nuevos tokens
+			ctx.SetSameSite(http.SameSiteNoneMode)
+			ctx.SetCookie(
+				"access_token", // Nombre
+				token,          // Valor
+				60*15,          // Tiempo de vida en segundos (15 minutos)
+				"/",            // Path
+				"",             // Domain
+				true,           // Secure
+				false,          // HttpOnly
+			)
+
+			// Configurar cookie para el refresh token manteniendo la misma duración
+			var refreshExpiry int
+			if isRememberMe {
+				refreshExpiry = 60 * 60 * 24 * 7 // 7 días
+			} else {
+				refreshExpiry = 60 * 60 // 1 hora
+			}
+
+			ctx.SetSameSite(http.SameSiteNoneMode)
+			ctx.SetCookie(
+				"refresh_token", // Nombre
+				newRefreshToken, // Valor
+				refreshExpiry,   // Tiempo de vida en segundos
+				"/",             // Path
+				"",              // Domain
+				true,            // Secure
+				false,           // HttpOnly
+			)
+
+			fmt.Println("CheckStatus: Tokens regenerados con rol correcto")
+			rolCorregido = true
+		}
 	}
 
 	// Para administradores, no incluir sede en la respuesta a menos que tenga una sede seleccionada temporalmente
@@ -463,10 +540,20 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 		sede, _ = c.authService.GetSedeByID(*usuario.IdSede)
 	}
 
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Usuario autenticado", gin.H{
+	// Enviar respuesta con una indicación de si el rol fue corregido
+	responseData := gin.H{
 		"usuario": usuario,
 		"sede":    sede,
-	}))
+	}
+
+	if rolCorregido {
+		responseData["rol_corregido"] = true
+		responseData["mensaje_rol"] = fmt.Sprintf(
+			"Se detectó una discrepancia en el rol (token: %s, BD: %s) y se ha corregido",
+			userRole.(string), usuario.Rol)
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Usuario autenticado", responseData))
 }
 
 // GetUserSedes modificado para menor dependencia en la base de datos
