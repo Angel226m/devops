@@ -23,13 +23,6 @@ interface Pago {
   numero_comprobante?: string | null;
 }
 
-// Interfaz para la sede (ajusta según tu aplicación)
-interface Sede {
-  id_sede: number;
-  nombre: string;
-  // ... otros campos
-}
-
 const PagosVendedorPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, selectedSede } = useSelector((state: RootState) => state.auth);
@@ -55,93 +48,67 @@ const PagosVendedorPage: React.FC = () => {
       try {
         setLoading(true);
         
-        // Manejo correcto cuando selectedSede puede ser null
-        let sedeId: number | null = null;
-        
-        if (selectedSede) {
-          // Si es un objeto, obtenemos el id_sede
-          if (typeof selectedSede === 'object' && selectedSede !== null) {
-            sedeId = selectedSede.id_sede;
-          } 
-          // Si es un número, lo usamos directamente
-          else if (typeof selectedSede === 'number') {
-            sedeId = selectedSede;
+        // Aquí iría la llamada real a la API
+        const response = await axios.get(endpoints.pago.vendedorList, {
+          params: {
+            id_sede: selectedSede,
+            fecha_inicio: dateRange.startDate,
+            fecha_fin: dateRange.endDate
           }
-        }
-        
-        let response;
-        // Si tenemos un ID de sede, usamos la ruta específica para esa sede
-        if (sedeId !== null) {
-          response = await axios.get(`${endpoints.pago.vendedorListBySede}/${sedeId}`, {
-            params: {
-              fecha_inicio: dateRange.startDate,
-              fecha_fin: dateRange.endDate
-            }
-          });
-        } else {
-          // Si no hay sede seleccionada, usamos la ruta general
-          response = await axios.get(endpoints.pago.vendedorList, {
-            params: {
-              fecha_inicio: dateRange.startDate,
-              fecha_fin: dateRange.endDate
-            }
-          });
-        }
+        });
         
         if (response.data && response.data.data) {
           setPagos(response.data.data);
         } else {
-          throw new Error('No se recibieron datos de la API');
+          // Si no hay respuesta de la API, usar datos de ejemplo para desarrollo
+          setTimeout(() => {
+            setPagos([
+              { 
+                id_pago: 1,
+                id_reserva: 101,
+                cliente: 'Juan Pérez', 
+                tour: 'Islas Ballestas', 
+                fecha_pago: '2025-06-09', 
+                metodo_pago: 'Efectivo', 
+                canal_pago: 'Oficina',
+                monto: 150.00,
+                estado: 'PROCESADO',
+                comprobante: 'Boleta',
+                numero_comprobante: 'B-001-123'
+              },
+              { 
+                id_pago: 2, 
+                id_reserva: 102,
+                cliente: 'María López', 
+                tour: 'Reserva de Paracas', 
+                fecha_pago: '2025-06-08', 
+                metodo_pago: 'Tarjeta', 
+                canal_pago: 'Web',
+                monto: 100.00,
+                estado: 'PROCESADO',
+                comprobante: 'Factura',
+                numero_comprobante: 'F-001-456'
+              },
+              { 
+                id_pago: 3, 
+                id_reserva: 103,
+                cliente: 'Carlos Rodríguez', 
+                tour: 'Islas Ballestas', 
+                fecha_pago: '2025-06-07', 
+                metodo_pago: 'Transferencia', 
+                canal_pago: 'Banco',
+                monto: 200.00,
+                estado: 'PENDIENTE',
+                comprobante: 'Pendiente',
+                numero_comprobante: null
+              }
+            ]);
+            setLoading(false);
+          }, 1000);
         }
         
       } catch (error) {
         console.error('Error al cargar pagos:', error);
-        
-        // Datos de ejemplo en caso de error
-        setTimeout(() => {
-          setPagos([
-            { 
-              id_pago: 1,
-              id_reserva: 101,
-              cliente: 'Juan Pérez', 
-              tour: 'Islas Ballestas', 
-              fecha_pago: '2025-06-09', 
-              metodo_pago: 'Efectivo', 
-              canal_pago: 'Oficina',
-              monto: 150.00,
-              estado: 'PROCESADO',
-              comprobante: 'Boleta',
-              numero_comprobante: 'B-001-123'
-            },
-            { 
-              id_pago: 2, 
-              id_reserva: 102,
-              cliente: 'María López', 
-              tour: 'Reserva de Paracas', 
-              fecha_pago: '2025-06-08', 
-              metodo_pago: 'Tarjeta', 
-              canal_pago: 'Web',
-              monto: 100.00,
-              estado: 'PROCESADO',
-              comprobante: 'Factura',
-              numero_comprobante: 'F-001-456'
-            },
-            { 
-              id_pago: 3, 
-              id_reserva: 103,
-              cliente: 'Carlos Rodríguez', 
-              tour: 'Islas Ballestas', 
-              fecha_pago: '2025-06-07', 
-              metodo_pago: 'Transferencia', 
-              canal_pago: 'Banco',
-              monto: 200.00,
-              estado: 'PENDIENTE',
-              comprobante: 'Pendiente',
-              numero_comprobante: null
-            }
-          ]);
-        }, 1000);
-      } finally {
         setLoading(false);
       }
     };
@@ -175,30 +142,6 @@ const PagosVendedorPage: React.FC = () => {
     }).format(valor);
   };
   
-  // Formatear fecha
-  const formatearFecha = (fecha: string): string => {
-    if (!fecha) return 'No especificada';
-    
-    // Si ya viene en formato DD/MM/YYYY
-    if (fecha.includes('/')) {
-      return fecha;
-    }
-    
-    try {
-      const date = new Date(fecha);
-      if (isNaN(date.getTime())) {
-        return fecha; // Devolver el string original si no es una fecha válida
-      }
-      return date.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      return fecha;
-    }
-  };
-  
   const filteredPagos = pagos.filter(pago => 
     pago.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pago.tour.toLowerCase().includes(searchTerm.toLowerCase())
@@ -215,7 +158,7 @@ const PagosVendedorPage: React.FC = () => {
   const columns = [
     { header: 'Cliente', accessor: 'cliente' },
     { header: 'Tour', accessor: 'tour' },
-    { header: 'Fecha', accessor: (row: Pago) => formatearFecha(row.fecha_pago) },
+    { header: 'Fecha', accessor: 'fecha_pago' },
     { header: 'Método', accessor: 'metodo_pago' },
     { header: 'Canal', accessor: 'canal_pago' },
     { header: 'Monto', accessor: (row: Pago) => formatMoneda(row.monto) },
@@ -382,7 +325,7 @@ const PagosVendedorPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-500">Fecha:</p>
-                    <p className="font-medium">{formatearFecha(selectedPago.fecha_pago)}</p>
+                    <p className="font-medium">{selectedPago.fecha_pago}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Monto:</p>
