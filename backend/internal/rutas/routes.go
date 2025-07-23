@@ -1,6 +1,7 @@
 package rutas
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"sistema-toursseft/internal/config"
@@ -20,7 +21,10 @@ import (
 func SetupRoutes(
 	router *gin.Engine,
 	config *config.Config,
+	db *sql.DB, // Agregar la base de datos como parámetro
+
 	authController *controladores.AuthController,
+
 	usuarioController *controladores.UsuarioController,
 	idiomaController *controladores.IdiomaController, // NUEVO CONTROLADOR
 	usuarioIdiomaController *controladores.UsuarioIdiomaController, // Asegúrate de que esté aquí
@@ -59,7 +63,10 @@ func SetupRoutes(
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(middleware.ErrorMiddleware())
 	router.Use(gin.Recovery())
-
+	router.Use(func(c *gin.Context) {
+		c.Set("db", db)
+		c.Next()
+	})
 	// Rutas públicas
 	public := router.Group("/api/v1")
 	{

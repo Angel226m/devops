@@ -6,11 +6,9 @@ import (
 	"net/http"
 	"sistema-toursseft/internal/config"
 	"sistema-toursseft/internal/repositorios"
-	"sistema-toursseft/internal/servicios"
 	"sistema-toursseft/internal/utils"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
@@ -18,8 +16,9 @@ import (
 
 // AuthMiddleware crea un middleware para autenticación JWT de usuarios administrativos
 // AuthMiddleware crea un middleware para autenticación JWT de usuarios administrativos
-func AuthMiddleware(config *config.Config, db *sql.DB) gin.HandlerFunc {
+func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// Agregar logs para depuración
 		fmt.Println("AuthMiddleware: Iniciando verificación de autenticación")
 		fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
 		fmt.Printf("Cookies recibidas: %v\n", ctx.Request.Cookies())
@@ -100,127 +99,83 @@ func AuthMiddleware(config *config.Config, db *sql.DB) gin.HandlerFunc {
 		if claims, ok := token.Claims.(*utils.TokenClaims); ok && token.Valid {
 			fmt.Printf("AuthMiddleware: Token válido para usuario ID: %d, Rol: %s\n", claims.UserID, claims.Role)
 
-			// NUEVO: Verificar el rol contra la base de datos
+			// Obtener información del usuario de la base de datos para verificación
+			db := ctx.MustGet("db").(*sql.DB)
 			userRepo := repositorios.NewUsuarioRepository(db)
 			usuario, err := userRepo.GetByID(claims.UserID)
 
-			var userRole string
-			var sedeID int = 0
-
+			// Si pudimos obtener el usuario de la BD
 			if err == nil && usuario != nil {
-				// Si pudimos obtener el usuario, verificar si hay discrepancia de rol
+				// Verificar si hay discrepancia de rol
 				if usuario.Rol != claims.Role {
-					fmt.Printf("AuthMiddleware: Discrepancia de rol detectada: Token=%s, BD=%s\n",
-						claims.Role, usuario.Rol)
+					fmt.Printf("AuthMiddleware: Detectada discrepancia de rol: BD = %s, Token = %s\n",
+						usuario.Rol, claims.Role)
 
-					// Usar el rol de la base de datos (el correcto)
-					userRole = usuario.Rol
+					// USAR EL ROL DE LA BASE DE DATOS
+					ctx.Set("userID", claims.UserID)
+					ctx.Set("userRole", usuario.Rol) // Usar el rol de la BD, no del token
 
-					// Si el usuario tiene una sede asignada, usarla
-					if usuario.Rol != "ADMIN" && usuario.IdSede != nil {
-						sedeID = *usuario.IdSede
-					} else if claims.SedeID > 0 && usuario.Rol == "ADMIN" {
-						// Si es admin y el token tiene una sede seleccionada, respetarla
-						sedeID = claims.SedeID
+					// Establecer la sede según el rol correcto
+					if usuario.Rol == "ADMIN" && claims.SedeID > 0 {
+						// Admin con sede seleccionada
+						ctx.Set("sedeID", claims.SedeID)
+						ctx.Set("adminConSede", true)
+						fmt.Printf("AuthMiddleware: Admin con sede seleccionada: %d\n", claims.SedeID)
+					} else if usuario.Rol == "ADMIN" {
+						// Admin sin sede específica
+						ctx.Set("adminSinSede", true)
+						fmt.Println("AuthMiddleware: Admin sin sede específica")
+					} else if usuario.IdSede != nil {
+						// Otros roles con su sede asignada
+						ctx.Set("sedeID", *usuario.IdSede)
+						fmt.Printf("AuthMiddleware: Usuario con sede asignada: %d\n", *usuario.IdSede)
 					}
 
-					// Generar nuevos tokens con el rol correcto
-					authService := servicios.NewAuthService(userRepo, nil, config)
-
-					var newToken, newRefreshToken string
-					var tokenErr error
-
-					// Determinar si el refresh token tiene remember_me activo
-					refreshToken, _ := ctx.Cookie("refresh_token")
-					var isRememberMe bool = false
-
-					if refreshToken != "" {
-						refreshClaims, _ := utils.GetRefreshTokenClaims(refreshToken, config)
-						if refreshClaims != nil {
-							issuedAt := refreshClaims.IssuedAt.Time
-							expiresAt := refreshClaims.ExpiresAt.Time
-							isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
-						}
-					}
-
-					// Generar tokens según el rol y sede
-					if sedeID > 0 {
-						newToken, newRefreshToken, tokenErr = authService.GenerateTokensForAdminWithSede(
-							claims.UserID, sedeID, isRememberMe)
-					} else {
-						newToken, newRefreshToken, tokenErr = authService.GenerateTokensWithoutDb(
-							claims.UserID, userRole, isRememberMe)
-					}
-
-					if tokenErr == nil {
-						// Actualizar cookies con los nuevos tokens
-						fmt.Println("AuthMiddleware: Regenerando tokens con rol correcto")
-
-						ctx.SetSameSite(http.SameSiteNoneMode)
-						ctx.SetCookie(
-							"access_token", // Nombre
-							newToken,       // Valor
-							60*15,          // Tiempo de vida (15 min)
-							"/",            // Path
-							"",             // Domain
-							true,           // Secure
-							false,          // HttpOnly
-						)
-
-						var refreshExpiry int
-						if isRememberMe {
-							refreshExpiry = 60 * 60 * 24 * 7 // 7 días
-						} else {
-							refreshExpiry = 60 * 60 // 1 hora
-						}
-
-						ctx.SetSameSite(http.SameSiteNoneMode)
-						ctx.SetCookie(
-							"refresh_token", // Nombre
-							newRefreshToken, // Valor
-							refreshExpiry,   // Tiempo de vida
-							"/",             // Path
-							"",              // Domain
-							true,            // Secure
-							false,           // HttpOnly
-						)
-					} else {
-						fmt.Printf("AuthMiddleware: Error al regenerar tokens: %v\n", tokenErr)
-					}
+					// No regeneramos tokens aquí para evitar bucles infinitos
+					// La regeneración ocurrirá en el endpoint CheckStatus
 				} else {
-					// No hay discrepancia, usar los valores del token
-					userRole = claims.Role
-					sedeID = claims.SedeID
+					// No hay discrepancia, proceder normalmente
+					ctx.Set("userID", claims.UserID)
+					ctx.Set("userRole", claims.Role)
+
+					// Para administradores con sede seleccionada
+					if claims.Role == "ADMIN" && claims.SedeID > 0 {
+						ctx.Set("sedeID", claims.SedeID)
+						ctx.Set("adminConSede", true)
+						fmt.Printf("AuthMiddleware: Admin con sede seleccionada: %d\n", claims.SedeID)
+					} else if claims.Role == "ADMIN" {
+						ctx.Set("adminSinSede", true)
+						fmt.Println("AuthMiddleware: Admin sin sede específica")
+					} else if claims.SedeID > 0 {
+						ctx.Set("sedeID", claims.SedeID)
+						fmt.Printf("AuthMiddleware: Usuario con sede asignada: %d\n", claims.SedeID)
+					}
 				}
 			} else {
-				// Si no pudimos obtener el usuario, usar el rol del token (pero loguear el error)
-				fmt.Printf("AuthMiddleware: No se pudo verificar el usuario en BD: %v\n", err)
-				userRole = claims.Role
-				sedeID = claims.SedeID
+				// Si no pudimos verificar con la BD, confiar en el token (pero loguear el error)
+				fmt.Printf("AuthMiddleware: No se pudo verificar rol en BD: %v\n", err)
+
+				ctx.Set("userID", claims.UserID)
+				ctx.Set("userRole", claims.Role)
+
+				// Para administradores con sede seleccionada
+				if claims.Role == "ADMIN" && claims.SedeID > 0 {
+					ctx.Set("sedeID", claims.SedeID)
+					ctx.Set("adminConSede", true)
+					fmt.Printf("AuthMiddleware: Admin con sede seleccionada: %d\n", claims.SedeID)
+				} else if claims.Role == "ADMIN" {
+					ctx.Set("adminSinSede", true)
+					fmt.Println("AuthMiddleware: Admin sin sede específica")
+				} else if claims.SedeID > 0 {
+					ctx.Set("sedeID", claims.SedeID)
+					fmt.Printf("AuthMiddleware: Usuario con sede asignada: %d\n", claims.SedeID)
+				}
 			}
 
-			// Guardar claims en el contexto (con valores posiblemente corregidos)
-			ctx.Set("userID", claims.UserID)
-			ctx.Set("userRole", userRole) // Puede ser diferente del token
-
-			// Para administradores con sede seleccionada
-			if userRole == "ADMIN" && sedeID > 0 {
-				// El admin ha seleccionado una sede específica
-				ctx.Set("sedeID", sedeID)
-				ctx.Set("adminConSede", true) // Bandera para indicar admin con sede específica
-				fmt.Printf("AuthMiddleware: Admin con sede seleccionada: %d\n", sedeID)
-			} else if userRole == "ADMIN" {
-				// Admin sin sede específica (puede ver todas)
-				ctx.Set("adminSinSede", true) // Bandera para indicar admin sin sede específica
-				fmt.Println("AuthMiddleware: Admin sin sede específica")
-			} else if sedeID > 0 {
-				// Otros roles solo pueden ver su sede asignada
-				ctx.Set("sedeID", sedeID)
-				fmt.Printf("AuthMiddleware: Usuario con sede asignada: %d\n", sedeID)
-			}
-
-			fmt.Printf("AuthMiddleware: Contexto establecido - userID: %d, userRole: %s\n",
-				claims.UserID, userRole)
+			// Log de información final
+			userRole, _ := ctx.Get("userRole")
+			fmt.Printf("AuthMiddleware: Contexto establecido final - userID: %d, userRole: %s\n",
+				claims.UserID, userRole.(string))
 
 			ctx.Next()
 		} else {
@@ -347,8 +302,8 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 			return
 		}
 	}
-}*/
-
+}
+*/
 // ClienteAuthMiddleware crea un middleware para autenticación JWT de clientes
 func ClienteAuthMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
