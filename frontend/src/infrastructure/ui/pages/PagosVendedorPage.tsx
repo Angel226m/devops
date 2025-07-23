@@ -1,5 +1,4 @@
- 
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import axios from '../../api/axiosClient';
@@ -10,21 +9,46 @@ import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { FaMoneyBillWave, FaSearch, FaPrint, FaFileInvoice, FaFilter, FaEye, FaPlus, FaExclamationTriangle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import ROUTES from '../../../shared/constants/appRoutes';
+ import ROUTES from '../../../shared/constants/appRoutes';
 
 interface Pago {
   id_pago: number;
   id_reserva: number;
-  cliente: string;
-  tour: string;
-  fecha_pago: string;
   metodo_pago: string;
   canal_pago: string;
   monto: number;
+  fecha_pago: string;
   estado: string;
   comprobante?: string | null;
   numero_comprobante?: string | null;
+  // Campos adicionales que vienen de la API para mostrar en la tabla
+  NombreCliente?: string;
+  ApellidosCliente?: string;
+  DocumentoCliente?: string;
+  TourNombre?: string;
+  TourFecha?: string;
 }
+
+// Convertir datos de la API al formato que necesitamos para mostrar
+const adaptarPago = (pago: any): Pago => {
+  return {
+    id_pago: pago.id || pago.ID || pago.id_pago,
+    id_reserva: pago.id_reserva,
+    metodo_pago: pago.metodo_pago,
+    canal_pago: pago.canal_pago,
+    monto: pago.monto,
+    fecha_pago: pago.fecha_pago,
+    estado: pago.estado,
+    comprobante: pago.comprobante,
+    numero_comprobante: pago.numero_comprobante,
+    // Campos para mostrar en la tabla
+    NombreCliente: pago.NombreCliente || pago.nombres,
+    ApellidosCliente: pago.ApellidosCliente || pago.apellidos,
+    DocumentoCliente: pago.DocumentoCliente || pago.numero_documento,
+    TourNombre: pago.TourNombre || pago.nombre,
+    TourFecha: pago.TourFecha || pago.fecha_especifica
+  };
+};
 
 const PagosVendedorPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -54,11 +78,14 @@ const PagosVendedorPage: React.FC = () => {
       { 
         id_pago: 1,
         id_reserva: 101,
-        cliente: 'Juan Pérez', 
-        tour: 'Islas Ballestas', 
+        NombreCliente: 'Juan',
+        ApellidosCliente: 'Pérez', 
+        DocumentoCliente: '45678912',
+        TourNombre: 'Islas Ballestas',
+        TourFecha: '2025-06-09',
         fecha_pago: '2025-06-09', 
-        metodo_pago: 'Efectivo', 
-        canal_pago: 'Oficina',
+        metodo_pago: 'EFECTIVO', 
+        canal_pago: 'LOCAL',
         monto: 150.00,
         estado: 'PROCESADO',
         comprobante: 'Boleta',
@@ -67,11 +94,14 @@ const PagosVendedorPage: React.FC = () => {
       { 
         id_pago: 2, 
         id_reserva: 102,
-        cliente: 'María López', 
-        tour: 'Reserva de Paracas', 
+        NombreCliente: 'María',
+        ApellidosCliente: 'López',
+        DocumentoCliente: '12345678',
+        TourNombre: 'Reserva de Paracas',
+        TourFecha: '2025-06-08',
         fecha_pago: '2025-06-08', 
-        metodo_pago: 'Tarjeta', 
-        canal_pago: 'Web',
+        metodo_pago: 'TARJETA', 
+        canal_pago: 'WEB',
         monto: 100.00,
         estado: 'PROCESADO',
         comprobante: 'Factura',
@@ -80,11 +110,14 @@ const PagosVendedorPage: React.FC = () => {
       { 
         id_pago: 3, 
         id_reserva: 103,
-        cliente: 'Carlos Rodríguez', 
-        tour: 'Islas Ballestas', 
+        NombreCliente: 'Carlos',
+        ApellidosCliente: 'Rodríguez',
+        DocumentoCliente: '87654321',
+        TourNombre: 'Islas Ballestas',
+        TourFecha: '2025-06-07',
         fecha_pago: '2025-06-07', 
-        metodo_pago: 'Transferencia', 
-        canal_pago: 'Banco',
+        metodo_pago: 'TRANSFERENCIA', 
+        canal_pago: 'LOCAL',
         monto: 200.00,
         estado: 'PENDIENTE',
         comprobante: 'Pendiente',
@@ -104,23 +137,64 @@ const PagosVendedorPage: React.FC = () => {
           throw new Error("Usuario no tiene sede asignada");
         }
         
-        // Usar la ruta general de pagos que automáticamente filtra por la sede del vendedor
+        // Cargar reservas y luego sus pagos
         try {
-          // Usamos el endpoint vendedorList en lugar de vendedorListBySede
-          const response = await axios.get(endpoints.pago.vendedorList);
+          // Primero obtenemos todas las reservas
+          const reservasResponse = await axios.get(endpoints.reserva.vendedorList);
           
-          if (response.data && response.data.data) {
-            setPagos(response.data.data);
+          if (reservasResponse.data && reservasResponse.data.data) {
+            const reservas = reservasResponse.data.data;
+            
+            // Array para almacenar todos los pagos de todas las reservas
+            let todosLosPagos: Pago[] = [];
+            
+            // Para cada reserva, obtener sus pagos
+            for (const reserva of reservas) {
+              try {
+                const pagosResponse = await axios.get(
+                  endpoints.pago.vendedorListByReserva(reserva.id_reserva)
+                );
+                
+                if (pagosResponse.data && pagosResponse.data.data) {
+                  // Adaptar los datos de los pagos y agregarles la información de la reserva
+                  const pagosDeLaReserva = pagosResponse.data.data.map((pago: any) => ({
+                    ...pago,
+                    NombreCliente: reserva.nombre_cliente || reserva.nombres,
+                    ApellidosCliente: reserva.apellidos,
+                    DocumentoCliente: reserva.documento_cliente || reserva.numero_documento,
+                    TourNombre: reserva.nombre_tour,
+                    TourFecha: reserva.fecha_tour
+                  }));
+                  
+                  todosLosPagos = [...todosLosPagos, ...pagosDeLaReserva];
+                }
+              } catch (error) {
+                console.warn(`Error al cargar pagos para reserva ${reserva.id_reserva}:`, error);
+                // Continuamos con la siguiente reserva
+              }
+            }
+            
+            // Ordenar los pagos por fecha (más recientes primero)
+            todosLosPagos.sort((a, b) => 
+              new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime()
+            );
+            
+            // Actualizar estado
+            setPagos(todosLosPagos);
+            
+            if (todosLosPagos.length === 0) {
+              setApiError("No se encontraron pagos para ninguna reserva.");
+            }
           } else {
-            setPagos([]);
+            throw new Error("No se encontraron reservas");
           }
         } catch (error: any) {
-          console.error('Error al cargar pagos:', error);
+          console.error('Error al cargar reservas o pagos:', error);
           
           if (error.response && error.response.data && error.response.data.message) {
             setApiError(error.response.data.message);
           } else {
-            setApiError("Error al cargar pagos. Se están mostrando datos de ejemplo.");
+            setApiError("Error al cargar los datos. Se están mostrando datos de ejemplo.");
           }
           
           setPagos(loadSampleData());
@@ -138,7 +212,7 @@ const PagosVendedorPage: React.FC = () => {
     };
     
     fetchPagos();
-  }, [dispatch, selectedSede, dateRange]);
+  }, [dispatch, selectedSede]);
   
   const handleRegistrarPago = () => {
     setSelectedPago(null);
@@ -159,7 +233,7 @@ const PagosVendedorPage: React.FC = () => {
   };
   
   const handleVerReserva = (idReserva: number) => {
-    navigate(ROUTES.VENDEDOR.RESERVA.VER(idReserva));
+    navigate(ROUTES.VENDEDOR.RESERVA.VER(idReserva.toString()));
   };
   
   // Formatear moneda
@@ -194,26 +268,55 @@ const PagosVendedorPage: React.FC = () => {
     }
   };
   
-  const filteredPagos = pagos.filter(pago => 
-    pago.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pago.tour?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Función para mostrar nombre completo del cliente
+  const getNombreCompleto = (pago: Pago) => {
+    const nombre = pago.NombreCliente || '';
+    const apellidos = pago.ApellidosCliente || '';
+    return `${nombre} ${apellidos}`.trim();
+  };
+  
+  const filteredPagos = pagos.filter(pago => {
+    const nombreCompleto = getNombreCompleto(pago).toLowerCase();
+    const tourNombre = (pago.TourNombre || '').toLowerCase();
+    const searchTermLower = searchTerm.toLowerCase();
+    
+    return nombreCompleto.includes(searchTermLower) || 
+           tourNombre.includes(searchTermLower);
+  });
   
   // Calcular totales para las tarjetas de resumen
   const totales = {
-    efectivo: pagos.filter(p => p.metodo_pago === 'Efectivo' || p.metodo_pago === 'EFECTIVO').reduce((sum, p) => sum + p.monto, 0),
-    tarjeta: pagos.filter(p => p.metodo_pago === 'Tarjeta' || p.metodo_pago === 'TARJETA').reduce((sum, p) => sum + p.monto, 0),
-    transferencia: pagos.filter(p => p.metodo_pago === 'Transferencia' || p.metodo_pago === 'TRANSFERENCIA').reduce((sum, p) => sum + p.monto, 0),
+    efectivo: pagos.filter(p => p.metodo_pago === 'EFECTIVO').reduce((sum, p) => sum + p.monto, 0),
+    tarjeta: pagos.filter(p => p.metodo_pago === 'TARJETA').reduce((sum, p) => sum + p.monto, 0),
+    transferencia: pagos.filter(p => p.metodo_pago === 'TRANSFERENCIA').reduce((sum, p) => sum + p.monto, 0),
     total: pagos.reduce((sum, p) => sum + p.monto, 0)
   };
   
   const columns = [
-    { header: 'Cliente', accessor: 'cliente' },
-    { header: 'Tour', accessor: 'tour' },
-    { header: 'Fecha', accessor: (row: Pago) => formatearFecha(row.fecha_pago) },
-    { header: 'Método', accessor: 'metodo_pago' },
-    { header: 'Canal', accessor: 'canal_pago' },
-    { header: 'Monto', accessor: (row: Pago) => formatMoneda(row.monto) },
+    { 
+      header: 'Cliente', 
+      accessor: (row: Pago) => getNombreCompleto(row) 
+    },
+    { 
+      header: 'Tour', 
+      accessor: 'TourNombre' 
+    },
+    { 
+      header: 'Fecha Tour', 
+      accessor: (row: Pago) => formatearFecha(row.TourFecha || '') 
+    },
+    { 
+      header: 'Fecha Pago', 
+      accessor: (row: Pago) => formatearFecha(row.fecha_pago) 
+    },
+    { 
+      header: 'Método', 
+      accessor: 'metodo_pago' 
+    },
+    { 
+      header: 'Monto', 
+      accessor: (row: Pago) => formatMoneda(row.monto) 
+    },
     { 
       header: 'Estado', 
       accessor: (row: Pago) => {
@@ -223,12 +326,15 @@ const PagosVendedorPage: React.FC = () => {
         return <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor}`}>{row.estado}</span>;
       }
     },
-    { header: 'Comprobante', accessor: (row: Pago) => (
-      <span className="flex items-center">
-        {row.comprobante} 
-        {row.numero_comprobante && <span className="ml-1 text-xs text-gray-500">({row.numero_comprobante})</span>}
-      </span>
-    )},
+    { 
+      header: 'Comprobante', 
+      accessor: (row: Pago) => (
+        <span className="flex items-center">
+          {row.comprobante} 
+          {row.numero_comprobante && <span className="ml-1 text-xs text-gray-500">({row.numero_comprobante})</span>}
+        </span>
+      )
+    },
     {
       header: 'Acciones',
       accessor: (row: Pago) => (
@@ -297,7 +403,9 @@ const PagosVendedorPage: React.FC = () => {
             <div>
               <p className="font-medium">Aviso</p>
               <p className="mt-1">{apiError}</p>
-              <p className="mt-2 text-sm">Se están mostrando datos de ejemplo hasta que se corrija el problema con la API.</p>
+              {apiError.includes("ejemplo") && (
+                <p className="mt-2 text-sm">Se están mostrando datos de ejemplo hasta que se corrija el problema con la API.</p>
+              )}
             </div>
           </div>
         )}
@@ -388,14 +496,18 @@ const PagosVendedorPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Cliente:</p>
-                    <p className="font-medium">{selectedPago.cliente}</p>
+                    <p className="font-medium">{getNombreCompleto(selectedPago)}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Tour:</p>
-                    <p className="font-medium">{selectedPago.tour}</p>
+                    <p className="font-medium">{selectedPago.TourNombre}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Fecha:</p>
+                    <p className="text-gray-500">Fecha Tour:</p>
+                    <p className="font-medium">{formatearFecha(selectedPago.TourFecha || '')}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Fecha Pago:</p>
                     <p className="font-medium">{formatearFecha(selectedPago.fecha_pago)}</p>
                   </div>
                   <div>
