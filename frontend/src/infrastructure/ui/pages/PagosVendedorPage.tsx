@@ -8,6 +8,8 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { FaMoneyBillWave, FaSearch, FaPrint, FaFileInvoice, FaFilter, FaEye, FaPlus, FaExclamationTriangle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import ROUTES from '../../../shared/constants/appRoutes';
 
 interface Pago {
   id_pago: number;
@@ -25,6 +27,7 @@ interface Pago {
 
 const PagosVendedorPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { user, selectedSede } = useSelector((state: RootState) => state.auth);
   
   const [loading, setLoading] = useState(false);
@@ -103,41 +106,29 @@ const PagosVendedorPage: React.FC = () => {
         // Extraer solo el ID de la sede si es un objeto
         const sedeId = typeof selectedSede === 'object' ? selectedSede.id_sede : selectedSede;
         
-        // Obtener los pagos - Por ahora usamos datos de ejemplo ya que la API está dando errores
-        setApiError("La API de pagos está devolviendo errores (400 Bad Request). Se están mostrando datos de ejemplo.");
-        setPagos(loadSampleData());
-        
-        /* Intentos a la API que no funcionan:
-        
-        // Intento 1: Ruta simple sin parámetros adicionales
-        const response = await axios.get('/api/v1/vendedor/pagos');
-        
-        // Intento 2: Ruta con filtro de fechas
-        const response = await axios.get('/api/v1/vendedor/pagos', {
-          params: {
-            fecha_inicio: dateRange.startDate,
-            fecha_fin: dateRange.endDate
+        // Intentar obtener los pagos usando la ruta correcta: pagos/sede/:idSede
+        try {
+          const response = await axios.get(endpoints.pago.vendedorListBySede(sedeId), {
+            params: {
+              fecha_inicio: dateRange.startDate,
+              fecha_fin: dateRange.endDate
+            }
+          });
+          
+          if (response.data && response.data.data) {
+            setPagos(response.data.data);
+          } else {
+            setPagos([]);
           }
-        });
-        
-        // Intento 3: Ruta específica de sede 
-        const response = await axios.get(`/api/v1/vendedor/pagos/sede/${sedeId}`, {
-          params: {
-            fecha_inicio: dateRange.startDate,
-            fecha_fin: dateRange.endDate
-          }
-        });
-        
-        if (response.data && response.data.data) {
-          setPagos(response.data.data);
-        } else {
-          setPagos([]);
+        } catch (error) {
+          console.error('Error al cargar pagos:', error);
+          setApiError("Error al cargar pagos de la sede. Se están mostrando datos de ejemplo.");
+          setPagos(loadSampleData());
         }
-        */
         
       } catch (error: any) {
-        console.error('Error al cargar pagos:', error);
-        setApiError(error.response?.data?.message || error.message || 'Error al cargar los pagos');
+        console.error('Error general:', error);
+        setApiError(error.message || 'Error al cargar los pagos');
         
         // Usar datos de ejemplo en caso de error
         setPagos(loadSampleData());
@@ -165,6 +156,10 @@ const PagosVendedorPage: React.FC = () => {
   
   const handleGenerarComprobante = (pago: Pago) => {
     console.log('Generar comprobante para pago:', pago);
+  };
+  
+  const handleVerReserva = (idReserva: number) => {
+    navigate(ROUTES.VENDEDOR.RESERVA.VER(idReserva));
   };
   
   // Formatear moneda
@@ -267,6 +262,13 @@ const PagosVendedorPage: React.FC = () => {
       )
     }
   ];
+  
+  const handleSubmitPago = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Implementar la lógica para enviar el formulario de pago
+    // Usar axios.post(endpoints.pago.vendedorCreate, {...datos})
+    setIsModalOpen(false);
+  };
   
   return (
     <div className="py-6 px-4 space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -434,28 +436,46 @@ const PagosVendedorPage: React.FC = () => {
                     </Button>
                   )}
                   <Button
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => handleVerReserva(selectedPago.id_reserva)}
                     variant="primary"
+                    className="flex items-center gap-2"
+                  >
+                    Ver Reserva
+                  </Button>
+                  <Button
+                    onClick={() => setIsModalOpen(false)}
+                    variant="secondary"
                   >
                     Cerrar
                   </Button>
                 </div>
               </div>
             ) : (
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSubmitPago}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reserva</label>
+                    <input 
+                      type="number" 
+                      className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="ID de reserva"
+                      required
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                     <input 
                       type="text" 
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Nombre del cliente"
+                      required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tour</label>
                     <select 
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     >
                       <option value="">Seleccionar tour</option>
                       <option value="Islas Ballestas">Islas Ballestas</option>
@@ -467,6 +487,7 @@ const PagosVendedorPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
                     <select 
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     >
                       <option value="">Seleccionar método</option>
                       <option value="Efectivo">Efectivo</option>
@@ -478,6 +499,7 @@ const PagosVendedorPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Canal de Pago</label>
                     <select 
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     >
                       <option value="">Seleccionar canal</option>
                       <option value="Oficina">Oficina</option>
@@ -492,6 +514,7 @@ const PagosVendedorPage: React.FC = () => {
                       step="0.01" 
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="0.00"
+                      required
                     />
                   </div>
                   <div>
@@ -500,6 +523,7 @@ const PagosVendedorPage: React.FC = () => {
                       type="date" 
                       defaultValue={new Date().toISOString().split('T')[0]}
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     />
                   </div>
                 </div>
@@ -508,7 +532,7 @@ const PagosVendedorPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Comprobante</label>
                   <div className="flex space-x-4">
                     <label className="flex items-center">
-                      <input type="radio" name="comprobante" value="Boleta" className="mr-2" />
+                      <input type="radio" name="comprobante" value="Boleta" className="mr-2" required />
                       Boleta
                     </label>
                     <label className="flex items-center">
@@ -535,12 +559,14 @@ const PagosVendedorPage: React.FC = () => {
                   <Button 
                     onClick={() => setIsModalOpen(false)}
                     variant="secondary"
+                    type="button"
                   >
                     Cancelar
                   </Button>
                   <Button 
                     variant="success"
                     className="flex items-center gap-2"
+                    type="submit"
                   >
                     <FaMoneyBillWave /> Registrar Pago
                   </Button>
