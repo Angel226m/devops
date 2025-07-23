@@ -441,73 +441,18 @@ func (s *AuthService) GenerateTokensForAdminWithSede(userID int, sedeID int, rem
 	return tokenString, refreshTokenString, nil
 }
 
-/*
+// GenerateTokensWithoutDb genera tokens sin buscar el usuario en la base de datos
 // GenerateTokensWithoutDb genera tokens sin buscar el usuario en la base de datos
 func (s *AuthService) GenerateTokensWithoutDb(userID int, userRole string, rememberMe bool) (string, string, error) {
-	// Tiempo de expiración para el token de acceso (15 minutos)
-	expirationTime := time.Now().Add(15 * time.Minute)
-
-	// Crear los claims para el token JWT
-	claims := &utils.TokenClaims{
-		UserID: userID,
-		Role:   userRole,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "sistema-tours",
-			Subject:   fmt.Sprintf("%d", userID),
-		},
-	}
-
-	// Crear el token con el algoritmo de firma
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Firmar el token con la clave secreta
-	tokenString, err := token.SignedString([]byte(s.config.JWTSecret))
-	if err != nil {
-		return "", "", err
-	}
-
-	// Determinar la duración para el refresh token basado en rememberMe
-	var refreshExpirationTime time.Time
-	if rememberMe {
-		refreshExpirationTime = time.Now().Add(7 * 24 * time.Hour) // 7 días
-	} else {
-		refreshExpirationTime = time.Now().Add(1 * time.Hour) // 1 hora
-	}
-
-	// Crear los claims para el refresh token
-	refreshClaims := &utils.TokenClaims{
-		UserID: userID,
-		Role:   userRole,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(refreshExpirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "sistema-tours",
-			Subject:   fmt.Sprintf("%d", userID),
-		},
-	}
-
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(s.config.JWTRefreshSecret))
-	if err != nil {
-		return "", "", err
-	}
-
-	return tokenString, refreshTokenString, nil
-}
-*/
-
-// GenerateTokensWithoutDb genera tokens sin buscar el usuario en la base de datos
-func (s *AuthService) GenerateTokensWithoutDb(userID int, userRole string, rememberMe bool) (string, string, error) {
-	// Verificar que el rol proporcionado sea el correcto consultando la base de datos
+	// CORREGIDO: Verificar siempre que el rol proporcionado sea el correcto consultando la base de datos
 	actualUser, err := s.GetUserByID(userID)
 	if err != nil {
-		// Si no podemos verificar el usuario, registrarlo pero continuar con el rol proporcionado
-		fmt.Printf("Warning: No se pudo verificar el usuario %d al generar tokens: %v\n",
-			userID, err)
-	} else if actualUser.Rol != userRole {
-		// Si hay discrepancia, usar el rol de la BD
+		// Si no podemos verificar el usuario, fallamos de forma segura
+		return "", "", fmt.Errorf("no se pudo verificar el usuario %d al generar tokens: %w", userID, err)
+	}
+
+	// Si hay discrepancia, usar el rol de la BD
+	if actualUser.Rol != userRole {
 		fmt.Printf("Warning: Discrepancia de rol al generar tokens para usuario %d: token=%s, BD=%s\n",
 			userID, userRole, actualUser.Rol)
 		userRole = actualUser.Rol // Usar el rol de la BD
@@ -549,6 +494,73 @@ func (s *AuthService) GenerateTokensWithoutDb(userID int, userRole string, remem
 	refreshClaims := &utils.TokenClaims{
 		UserID: userID,
 		Role:   userRole, // Usamos el rol verificado
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(refreshExpirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "sistema-tours",
+			Subject:   fmt.Sprintf("%d", userID),
+		},
+	}
+
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refreshTokenString, err := refreshToken.SignedString([]byte(s.config.JWTRefreshSecret))
+	if err != nil {
+		return "", "", err
+	}
+
+	return tokenString, refreshTokenString, nil
+}
+
+// GenerateTokensForUserWithSede genera tokens para usuarios no admin con sede asignada
+func (s *AuthService) GenerateTokensForUserWithSede(userID int, sedeID int, userRole string, rememberMe bool) (string, string, error) {
+	// Verificar que la sede exista
+	sede, err := s.sedeRepo.GetByID(sedeID)
+	if err != nil {
+		return "", "", fmt.Errorf("sede no encontrada: %w", err)
+	}
+
+	if sede.Eliminado {
+		return "", "", fmt.Errorf("la sede seleccionada no está disponible")
+	}
+
+	// Tiempo de expiración para el token de acceso (15 minutos)
+	expirationTime := time.Now().Add(15 * time.Minute)
+
+	// Crear los claims para el token JWT
+	claims := &utils.TokenClaims{
+		UserID: userID,
+		SedeID: sedeID,
+		Role:   userRole, // Usar el rol proporcionado (de la BD)
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "sistema-tours",
+			Subject:   fmt.Sprintf("%d", userID),
+		},
+	}
+
+	// Crear el token con el algoritmo de firma
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Firmar el token con la clave secreta
+	tokenString, err := token.SignedString([]byte(s.config.JWTSecret))
+	if err != nil {
+		return "", "", err
+	}
+
+	// Determinar la duración para el refresh token basado en rememberMe
+	var refreshExpirationTime time.Time
+	if rememberMe {
+		refreshExpirationTime = time.Now().Add(7 * 24 * time.Hour) // 7 días
+	} else {
+		refreshExpirationTime = time.Now().Add(1 * time.Hour) // 1 hora
+	}
+
+	// Crear los claims para el refresh token
+	refreshClaims := &utils.TokenClaims{
+		UserID: userID,
+		SedeID: sedeID,
+		Role:   userRole, // Usar el rol proporcionado (de la BD)
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(refreshExpirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

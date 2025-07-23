@@ -98,134 +98,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Login exitoso", responseData))
 }
 
-/*
 // RefreshToken maneja la regeneración de token usando refresh token
-func (c *AuthController) RefreshToken(ctx *gin.Context) {
-	fmt.Println("RefreshToken: Iniciando regeneración de token")
-	fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
-
-	// Obtener refresh token de la cookie
-	refreshToken, err := ctx.Cookie("refresh_token")
-	fmt.Printf("RefreshToken: Token obtenido de cookie: %v, Error: %v\n", refreshToken != "", err)
-
-	// Si no hay cookie, intentar obtenerlo del Header Authorization
-	if err != nil || refreshToken == "" {
-		authHeader := ctx.GetHeader("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			refreshToken = strings.TrimPrefix(authHeader, "Bearer ")
-			fmt.Printf("RefreshToken: Token obtenido del header Authorization: %v\n", refreshToken != "")
-		}
-	}
-
-	// Si aún no tenemos el token, intentar obtenerlo del cuerpo de la solicitud
-	if refreshToken == "" {
-		var refreshReq struct {
-			RefreshToken string `json:"refresh_token"`
-		}
-		if ctx.ShouldBindJSON(&refreshReq) == nil && refreshReq.RefreshToken != "" {
-			refreshToken = refreshReq.RefreshToken
-			fmt.Printf("RefreshToken: Token obtenido del body JSON: %v\n", refreshToken != "")
-		} else {
-			// Si aún no se encuentra el token, probar obtenerlo del form data
-			refreshToken = ctx.PostForm("refresh_token")
-			fmt.Printf("RefreshToken: Token obtenido de form data: %v\n", refreshToken != "")
-		}
-	}
-
-	// Verificar si encontramos el token
-	if refreshToken == "" {
-		fmt.Println("RefreshToken: No se encontró el refresh token en ninguna fuente")
-		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Refresh token no proporcionado", nil))
-		return
-	}
-
-	// Validar el refresh token
-	claims, err := utils.ValidateRefreshToken(refreshToken, ctx.MustGet("config").(*config.Config))
-	if err != nil {
-		fmt.Printf("RefreshToken: Error al validar refresh token: %v\n", err)
-		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Refresh token inválido", err))
-		return
-	}
-
-	// Obtener las propiedades del token
-	userID := claims.UserID
-	userRole := claims.Role
-	sedeID := claims.SedeID
-
-	// Determinar si tiene remember_me
-	issuedAt := claims.IssuedAt.Time
-	expiresAt := claims.ExpiresAt.Time
-	isRememberMe := expiresAt.Sub(issuedAt) > 24*time.Hour
-
-	// Generar nuevos tokens
-	var token, newRefreshToken string
-
-	// Si tiene sede seleccionada
-	if sedeID > 0 {
-		token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(userID, sedeID, isRememberMe)
-	} else {
-		// Sin sede seleccionada
-		token, newRefreshToken, err = c.authService.GenerateTokensWithoutDb(userID, userRole, isRememberMe)
-	}
-
-	if err != nil {
-		fmt.Printf("RefreshToken: Error al generar nuevos tokens: %v\n", err)
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al generar nuevos tokens", err))
-		return
-	}
-
-	// Configurar cookie para el nuevo token JWT
-	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie(
-		"access_token", // Nombre
-		token,          // Valor
-		60*15,          // Tiempo de vida en segundos (15 minutos)
-		"/",            // Path
-		"",             // Domain (vacío = dominio actual)
-		true,           // Secure
-		false,          // HttpOnly
-	)
-
-	// Configurar cookie para el nuevo refresh token manteniendo la misma duración
-	var refreshExpiry int
-	if isRememberMe {
-		refreshExpiry = 60 * 60 * 24 * 7 // 7 días si remember_me estaba activo
-	} else {
-		refreshExpiry = 60 * 60 // 1 hora si remember_me no estaba activo
-	}
-
-	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie(
-		"refresh_token", // Nombre
-		newRefreshToken, // Valor
-		refreshExpiry,   // Tiempo de vida en segundos (variable)
-		"/",             // Path
-		"",              // Domain
-		true,            // Secure
-		false,           // HttpOnly
-	)
-
-	fmt.Println("RefreshToken: Cookies establecidas exitosamente")
-
-	// Obtener sede si es necesario
-	var sede *entidades.Sede = nil
-	if sedeID > 0 {
-		sede, _ = c.authService.GetSedeByID(sedeID)
-	}
-
-	// Crear usuario simplificado para la respuesta
-	usuario := gin.H{
-		"id_usuario": userID,
-		"rol":        userRole,
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Token actualizado exitosamente", gin.H{
-		"usuario": usuario,
-		"sede":    sede,
-	}))
-}
-*/
-
 // RefreshToken maneja la regeneración de token usando refresh token
 func (c *AuthController) RefreshToken(ctx *gin.Context) {
 	fmt.Println("RefreshToken: Iniciando regeneración de token")
@@ -278,7 +151,7 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 	userID := claims.UserID
 	sedeID := claims.SedeID
 
-	// CORRECCIÓN: Obtener el rol correcto de la base de datos
+	// CORREGIDO: Obtener siempre el usuario y su rol actual de la base de datos
 	usuario, err := c.authService.GetUserByID(userID)
 	if err != nil {
 		fmt.Printf("RefreshToken: Error al obtener usuario: %v\n", err)
@@ -286,24 +159,24 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	// Usar el rol actual de la BD
+	// CORREGIDO: Usar SIEMPRE el rol actual de la BD, ignorando el del token
 	userRole := usuario.Rol
-	fmt.Printf("RefreshToken: Usando rol de BD: %s\n", userRole)
+	fmt.Printf("RefreshToken: Usando rol de BD: %s (ignorando rol del token: %s)\n", userRole, claims.Role)
 
 	// Determinar si tiene remember_me
 	issuedAt := claims.IssuedAt.Time
 	expiresAt := claims.ExpiresAt.Time
 	isRememberMe := expiresAt.Sub(issuedAt) > 24*time.Hour
 
-	// Generar nuevos tokens con el rol correcto
+	// Generar nuevos tokens con el rol correcto de la BD
 	var token, newRefreshToken string
 
-	// Si tiene sede seleccionada
+	// Si tiene sede seleccionada y es ADMIN (verificando el rol de la BD)
 	if sedeID > 0 && userRole == "ADMIN" {
 		token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(userID, sedeID, isRememberMe)
 	} else if userRole != "ADMIN" && usuario.IdSede != nil {
 		// Usuario no admin con sede asignada en BD
-		token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(userID, *usuario.IdSede, isRememberMe)
+		token, newRefreshToken, err = c.authService.GenerateTokensForUserWithSede(userID, *usuario.IdSede, userRole, isRememberMe)
 	} else {
 		// Sin sede seleccionada - USAR EL ROL DE LA BD
 		token, newRefreshToken, err = c.authService.GenerateTokensWithoutDb(userID, userRole, isRememberMe)
@@ -356,70 +229,14 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 		sede, _ = c.authService.GetSedeByID(*usuario.IdSede)
 	}
 
-	// Crear objeto de usuario para la respuesta
-	usuarioResp := gin.H{
-		"id_usuario": userID,
-		"rol":        userRole,
-		// Añadir otros campos necesarios según tu aplicación
-	}
-
+	// Crear objeto de usuario para la respuesta usando los datos completos
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Token actualizado exitosamente", gin.H{
-		"usuario": usuarioResp,
-		"sede":    sede,
-	}))
-}
-
-/*
-func (c *AuthController) CheckStatus(ctx *gin.Context) {
-	// Logs para depuración
-	fmt.Println("Ejecutando CheckStatus")
-
-	// Obtener usuario y rol del contexto (puesto por el middleware de autenticación)
-	userID, exists := ctx.Get("userID")
-	userRole, roleExists := ctx.Get("userRole")
-	fmt.Printf("CheckStatus: userID en contexto = %v (exists: %v)\n", userID, exists)
-	fmt.Printf("CheckStatus: userRole en contexto = %v (exists: %v)\n", userRole, roleExists)
-
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no autenticado", nil))
-		return
-	}
-
-	// Obtener datos básicos del usuario desde la BD
-	usuario, err := c.authService.GetUserByID(userID.(int))
-	if err != nil {
-		fmt.Printf("CheckStatus: Error al obtener usuario: %v\n", err)
-		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no encontrado", err))
-		return
-	}
-
-	// IMPORTANTE: Usar el rol del token JWT, no el de la base de datos
-	if roleExists {
-		rolOriginal := usuario.Rol
-		usuario.Rol = userRole.(string)
-		fmt.Printf("CheckStatus: Sobreescribiendo rol de BD (%s) con rol del token: %s\n",
-			rolOriginal, userRole.(string))
-	}
-
-	// Para administradores, no incluir sede en la respuesta a menos que tenga una sede seleccionada temporalmente
-	// Para otros roles, incluir la sede asignada
-	var sede *entidades.Sede = nil
-
-	// Verificar si hay una sede seleccionada en la sesión (para administradores)
-	sedeID, sedeExists := ctx.Get("sedeID")
-	if usuario.Rol == "ADMIN" && sedeExists && sedeID.(int) > 0 {
-		sede, _ = c.authService.GetSedeByID(sedeID.(int))
-	} else if usuario.Rol != "ADMIN" && usuario.IdSede != nil {
-		sede, _ = c.authService.GetSedeByID(*usuario.IdSede)
-	}
-
-	ctx.JSON(http.StatusOK, utils.SuccessResponse("Usuario autenticado", gin.H{
 		"usuario": usuario,
 		"sede":    sede,
 	}))
 }
-*/
 
+// CheckStatus verifica si el usuario tiene una sesión válida
 // CheckStatus verifica si el usuario tiene una sesión válida
 func (c *AuthController) CheckStatus(ctx *gin.Context) {
 	// Logs para depuración
@@ -444,11 +261,73 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 		return
 	}
 
-	// CORRECCIÓN: NO sobrescribir el rol, usar el de la BD
+	// CORREGIDO: Verificar si hay discrepancia entre el rol del token y el de la BD
 	if roleExists && usuario.Rol != userRole.(string) {
 		fmt.Printf("CheckStatus: Detectada discrepancia en rol: BD = %s, Token = %s\n",
 			usuario.Rol, userRole.(string))
-		// Solo registramos la discrepancia, NO modificamos el rol
+
+		// Regenerar token con el rol correcto
+		// Obtener información del refresh token para mantener configuración
+		refreshToken, err := ctx.Cookie("refresh_token")
+		var isRememberMe bool = false
+		var sedeID int = 0
+
+		if err == nil && refreshToken != "" {
+			claims, err := utils.GetRefreshTokenClaims(refreshToken, ctx.MustGet("config").(*config.Config))
+			if err == nil && claims != nil {
+				issuedAt := claims.IssuedAt.Time
+				expiresAt := claims.ExpiresAt.Time
+				isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+				sedeID = claims.SedeID
+			}
+		}
+
+		// Generar nuevos tokens con el rol correcto
+		var token, newRefreshToken string
+
+		if usuario.Rol == "ADMIN" && sedeID > 0 {
+			token, newRefreshToken, err = c.authService.GenerateTokensForAdminWithSede(usuario.ID, sedeID, isRememberMe)
+		} else if usuario.Rol != "ADMIN" && usuario.IdSede != nil {
+			token, newRefreshToken, err = c.authService.GenerateTokensForUserWithSede(usuario.ID, *usuario.IdSede, usuario.Rol, isRememberMe)
+		} else {
+			token, newRefreshToken, err = c.authService.GenerateTokensWithoutDb(usuario.ID, usuario.Rol, isRememberMe)
+		}
+
+		if err == nil {
+			// Actualizar cookies con los nuevos tokens
+			ctx.SetSameSite(http.SameSiteNoneMode)
+			ctx.SetCookie(
+				"access_token", // Nombre
+				token,          // Valor
+				60*15,          // Tiempo de vida en segundos (15 minutos)
+				"/",            // Path
+				"",             // Domain (vacío = dominio actual)
+				true,           // Secure
+				false,          // HttpOnly
+			)
+
+			var refreshExpiry int
+			if isRememberMe {
+				refreshExpiry = 60 * 60 * 24 * 7 // 7 días si remember_me estaba activo
+			} else {
+				refreshExpiry = 60 * 60 // 1 hora si remember_me no estaba activo
+			}
+
+			ctx.SetSameSite(http.SameSiteNoneMode)
+			ctx.SetCookie(
+				"refresh_token", // Nombre
+				newRefreshToken, // Valor
+				refreshExpiry,   // Tiempo de vida en segundos (variable)
+				"/",             // Path
+				"",              // Domain
+				true,            // Secure
+				false,           // HttpOnly
+			)
+
+			fmt.Println("CheckStatus: Tokens actualizados por discrepancia de rol")
+		} else {
+			fmt.Printf("CheckStatus: Error al regenerar tokens: %v\n", err)
+		}
 	}
 
 	// Para administradores, no incluir sede en la respuesta a menos que tenga una sede seleccionada temporalmente
