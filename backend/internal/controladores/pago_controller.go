@@ -490,3 +490,24 @@ func (c *PagoController) CrearPagoMercadoPago(ctx *gin.Context) {
 		"id_pago": idPago,
 	}))
 }
+
+// ActualizarComprobantesFaltantes actualiza los comprobantes faltantes en los pagos existentes
+func (c *PagoController) ActualizarComprobantesFaltantes(ctx *gin.Context) {
+	// Verificar que solo los administradores puedan ejecutar esta acción
+	if ctx.GetString("rol") != "ADMIN" {
+		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("Solo los administradores pueden actualizar comprobantes faltantes", nil))
+		return
+	}
+
+	// Actualizar comprobantes
+	actualizados, err := c.pagoService.ActualizarComprobantesFaltantes()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al actualizar comprobantes faltantes", err))
+		return
+	}
+
+	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Comprobantes actualizados exitosamente", gin.H{
+		"pagos_actualizados": actualizados,
+	}))
+}

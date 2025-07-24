@@ -330,3 +330,8 @@ func (s *PagoService) CrearPagoMercadoPago(idReserva int, monto float64, referen
 	// Crear un nuevo pago con valores predeterminados para MercadoPago
 	return s.pagoRepo.CrearPagoMercadoPago(idReserva, monto, referenciaPago)
 }
+
+// ActualizarComprobantesFaltantes actualiza los comprobantes faltantes
+func (s *PagoService) ActualizarComprobantesFaltantes() (int, error) {
+	return s.pagoRepo.ActualizarComprobantesFaltantes()
+}

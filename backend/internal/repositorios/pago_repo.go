@@ -3,6 +3,7 @@ package repositorios
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"sistema-toursseft/internal/entidades"
 	"time"
 )
@@ -64,10 +65,11 @@ func (r *PagoRepository) GetByID(id int) (*entidades.Pago, error) {
 	return pago, nil
 }
 
+/*
 // Create guarda un nuevo pago en la base de datos
 func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 	var id int
-	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, 
+	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante,
               numero_comprobante, url_comprobante, eliminado)
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
               RETURNING id_pago`
@@ -85,6 +87,78 @@ func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 	).Scan(&id)
 
 	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+*/
+// Create guarda un nuevo pago en la base de datos y genera automáticamente el número de comprobante y URL
+func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
+	// Comenzamos una transacción para asegurar que todas las operaciones son atómicas
+	tx, err := r.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Paso 1: Obtener el número de comprobante más alto actual
+	var maxNumero int
+	queryMax := `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_comprobante, 9) AS INTEGER)), 0)
+				 FROM pago
+				 WHERE numero_comprobante ~ '^N-COMP-\d+$'`
+
+	err = tx.QueryRow(queryMax).Scan(&maxNumero)
+	if err != nil {
+		return 0, err
+	}
+
+	// Paso 2: Generar el nuevo número de comprobante
+	nuevoNumero := maxNumero + 1
+	numeroComprobante := fmt.Sprintf("N-COMP-%05d", nuevoNumero)
+	urlComprobante := fmt.Sprintf("https://tu-sitio.com/comprobantes/N-COMP-%05d.pdf", nuevoNumero)
+
+	// Paso 3: Insertar el nuevo pago con los valores generados
+	var id int
+	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, 
+			  numero_comprobante, url_comprobante, eliminado)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
+			  RETURNING id_pago`
+
+	// Si el usuario proporciona un número de comprobante, respetarlo, sino usar el generado
+	numeroComprobanteFinal := numeroComprobante
+	if pago.NumeroComprobante != "" {
+		numeroComprobanteFinal = pago.NumeroComprobante
+	}
+
+	// Si el usuario proporciona una URL de comprobante, respetarla, sino usar la generada
+	urlComprobanteFinal := urlComprobante
+	if pago.URLComprobante != "" {
+		urlComprobanteFinal = pago.URLComprobante
+	}
+
+	err = tx.QueryRow(
+		query,
+		pago.IDReserva,
+		pago.MetodoPago,
+		pago.CanalPago,
+		pago.IDSede, // Si es nil, se insertará NULL
+		pago.Monto,
+		pago.Comprobante,
+		numeroComprobanteFinal,
+		urlComprobanteFinal,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	// Confirmar la transacción
+	if err = tx.Commit(); err != nil {
 		return 0, err
 	}
 
@@ -442,6 +516,7 @@ func (r *PagoRepository) ListBySede(idSede int) ([]*entidades.Pago, error) {
 }
 
 // CrearPagoMercadoPago crea un pago específico para MercadoPago
+/*
 func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {
 	var id int
 	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, estado, eliminado)
@@ -456,6 +531,64 @@ func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, refe
 	).Scan(&id)
 
 	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+*/
+
+// CrearPagoMercadoPago crea un pago específico para MercadoPago con generación automática de comprobante
+func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {
+	// Comenzamos una transacción para asegurar que todas las operaciones son atómicas
+	tx, err := r.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Paso 1: Obtener el número de comprobante más alto actual
+	var maxNumero int
+	queryMax := `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_comprobante, 9) AS INTEGER)), 0)
+				 FROM pago
+				 WHERE numero_comprobante ~ '^N-COMP-\d+$'`
+
+	err = tx.QueryRow(queryMax).Scan(&maxNumero)
+	if err != nil {
+		return 0, err
+	}
+
+	// Paso 2: Generar el nuevo número de comprobante
+	nuevoNumero := maxNumero + 1
+	numeroComprobante := fmt.Sprintf("N-COMP-%05d", nuevoNumero)
+	urlComprobante := fmt.Sprintf("https://tu-sitio.com/comprobantes/N-COMP-%05d.pdf", nuevoNumero)
+
+	// Paso 3: Insertar el nuevo pago con los valores generados
+	var id int
+	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, 
+			  numero_comprobante, url_comprobante, estado, eliminado)
+			  VALUES ($1, 'MERCADOPAGO', 'WEB', NULL, $2, $3, $4, $5, 'PROCESADO', FALSE)
+			  RETURNING id_pago`
+
+	err = tx.QueryRow(
+		query,
+		idReserva,
+		monto,
+		referenciaPago,
+		numeroComprobante,
+		urlComprobante,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, err
+	}
+
+	// Confirmar la transacción
+	if err = tx.Commit(); err != nil {
 		return 0, err
 	}
 
@@ -518,4 +651,76 @@ func (r *PagoRepository) ListByFecha(fecha time.Time) ([]*entidades.Pago, error)
 	}
 
 	return pagos, nil
+}
+
+// ActualizarComprobantesFaltantes actualiza los números de comprobante y URLs para pagos que no los tienen
+func (r *PagoRepository) ActualizarComprobantesFaltantes() (int, error) {
+	// Comenzamos una transacción
+	tx, err := r.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Identificar el último número de comprobante
+	var maxNumero int
+	queryMax := `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_comprobante, 9) AS INTEGER)), 0)
+				 FROM pago
+				 WHERE numero_comprobante ~ '^N-COMP-\d+$'`
+
+	err = tx.QueryRow(queryMax).Scan(&maxNumero)
+	if err != nil {
+		return 0, err
+	}
+
+	// Obtener IDs de pagos sin número de comprobante
+	rows, err := tx.Query(`SELECT id_pago FROM pago 
+						   WHERE (numero_comprobante IS NULL OR numero_comprobante = '') 
+						   AND eliminado = FALSE
+						   ORDER BY id_pago`)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	// Actualizar cada pago con un nuevo número secuencial
+	actualizados := 0
+	for rows.Next() {
+		var idPago int
+		if err := rows.Scan(&idPago); err != nil {
+			return actualizados, err
+		}
+
+		// Incrementar contador y generar nuevo número
+		maxNumero++
+		numeroComprobante := fmt.Sprintf("N-COMP-%05d", maxNumero)
+		urlComprobante := fmt.Sprintf("https://tu-sitio.com/comprobantes/N-COMP-%05d.pdf", maxNumero)
+
+		// Actualizar el pago
+		_, err = tx.Exec(`UPDATE pago SET 
+						  numero_comprobante = $1, 
+						  url_comprobante = $2 
+						  WHERE id_pago = $3`,
+			numeroComprobante, urlComprobante, idPago)
+		if err != nil {
+			return actualizados, err
+		}
+
+		actualizados++
+	}
+
+	if err = rows.Err(); err != nil {
+		return actualizados, err
+	}
+
+	// Confirmar la transacción
+	if err = tx.Commit(); err != nil {
+		return actualizados, err
+	}
+
+	return actualizados, nil
 }
