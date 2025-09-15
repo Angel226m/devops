@@ -2,210 +2,327 @@ package repositorios_test
 
 import (
 	"database/sql"
+	"errors"
+	"regexp"
 	"sistema-toursseft/internal/entidades"
 	"sistema-toursseft/internal/repositorios"
 	"testing"
 
-	_ "github.com/lib/pq" // 👈 Este es el que faltaba
-
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// setupTestDB configura una conexión a la base de datos de prueba
-func setupTestDB(t *testing.T) *sql.DB {
-	// Aquí deberías configurar una conexión a tu base de datos de prueba
-	// Puedes usar variables de entorno específicas para pruebas
-	db, err := sql.Open("postgres", "postgres://usuario:password@localhost:5432/toursseft_test?sslmode=disable")
-	require.NoError(t, err)
-	require.NoError(t, db.Ping())
-
-	// Limpia y prepara la base de datos para las pruebas
-	cleanDB(t, db)
-	seedDB(t, db)
-
-	return db
-}
-
-// cleanDB limpia las tablas relevantes en la base de datos
-func cleanDB(t *testing.T, db *sql.DB) {
-	_, err := db.Exec("DELETE FROM reserva WHERE id_canal > 0")
-	require.NoError(t, err)
-	_, err = db.Exec("DELETE FROM pago WHERE id_canal > 0")
-	require.NoError(t, err)
-	_, err = db.Exec("DELETE FROM canal_venta WHERE id_canal > 0")
-	require.NoError(t, err)
-	_, err = db.Exec("DELETE FROM sede WHERE id_sede > 0")
-	require.NoError(t, err)
-}
-
-// seedDB inserta datos iniciales necesarios para las pruebas
-func seedDB(t *testing.T, db *sql.DB) {
-	// Insertar una sede para las pruebas
-	var idSede int
-	err := db.QueryRow("INSERT INTO sede (nombre, direccion, telefono, eliminado) VALUES ('Sede Test', 'Dirección Test', '123456789', false) RETURNING id_sede").Scan(&idSede)
-	require.NoError(t, err)
-
-	// Insertar un canal de venta para las pruebas
-	_, err = db.Exec("INSERT INTO canal_venta (id_sede, nombre, descripcion, eliminado) VALUES ($1, 'Canal Test', 'Descripción Test', false)", idSede)
-	require.NoError(t, err)
-}
-
 func TestCanalVentaRepository_GetByID(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID del canal insertado en seedDB
-	var idCanal int
-	err := db.QueryRow("SELECT id_canal FROM canal_venta WHERE nombre = 'Canal Test'").Scan(&idCanal)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"id_canal", "id_sede", "nombre", "descripcion", "eliminado", "nombre_sede"}).
+			AddRow(1, 2, "Online", "Canal de venta online", false, "Sede Principal")
 
-	// Probar GetByID
-	canal, err := repo.GetByID(idCanal)
-	require.NoError(t, err)
-	assert.NotNil(t, canal)
-	assert.Equal(t, "Canal Test", canal.Nombre)
-	assert.Equal(t, "Descripción Test", canal.Descripcion)
-	assert.False(t, canal.Eliminado)
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.id_canal = $1`)).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		canal, err := repo.GetByID(1)
+		assert.NoError(t, err)
+		assert.NotNil(t, canal)
+		assert.Equal(t, 1, canal.ID)
+		assert.Equal(t, 2, canal.IDSede)
+		assert.Equal(t, "Online", canal.Nombre)
+		assert.Equal(t, "Canal de venta online", canal.Descripcion)
+		assert.Equal(t, false, canal.Eliminado)
+		assert.Equal(t, "Sede Principal", canal.NombreSede)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.id_canal = $1`)).
+			WithArgs(1).
+			WillReturnError(sql.ErrNoRows)
+
+		canal, err := repo.GetByID(1)
+		assert.Error(t, err)
+		assert.Nil(t, canal)
+		assert.Equal(t, "canal de venta no encontrado", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.id_canal = $1`)).
+			WithArgs(1).
+			WillReturnError(errors.New("database error"))
+
+		canal, err := repo.GetByID(1)
+		assert.Error(t, err)
+		assert.Nil(t, canal)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_GetByNombre(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID de la sede insertada en seedDB
-	var idSede int
-	err := db.QueryRow("SELECT id_sede FROM sede WHERE nombre = 'Sede Test'").Scan(&idSede)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"id_canal", "id_sede", "nombre", "descripcion", "eliminado"}).
+			AddRow(1, 2, "Online", "Canal de venta online", false)
 
-	// Probar GetByNombre
-	canal, err := repo.GetByNombre("Canal Test", idSede)
-	require.NoError(t, err)
-	assert.NotNil(t, canal)
-	assert.Equal(t, "Canal Test", canal.Nombre)
-	assert.Equal(t, idSede, canal.IDSede)
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT id_canal, id_sede, nombre, descripcion, eliminado FROM canal_venta WHERE nombre = $1 AND id_sede = $2 AND eliminado = false`)).
+			WithArgs("Online", 2).
+			WillReturnRows(rows)
+
+		canal, err := repo.GetByNombre("Online", 2)
+		assert.NoError(t, err)
+		assert.NotNil(t, canal)
+		assert.Equal(t, 1, canal.ID)
+		assert.Equal(t, 2, canal.IDSede)
+		assert.Equal(t, "Online", canal.Nombre)
+		assert.Equal(t, "Canal de venta online", canal.Descripcion)
+		assert.Equal(t, false, canal.Eliminado)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT id_canal, id_sede, nombre, descripcion, eliminado FROM canal_venta WHERE nombre = $1 AND id_sede = $2 AND eliminado = false`)).
+			WithArgs("Online", 2).
+			WillReturnError(sql.ErrNoRows)
+
+		canal, err := repo.GetByNombre("Online", 2)
+		assert.Error(t, err)
+		assert.Nil(t, canal)
+		assert.Equal(t, "canal de venta no encontrado", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_Create(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID de la sede insertada en seedDB
-	var idSede int
-	err := db.QueryRow("SELECT id_sede FROM sede WHERE nombre = 'Sede Test'").Scan(&idSede)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		canal := &entidades.NuevoCanalVentaRequest{
+			IDSede:      2,
+			Nombre:      "Online",
+			Descripcion: "Canal de venta online",
+		}
 
-	// Crear un nuevo canal
-	nuevoCanalRequest := &entidades.NuevoCanalVentaRequest{
-		IDSede:      idSede,
-		Nombre:      "Nuevo Canal",
-		Descripcion: "Nueva Descripción",
-	}
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO canal_venta (id_sede, nombre, descripcion, eliminado) VALUES ($1, $2, $3, false) RETURNING id_canal`)).
+			WithArgs(2, "Online", "Canal de venta online").
+			WillReturnRows(sqlmock.NewRows([]string{"id_canal"}).AddRow(1))
 
-	idNuevoCanal, err := repo.Create(nuevoCanalRequest)
-	require.NoError(t, err)
-	assert.Greater(t, idNuevoCanal, 0)
+		id, err := repo.Create(canal)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, id)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 
-	// Verificar que se haya creado correctamente
-	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM canal_venta WHERE id_canal = $1", idNuevoCanal).Scan(&count)
-	require.NoError(t, err)
-	assert.Equal(t, 1, count)
+	t.Run("DBError", func(t *testing.T) {
+		canal := &entidades.NuevoCanalVentaRequest{
+			IDSede:      2,
+			Nombre:      "Online",
+			Descripcion: "Canal de venta online",
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO canal_venta (id_sede, nombre, descripcion, eliminado) VALUES ($1, $2, $3, false) RETURNING id_canal`)).
+			WithArgs(2, "Online", "Canal de venta online").
+			WillReturnError(errors.New("database error"))
+
+		id, err := repo.Create(canal)
+		assert.Error(t, err)
+		assert.Equal(t, 0, id)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_Update(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID del canal insertado en seedDB
-	var idCanal int
-	err := db.QueryRow("SELECT id_canal FROM canal_venta WHERE nombre = 'Canal Test'").Scan(&idCanal)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		canal := &entidades.ActualizarCanalVentaRequest{
+			IDSede:      2,
+			Nombre:      "Online Updated",
+			Descripcion: "Canal actualizado",
+			Eliminado:   false,
+		}
 
-	// Obtener el ID de la sede insertada en seedDB
-	var idSede int
-	err = db.QueryRow("SELECT id_sede FROM sede WHERE nombre = 'Sede Test'").Scan(&idSede)
-	require.NoError(t, err)
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE canal_venta SET id_sede = $1, nombre = $2, descripcion = $3, eliminado = $4 WHERE id_canal = $5`)).
+			WithArgs(2, "Online Updated", "Canal actualizado", false, 1).
+			WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Actualizar el canal
-	actualizarCanalRequest := &entidades.ActualizarCanalVentaRequest{
-		IDSede:      idSede,
-		Nombre:      "Canal Actualizado",
-		Descripcion: "Descripción Actualizada",
-		Eliminado:   false,
-	}
+		err := repo.Update(1, canal)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 
-	err = repo.Update(idCanal, actualizarCanalRequest)
-	require.NoError(t, err)
+	t.Run("DBError", func(t *testing.T) {
+		canal := &entidades.ActualizarCanalVentaRequest{
+			IDSede:      2,
+			Nombre:      "Online Updated",
+			Descripcion: "Canal actualizado",
+			Eliminado:   false,
+		}
 
-	// Verificar que se haya actualizado correctamente
-	var nombre, descripcion string
-	err = db.QueryRow("SELECT nombre, descripcion FROM canal_venta WHERE id_canal = $1", idCanal).Scan(&nombre, &descripcion)
-	require.NoError(t, err)
-	assert.Equal(t, "Canal Actualizado", nombre)
-	assert.Equal(t, "Descripción Actualizada", descripcion)
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE canal_venta SET id_sede = $1, nombre = $2, descripcion = $3, eliminado = $4 WHERE id_canal = $5`)).
+			WithArgs(2, "Online Updated", "Canal actualizado", false, 1).
+			WillReturnError(errors.New("database error"))
+
+		err := repo.Update(1, canal)
+		assert.Error(t, err)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_Delete(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID del canal insertado en seedDB
-	var idCanal int
-	err := db.QueryRow("SELECT id_canal FROM canal_venta WHERE nombre = 'Canal Test'").Scan(&idCanal)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM reserva WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	// Eliminar el canal
-	err = repo.Delete(idCanal)
-	require.NoError(t, err)
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM pago WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	// Verificar que se haya marcado como eliminado
-	var eliminado bool
-	err = db.QueryRow("SELECT eliminado FROM canal_venta WHERE id_canal = $1", idCanal).Scan(&eliminado)
-	require.NoError(t, err)
-	assert.True(t, eliminado)
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE canal_venta SET eliminado = true WHERE id_canal = $1`)).
+			WithArgs(1).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		err := repo.Delete(1)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("ReservasExist", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM reserva WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+		err := repo.Delete(1)
+		assert.Error(t, err)
+		assert.Equal(t, "no se puede eliminar este canal de venta porque está siendo utilizado en reservas", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("PagosExist", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM reserva WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM pago WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+		err := repo.Delete(1)
+		assert.Error(t, err)
+		assert.Equal(t, "no se puede eliminar este canal de venta porque está siendo utilizado en pagos", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM reserva WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM pago WHERE id_canal = $1 AND eliminado = false`)).
+			WithArgs(1).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE canal_venta SET eliminado = true WHERE id_canal = $1`)).
+			WithArgs(1).
+			WillReturnError(errors.New("database error"))
+
+		err := repo.Delete(1)
+		assert.Error(t, err)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_List(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Listar todos los canales
-	canales, err := repo.List()
-	require.NoError(t, err)
-	assert.NotEmpty(t, canales)
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"id_canal", "id_sede", "nombre", "descripcion", "eliminado", "nombre_sede"}).
+			AddRow(1, 2, "Online", "Canal de venta online", false, "Sede Principal").
+			AddRow(2, 2, "Presencial", "Canal presencial", false, "Sede Principal")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.eliminado = false ORDER BY cv.nombre ASC`)).
+			WillReturnRows(rows)
+
+		canales, err := repo.List()
+		assert.NoError(t, err)
+		assert.Len(t, canales, 2)
+		assert.Equal(t, 1, canales[0].ID)
+		assert.Equal(t, "Online", canales[0].Nombre)
+		assert.Equal(t, 2, canales[1].ID)
+		assert.Equal(t, "Presencial", canales[1].Nombre)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.eliminado = false ORDER BY cv.nombre ASC`)).
+			WillReturnError(errors.New("database error"))
+
+		canales, err := repo.List()
+		assert.Error(t, err)
+		assert.Nil(t, canales)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCanalVentaRepository_ListBySede(t *testing.T) {
-	db := setupTestDB(t)
+	db, mock := SetupDB(t)
 	defer db.Close()
 
 	repo := repositorios.NewCanalVentaRepository(db)
 
-	// Obtener el ID de la sede insertada en seedDB
-	var idSede int
-	err := db.QueryRow("SELECT id_sede FROM sede WHERE nombre = 'Sede Test'").Scan(&idSede)
-	require.NoError(t, err)
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"id_canal", "id_sede", "nombre", "descripcion", "eliminado", "nombre_sede"}).
+			AddRow(1, 2, "Online", "Canal de venta online", false, "Sede Principal")
 
-	// Listar canales por sede
-	canales, err := repo.ListBySede(idSede)
-	require.NoError(t, err)
-	assert.NotEmpty(t, canales)
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.id_sede = $1 AND cv.eliminado = false ORDER BY cv.nombre ASC`)).
+			WithArgs(2).
+			WillReturnRows(rows)
 
-	// Verificar que todos los canales pertenezcan a la sede
-	for _, canal := range canales {
-		assert.Equal(t, idSede, canal.IDSede)
-	}
+		canales, err := repo.ListBySede(2)
+		assert.NoError(t, err)
+		assert.Len(t, canales, 1)
+		assert.Equal(t, 1, canales[0].ID)
+		assert.Equal(t, "Online", canales[0].Nombre)
+		assert.Equal(t, "Sede Principal", canales[0].NombreSede)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT cv.id_canal, cv.id_sede, cv.nombre, cv.descripcion, cv.eliminado, s.nombre as nombre_sede FROM canal_venta cv INNER JOIN sede s ON cv.id_sede = s.id_sede WHERE cv.id_sede = $1 AND cv.eliminado = false ORDER BY cv.nombre ASC`)).
+			WithArgs(2).
+			WillReturnError(errors.New("database error"))
+
+		canales, err := repo.ListBySede(2)
+		assert.Error(t, err)
+		assert.Nil(t, canales)
+		assert.Equal(t, "database error", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
