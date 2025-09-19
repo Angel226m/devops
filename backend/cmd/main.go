@@ -222,6 +222,19 @@ func main() {
 		sedeRepo,
 	)
 	instanciaTourService := servicios.NewInstanciaTourService(instanciaTourRepo)
+	// AGREGAR ESTA LÍNEA:
+	dashboardService := servicios.NewDashboardService(
+		usuarioRepo,
+		sedeRepo,
+		reservaRepo,
+		tourProgramadoRepo,
+		clienteRepo,
+		pagoRepo,
+		instanciaTourRepo,
+		tipoTourRepo,
+		embarcacionRepo,
+		db,
+	)
 	// Iniciar job de limpieza (cada 1 hora)
 	cleanupJob := jobs.NewCleanupJob(reservaService, 1)
 	cleanupJob.Start()
@@ -262,6 +275,7 @@ func main() {
 		clienteService)
 
 	recuperacionController := initRecuperacionContrasena(db, usuarioRepo, clienteRepo)
+	dashboardController := controladores.NewDashboardController(dashboardService)
 
 	// Configurar rutas
 	rutas.SetupRoutes(
@@ -290,7 +304,7 @@ func main() {
 		instanciaTourController, // Agregar el nuevo controlador aquí
 		mercadoPagoController,   // Añadido aquí
 		recuperacionController,  // Añadido el controlador de recuperación
-
+		dashboardController,     // AGREGAR ESTA LÍNEA
 		reservaService,
 		clienteService,
 		mercadoPagoService,

@@ -46,6 +46,7 @@ func SetupRoutes(
 	instanciaTourController *controladores.InstanciaTourController, // Nuevo controlador
 	mercadoPagoController *controladores.MercadoPagoController, // Añadido aquí
 	recuperacionController *controladores.RecuperacionContrasenaController, // Nuevo parámetro
+	dashboardController *controladores.DashboardController, // AGREGAR ESTA LÍNEA
 
 	// Servicios necesarios para acceso directo en rutas
 	reservaService *servicios.ReservaService,
@@ -410,6 +411,11 @@ func SetupRoutes(
 			// Confirmación manual de pagos con Mercado Pago
 			admin.POST("/reservas/confirmar-pago", reservaController.ConfirmarPagoReserva)
 
+			// Dashboard - métricas y estadísticas para administradores
+			admin.GET("/dashboard/metricas", dashboardController.GetDashboardMetricas)
+			admin.GET("/dashboard/resumen", dashboardController.GetResumenGeneral)
+			admin.GET("/dashboard/ventas-mes", dashboardController.GetVentasPorMes)
+			admin.GET("/dashboard/sedes", dashboardController.GetEstadisticasSedes)
 		}
 
 		// Vendedores
@@ -525,6 +531,11 @@ func SetupRoutes(
 
 			// Confirmación manual de pagos con Mercado Pago
 			vendedor.POST("/reservas/confirmar-pago", reservaController.ConfirmarPagoReserva)
+
+			// Dashboard - métricas para vendedores (solo su sede)
+			vendedor.GET("/dashboard/metricas", dashboardController.GetDashboardMetricas)
+			vendedor.GET("/dashboard/resumen", dashboardController.GetResumenGeneral)
+			vendedor.GET("/dashboard/ventas-mes", dashboardController.GetVentasPorMes)
 		}
 
 		// Choferes
