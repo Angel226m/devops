@@ -101,6 +101,7 @@ import { InstanciaTourRepoHttp } from '../repositories/InstanciaTourRepoHttp';
  
 import reservaReducer, { ReservaState } from './slices/reservaSlice';
 import pagoReducer, { PagoState } from './slices/pagoSlice';
+import dashboardReducer, { DashboardState } from './slices/dashboardSlice';
 
 
 import axiosClient from '../api/axiosClient';
@@ -124,6 +125,7 @@ export interface RootState {
   reserva: ReservaState;
 
   pago: PagoState;
+  dashboard: DashboardState; 
 
   // Agrega otros reducers aquí
 }
@@ -152,7 +154,7 @@ export const store = configureStore({
             cliente: clienteReducer,
     reserva: reservaReducer,
     pago: pagoReducer,
-
+    dashboard: dashboardReducer, // AGREGAR ESTA LÍNEA
 
     // Agrega otros reducers según sea necesario
   },

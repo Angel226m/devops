@@ -368,4 +368,20 @@ pago: {
   vendedorListByEstado: (estado: string) => `/vendedor/pagos/estado/${estado}`,
   vendedorListByCliente: (idCliente: number) => `/vendedor/pagos/cliente/${idCliente}`,
 },
+
+//actualizacion para el dahsboard
+  dashboard: {
+    // Rutas para admin
+    metricas: '/admin/dashboard/metricas',
+    resumen: '/admin/dashboard/resumen',
+    ventasMes: '/admin/dashboard/ventas-mes',
+    sedes: '/admin/dashboard/sedes',
+    
+    // Rutas para vendedor
+    vendedorMetricas: '/vendedor/dashboard/metricas',
+    vendedorResumen: '/vendedor/dashboard/resumen',
+    vendedorVentasMes: '/vendedor/dashboard/ventas-mes',
+  },
+
 };
+
