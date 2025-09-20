@@ -2,8 +2,6 @@ package entidades
 
 import (
 	"time"
-
-	"github.com/golang-jwt/jwt/v4"
 )
 
 // Usuario representa la estructura de un usuario en el sistema
@@ -56,6 +54,7 @@ type LoginResponse struct {
 	Usuario      *Usuario `json:"usuario"`                 // Datos del usuario
 }
 
+/*
 // JWTClaims contiene los claims para el token JWT
 type JWTClaims struct {
 	UserID int    `json:"user_id"`
@@ -63,3 +62,4 @@ type JWTClaims struct {
 	Role   string `json:"role,omitempty"`    // Rol del usuario (ADMIN, VENDEDOR, CHOFER, etc.)
 	jwt.StandardClaims
 }
+*/
