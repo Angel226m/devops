@@ -78,14 +78,20 @@ export const endpoints = {
   },
   
   // Endpoints para Mercado Pago
-    mercadoPago: {
-    reservar: "/mercadopago/reservar", // Ya tiene el prefijo correcto
-    pagarReserva: (id:number) => `/cliente/mis-reservas/${id}/pagar`, 
+     // ========== MERCADOPAGO (CHECKOUT PRO + CHECKOUT API) ==========
+  mercadoPago: {
+    // 🔵 Checkout Pro (existentes)
+    reservar: "/mercadopago/reservar",
+    pagarReserva: (id: number) => `/cliente/mis-reservas/${id}/pagar`, 
     webhook: "/webhook/mercadopago",
-    publicKey: "/mercadopago/public-key", // Cambiado de "/api/v1/mercadopago/public-key"
-    verificarPago: "/mercadopago/verificar-pago" // Nuevo endpoint para verificar pagos
+    publicKey: "/mercadopago/public-key",
+    verificarPago: "/mercadopago/verificar-pago",
     
-
+    // 🟢 Checkout API (nuevos)
+    processCardPayment: "/mercadopago/process-card-payment",
+    paymentMethods: "/mercadopago/payment-methods",
+    cardIssuers: "/mercadopago/card-issuers",
+    installments: "/mercadopago/installments"
   },
     recuperacion: {
     solicitar: "/clientes/recuperar-contrasena",

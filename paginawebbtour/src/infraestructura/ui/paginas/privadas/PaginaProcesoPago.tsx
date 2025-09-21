@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -42,9 +42,12 @@ interface PaqueteDatosReserva {
 // Tipos para los estados de pago simulados
 type EstadoPagoSimulado = 'approved' | 'pending' | 'rejected';
 
-// 🔧 CONSTANTES CORREGIDAS - FORZAR SANDBOX PARA PRUEBAS
-const IS_PRODUCTION = false; // Hardcodear como false para forzar sandbox
-const IS_SANDBOX = true; // Hardcodear como true para forzar sandbox
+// Tipos para modos de checkout
+type ModoCheckout = 'pro' | 'api' | 'simulado';
+
+// 🔧 CONSTANTES ACTUALIZADAS
+const IS_PRODUCTION = false; // Hardcodear como false para forzar test mode
+const IS_SANDBOX = true; // Hardcodear como true para forzar test mode
 const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutos en milisegundos
 
 // Detectar si realmente estamos en desarrollo o producción (solo para logging)
@@ -74,6 +77,24 @@ const PaginaProcesoPago = () => {
   const [pagoIniciado, setPagoIniciado] = useState(false);
   const maxIntentosVerificacion = 10;
   
+  // 🆕 NUEVOS ESTADOS PARA CHECKOUT API
+  const [modoCheckout, setModoCheckout] = useState<ModoCheckout>('api'); // API por defecto
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [cardIssuers, setCardIssuers] = useState<any[]>([]);
+  const [installmentOptions, setInstallmentOptions] = useState<any[]>([]);
+  const [cardForm, setCardForm] = useState({
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    securityCode: '',
+    cardholderName: '',
+    identificationType: 'DNI',
+    identificationNumber: '',
+    paymentMethodId: '',
+    issuerId: ''
+  });
+  const [mp, setMp] = useState<any>(null);
+  
   // Estados para datos de usuario
   const [editandoUsuario, setEditandoUsuario] = useState(false);
   const [datosUsuario, setDatosUsuario] = useState({
@@ -99,6 +120,7 @@ const PaginaProcesoPago = () => {
     console.log("   🎯 IS_SANDBOX (forzado):", IS_SANDBOX);
     console.log("   🎯 IS_PRODUCTION (forzado):", IS_PRODUCTION);
     console.log("   🧪 Usar modo simulado:", usarModoSimulado);
+    console.log("   🔄 Modo checkout actual:", modoCheckout);
     console.log("================================================");
     
     window.scrollTo(0, 0);
@@ -117,6 +139,21 @@ const PaginaProcesoPago = () => {
   const guardarCambiosUsuario = () => {
     setEditandoUsuario(false);
     alert('Cambios guardados correctamente.');
+  };
+
+  // 🆕 MANEJAR CAMBIOS EN FORMULARIO DE TARJETA
+  const handleCardFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    setCardForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Identificar método de pago cuando cambia el número de tarjeta
+    if (name === 'cardNumber') {
+      identifyPaymentMethod(value.replace(/\s/g, ''));
+    }
   };
 
   // Función para limpiar los datos de reserva en progreso
@@ -185,12 +222,12 @@ const PaginaProcesoPago = () => {
       if (response.data && response.data.public_key) {
         const newKey = response.data.public_key;
         
-        // VERIFICAR QUE SEA LA CLAVE DE SANDBOX CORRECTA
-        if (newKey.includes("bab1c568-ca8d-4fbc-9c87-b2b797744fc6")) {
-          console.log("✅ Clave pública de sandbox confirmada");
+        // VERIFICAR QUE SEA LA CLAVE DE TEST CORRECTA
+        if (newKey.includes("TEST-4e0f5e55-d687-4b7e-83db-12a20d3d6beb")) {
+          console.log("✅ Clave pública de TEST confirmada (Checkout API)");
         } else {
-          console.log("❌ PROBLEMA: Esta no es la clave de sandbox esperada");
-          console.log("   Esperada: APP_USR-bab1c568-ca8d-4fbc-9c87-b2b797744fc6");
+          console.log("❌ PROBLEMA: Esta no es la clave de TEST esperada");
+          console.log("   Esperada: TEST-4e0f5e55-d687-4b7e-83db-12a20d3d6beb");
           console.log("   Recibida:", newKey);
         }
         
@@ -207,6 +244,131 @@ const PaginaProcesoPago = () => {
       return null;
     }
   }, []);
+
+  // 🆕 OBTENER MÉTODOS DE PAGO DISPONIBLES
+  const obtenerMetodosPago = useCallback(async () => {
+    try {
+      console.log("📋 Obteniendo métodos de pago...");
+      const response = await clienteAxios.get(endpoints.mercadoPago.paymentMethods);
+      
+      if (response.data && response.data.data) {
+        setPaymentMethods(response.data.data);
+        console.log("✅ Métodos de pago obtenidos:", response.data.data.length);
+      }
+    } catch (error) {
+      console.error("❌ Error al obtener métodos de pago:", error);
+    }
+  }, []);
+
+  // 🆕 IDENTIFICAR MÉTODO DE PAGO POR BIN
+  const identifyPaymentMethod = useCallback(async (cardNumber: string) => {
+    if (mp && cardNumber.length >= 6) {
+      try {
+        const paymentMethod = await mp.getPaymentMethod({ bin: cardNumber.substring(0, 6) });
+        if (paymentMethod.results && paymentMethod.results.length > 0) {
+          const method = paymentMethod.results[0];
+          setCardForm(prev => ({
+            ...prev,
+            paymentMethodId: method.id
+          }));
+
+          // Obtener emisores si es tarjeta de crédito
+          if (method.payment_type_id === 'credit_card') {
+            await obtenerEmisores(method.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error al identificar método de pago:', error);
+      }
+    }
+  }, [mp]);
+
+  // 🆕 OBTENER EMISORES DE TARJETAS
+  const obtenerEmisores = useCallback(async (paymentMethodId: string) => {
+    try {
+      console.log("🏛️ Obteniendo emisores para:", paymentMethodId);
+      const response = await clienteAxios.get(
+        `${endpoints.mercadoPago.cardIssuers}?payment_method_id=${paymentMethodId}`
+      );
+      
+      if (response.data && response.data.data) {
+        setCardIssuers(response.data.data);
+        console.log("✅ Emisores obtenidos:", response.data.data.length);
+      }
+    } catch (error) {
+      console.error("❌ Error al obtener emisores:", error);
+    }
+  }, []);
+
+  // 🆕 PROCESAR PAGO CON CHECKOUT API
+  const procesarPagoConCheckoutAPI = useCallback(async () => {
+    if (cargandoPago) return;
+    
+    setCargandoPago(true);
+    setError(null);
+    setPagoIniciado(true);
+    
+    try {
+      console.log("💳 Procesando pago con Checkout API...");
+      
+      if (!mp) {
+        throw new Error('MercadoPago SDK no está inicializado');
+      }
+
+      // Crear token de tarjeta
+      const cardToken = await mp.createCardToken({
+        cardNumber: cardForm.cardNumber.replace(/\s/g, ''),
+        cardholderName: cardForm.cardholderName,
+        cardExpirationMonth: cardForm.expiryMonth,
+        cardExpirationYear: cardForm.expiryYear,
+        securityCode: cardForm.securityCode,
+        identificationType: cardForm.identificationType,
+        identificationNumber: cardForm.identificationNumber,
+      });
+
+      console.log("🎫 Token de tarjeta creado:", cardToken.id);
+
+      // Procesar pago con el token
+      const paymentData = {
+        token: cardToken.id,
+        transaction_amount: total,
+        payment_method_id: cardForm.paymentMethodId,
+        issuer_id: cardForm.issuerId || undefined,
+        installments: 1,
+        reserva_id: datosReserva.reservaId || datosReserva.instanciaId,
+        email: datosUsuario.correo,
+        first_name: datosUsuario.nombres,
+        last_name: datosUsuario.apellidos,
+        identification_type: cardForm.identificationType,
+        identification_number: cardForm.identificationNumber
+      };
+
+      console.log("📤 Enviando datos de pago:", paymentData);
+
+      const response = await clienteAxios.post(endpoints.mercadoPago.processCardPayment, paymentData);
+
+      console.log("📥 Respuesta del pago:", response.data);
+
+      if (response.data && response.data.success) {
+        const paymentResult = response.data.data;
+        
+        // Navegar según el resultado
+        navegarSegunEstadoPago(
+          paymentResult.status,
+          paymentResult.payment_id?.toString() || null,
+          paymentResult.reserva_id || datosReserva.reservaId || datosReserva.instanciaId
+        );
+      } else {
+        throw new Error('Error al procesar el pago');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error en el pago con Checkout API:', error);
+      setError(analizarErrorMercadoPago(error));
+    } finally {
+      setCargandoPago(false);
+    }
+  }, [mp, cardForm, total, datosUsuario, datosReserva, analizarErrorMercadoPago]);
 
   // Crear una preferencia simulada (para pruebas)
   const crearPreferenciaSimulada = useCallback(() => {
@@ -391,7 +553,7 @@ const PaginaProcesoPago = () => {
     }
   }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago]);
 
-  // Crear preferencia real usando el backend
+  // Crear preferencia real usando el backend (CHECKOUT PRO)
   const crearPreferenciaReal = useCallback(async () => {
     try {
       if (preferencia) {
@@ -695,7 +857,31 @@ const PaginaProcesoPago = () => {
     });
   }, []);
 
-  // Renderizar el botón de Mercado Pago
+  // 🆕 INICIALIZAR MERCADOPAGO SDK PARA CHECKOUT API
+  const inicializarMercadoPagoSDK = useCallback(async () => {
+    try {
+      if (!publicKey) {
+        const key = await obtenerClavePublica();
+        if (!key) return;
+      }
+
+      if (window.MercadoPago && publicKey) {
+        const mercadoPago = new window.MercadoPago(publicKey, {
+          locale: 'es-PE'
+        });
+        
+        setMp(mercadoPago);
+        console.log("✅ MercadoPago SDK inicializado para Checkout API");
+        
+        // Obtener métodos de pago al inicializar
+        await obtenerMetodosPago();
+      }
+    } catch (error) {
+      console.error("❌ Error al inicializar MercadoPago SDK:", error);
+    }
+  }, [publicKey, obtenerClavePublica, obtenerMetodosPago]);
+
+  // Renderizar el botón de Mercado Pago (CHECKOUT PRO)
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
       console.log("⏸️ No hay preferencia para renderizar el botón");
@@ -805,6 +991,9 @@ const PaginaProcesoPago = () => {
       if (!preferencia) {
         setPreferencia(nuevaPreferencia);
       }
+
+      // 🆕 Inicializar SDK para Checkout API
+      await inicializarMercadoPagoSDK();
       
       return nuevaPreferencia;
     } catch (error: any) {
@@ -814,7 +1003,7 @@ const PaginaProcesoPago = () => {
     } finally {
       setCargandoMercadoPago(false);
     }
-  }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, usarModoSimulado, preferencia, analizarErrorMercadoPago]);
+  }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, usarModoSimulado, preferencia, analizarErrorMercadoPago, inicializarMercadoPagoSDK]);
 
   // 🔧 FUNCIÓN CORREGIDA - Procesar pago directo
   const procesarPagoDirecto = async () => {
@@ -877,8 +1066,14 @@ const PaginaProcesoPago = () => {
         }
         return;
       }
+
+      // 🆕 CHECKOUT API - Procesar con tarjeta directamente
+      if (modoCheckout === 'api') {
+        await procesarPagoConCheckoutAPI();
+        return;
+      }
       
-      // 🔧 LÓGICA CORREGIDA PARA SELECCIÓN DE URL
+      // 🔧 CHECKOUT PRO - Lógica existente corregida
       if (preferencia) {
         console.log("🔍 ========== VERIFICACIÓN DE PREFERENCIA ==========");
         console.log("📋 Preferencia completa:", JSON.stringify(preferencia, null, 2));
@@ -987,9 +1182,9 @@ const PaginaProcesoPago = () => {
     iniciarMercadoPago();
   }, [obtenerClavePublica, iniciarProcesoPago, publicKey, preferencia]);
 
-  // Renderizar el botón cuando la preferencia cambia
+  // Renderizar el botón cuando la preferencia cambia (solo para Checkout Pro)
   useEffect(() => {
-    if (preferencia && sdkCargado && publicKey) {
+    if (preferencia && sdkCargado && publicKey && modoCheckout === 'pro') {
       const debouncedRender = debounce(() => {
         renderizarBotonMercadoPago();
       }, 500);
@@ -1000,7 +1195,7 @@ const PaginaProcesoPago = () => {
         debouncedRender.cancel();
       };
     }
-  }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago]);
+  }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago, modoCheckout]);
   
   // Verificar periódicamente el estado del pago en modo sandbox
   useEffect(() => {
@@ -1032,7 +1227,7 @@ const PaginaProcesoPago = () => {
       };
     }
   }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva]);
-  
+
   // Verificar si estamos regresando de un pago en Mercado Pago
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1123,7 +1318,7 @@ const PaginaProcesoPago = () => {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-white via-blue-50 to-cyan-50 min-h-screen">
       <div className="flex flex-col space-y-6">
-        {/* 🎨 ENCABEZADO MEJORADO CON INDICADOR DE SANDBOX */}
+        {/* 🎨 ENCABEZADO MEJORADO CON INDICADOR DE TEST MODE */}
         <div className="bg-gradient-to-r from-blue-600 to-teal-500 text-white p-6 rounded-xl shadow-lg">
           <div className="flex justify-between items-start">
             <div>
@@ -1131,10 +1326,10 @@ const PaginaProcesoPago = () => {
               <p className="mt-1 opacity-90">{t('pago.subtitulo', 'Completa tu reserva realizando el pago')}</p>
             </div>
             
-            {/* 🧪 INDICADOR DE MODO SANDBOX */}
+            {/* 🧪 INDICADOR DE MODO TEST */}
             {IS_SANDBOX && (
               <div className="bg-yellow-500 text-yellow-900 px-3 py-1 rounded-lg text-sm font-medium">
-                🧪 Modo Sandbox
+                🧪 Modo Test
               </div>
             )}
           </div>
@@ -1175,7 +1370,7 @@ const PaginaProcesoPago = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Información de la reserva */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Datos del tour */}
+                       {/* Datos del tour */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
@@ -1275,7 +1470,7 @@ const PaginaProcesoPago = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
                     <input 
-                                            type="text" 
+                      type="text" 
                       name="apellidos"
                       value={datosUsuario.apellidos}
                       onChange={handleUsuarioChange}
@@ -1349,7 +1544,7 @@ const PaginaProcesoPago = () => {
             )}
           </div>
           
-          {/* 🎨 OPCIONES DE PAGO MEJORADAS */}
+          {/* 🎨 PANEL DE PAGO MEJORADO CON CHECKOUT API */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
@@ -1367,13 +1562,13 @@ const PaginaProcesoPago = () => {
                     <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center mr-3">
                       <span className="text-yellow-900 font-bold">🧪</span>
                     </div>
-                    <span className="font-semibold text-yellow-800">Modo Sandbox Activo</span>
+                    <span className="font-semibold text-yellow-800">Modo Test Activo</span>
                   </div>
                   <p className="text-sm text-yellow-700 ml-11">
                     Los pagos son simulaciones. Ningún cargo real será efectuado.
                   </p>
                   <div className="mt-2 ml-11 text-xs text-yellow-600">
-                    Entorno: {ACTUAL_ENV} | Sandbox: {IS_SANDBOX ? 'Sí' : 'No'}
+                    Entorno: {ACTUAL_ENV} | Test Mode: {IS_SANDBOX ? 'Sí' : 'No'}
                   </div>
                 </div>
               )}
@@ -1389,9 +1584,195 @@ const PaginaProcesoPago = () => {
                   </div>
                 </div>
               )}
-              
+
+              {/* 🆕 SELECTOR DE MODO DE CHECKOUT */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-4 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setModoCheckout('api')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      modoCheckout === 'api'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    💳 Checkout API
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setModoCheckout('pro')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      modoCheckout === 'pro'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    🌐 Checkout Pro
+                  </button>
+                  
+                  {ACTUAL_ENV === 'development' && (
+                    <button
+                      type="button"
+                      onClick={() => setModoCheckout('simulado')}
+                      className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                        modoCheckout === 'simulado'
+                          ? 'bg-purple-600 text-white shadow-lg'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      🧪 Simulado
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 🆕 CHECKOUT API - FORMULARIO DE TARJETA */}
+              {modoCheckout === 'api' && (
+                <div className="space-y-4 mb-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      Datos de la tarjeta
+                    </h3>
+                    
+                    {/* Número de tarjeta */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Número de tarjeta *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        value={cardForm.cardNumber}
+                        onChange={handleCardFormChange}
+                        placeholder="1234 5678 9012 3456"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        maxLength={19}
+                        required
+                      />
+                    </div>
+
+                    {/* Nombre del titular */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre del titular *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardholderName"
+                        value={cardForm.cardholderName}
+                        onChange={handleCardFormChange}
+                        placeholder="JUAN PEREZ"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Vencimiento y CVV */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Mes *
+                        </label>
+                        <select
+                          name="expiryMonth"
+                          value={cardForm.expiryMonth}
+                          onChange={handleCardFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        >
+                          <option value="">MM</option>
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                              {String(i + 1).padStart(2, '0')}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Año *
+                        </label>
+                        <select
+                          name="expiryYear"
+                          value={cardForm.expiryYear}
+                          onChange={handleCardFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        >
+                          <option value="">AA</option>
+                          {Array.from({ length: 10 }, (_, i) => {
+                            const year = new Date().getFullYear() + i;
+                            return (
+                              <option key={year} value={String(year).slice(-2)}>
+                                {String(year).slice(-2)}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          CVV *
+                        </label>
+                        <input
+                          type="text"
+                          name="securityCode"
+                          value={cardForm.securityCode}
+                          onChange={handleCardFormChange}
+                          placeholder="123"
+                          maxLength={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Documento */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Tipo Doc.
+                        </label>
+                        <select
+                          name="identificationType"
+                          value={cardForm.identificationType}
+                          onChange={handleCardFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="DNI">DNI</option>
+                          <option value="CE">CE</option>
+                          <option value="PPN">Pasaporte</option>
+                        </select>
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Número de documento *
+                        </label>
+                        <input
+                          type="text"
+                          name="identificationNumber"
+                          value={cardForm.identificationNumber}
+                          onChange={handleCardFormChange}
+                          placeholder="12345678"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 🧪 CONTROLES DE DESARROLLO MEJORADOS */}
-              {ACTUAL_ENV === 'development' && (
+              {ACTUAL_ENV === 'development' && modoCheckout === 'simulado' && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                   <div className="flex items-center mb-3">
                     <div className="w-6 h-6 rounded-full bg-blue-400 mr-2 flex items-center justify-center">
@@ -1400,55 +1781,38 @@ const PaginaProcesoPago = () => {
                     <span className="font-medium text-blue-800">Controles de Desarrollo</span>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-blue-700">Modo simulado:</span>
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={usarModoSimulado} 
-                          onChange={(e) => setUsarModoSimulado(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
+                  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="text-sm font-medium text-purple-800 mb-2">Simular resultado:</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'approved', label: 'Aprobado', color: 'green' },
+                        { value: 'pending', label: 'Pendiente', color: 'yellow' },
+                        { value: 'rejected', label: 'Rechazado', color: 'red' }
+                      ].map(({ value, label, color }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setEstadoSimuladoSeleccionado(value as EstadoPagoSimulado)}
+                          className={`p-2 rounded text-center text-xs font-medium transition-all ${
+                            estadoSimuladoSeleccionado === value 
+                              ? `bg-${color}-600 text-white shadow-lg` 
+                              : `bg-white text-${color}-800 border border-${color}-200 hover:bg-${color}-50`
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
-                    
-                    {usarModoSimulado && (
-                      <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div className="text-sm font-medium text-purple-800 mb-2">Simular resultado:</div>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { value: 'approved', label: 'Aprobado', color: 'green' },
-                            { value: 'pending', label: 'Pendiente', color: 'yellow' },
-                            { value: 'rejected', label: 'Rechazado', color: 'red' }
-                          ].map(({ value, label, color }) => (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => setEstadoSimuladoSeleccionado(value as EstadoPagoSimulado)}
-                              className={`p-2 rounded text-center text-xs font-medium transition-all ${
-                                estadoSimuladoSeleccionado === value 
-                                  ? `bg-${color}-600 text-white shadow-lg` 
-                                  : `bg-white text-${color}-800 border border-${color}-200 hover:bg-${color}-50`
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
               
               {/* 💳 TARJETAS DE PRUEBA MEJORADAS */}
-              {ACTUAL_ENV === 'development' && !usarModoSimulado && IS_SANDBOX && (
+              {ACTUAL_ENV === 'development' && modoCheckout !== 'simulado' && IS_SANDBOX && (
                 <div className="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
                   <div className="flex items-center mb-3">
                     <span className="text-2xl mr-2">💳</span>
-                    <span className="font-semibold text-emerald-800">Tarjetas de Prueba - Sandbox</span>
+                    <span className="font-semibold text-emerald-800">Tarjetas de Prueba - Test Mode</span>
                   </div>
                   <div className="text-xs text-emerald-600 mb-3">
                     Usa estas tarjetas para probar diferentes escenarios de pago:
@@ -1460,7 +1824,7 @@ const PaginaProcesoPago = () => {
                         card: 'Mastercard',
                         number: '5031 7557 3453 0604',
                         cvv: '123',
-                        date: '11/25',
+                        date: '12/26',
                         name: 'APRO',
                         color: 'emerald',
                         icon: '✅'
@@ -1470,7 +1834,7 @@ const PaginaProcesoPago = () => {
                         card: 'Visa',
                         number: '4509 9535 6623 3704',
                         cvv: '123',
-                        date: '11/25',
+                        date: '12/26',
                         name: 'RECH',
                         color: 'red',
                         icon: '❌'
@@ -1480,7 +1844,7 @@ const PaginaProcesoPago = () => {
                         card: 'Visa',
                         number: '4075 5957 1648 3764',
                         cvv: '123',
-                        date: '11/25',
+                        date: '12/26',
                         name: 'CONT',
                         color: 'amber',
                         icon: '⏳'
@@ -1514,29 +1878,33 @@ const PaginaProcesoPago = () => {
                     <div className="animate-spin h-8 w-8 border-t-3 border-b-3 border-blue-500 rounded-full mb-3"></div>
                     <span className="text-blue-600 font-medium">Conectando con MercadoPago...</span>
                     <span className="text-blue-500 text-sm mt-1">
-                      {IS_SANDBOX ? '🧪 Modo sandbox activo' : '🔐 Modo producción'}
+                      {IS_SANDBOX ? '🧪 Modo test activo' : '🔐 Modo producción'}
                     </span>
                   </div>
                 ) : (
                   <>
-                    {/* Contenedor para el botón de Mercado Pago */}
-                    <div 
-                      className="mercado-pago-button w-full min-h-[60px] bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-dashed border-blue-200 mb-4 flex items-center justify-center"
-                      ref={mercadoPagoButtonRef}
-                    >
-                      <div className="text-center">
-                        <span className="text-sm text-blue-500 block">🔄 Cargando opciones de pago...</span>
-                        <span className="text-xs text-blue-400">MercadoPago</span>
+                    {/* Contenedor para el botón de Mercado Pago (CHECKOUT PRO) */}
+                    {modoCheckout === 'pro' && (
+                      <div 
+                        className="mercado-pago-button w-full min-h-[60px] bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-dashed border-blue-200 mb-4 flex items-center justify-center"
+                        ref={mercadoPagoButtonRef}
+                      >
+                        <div className="text-center">
+                          <span className="text-sm text-blue-500 block">🔄 Cargando opciones de pago...</span>
+                          <span className="text-xs text-blue-400">MercadoPago Checkout Pro</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
                     {/* 🚀 BOTÓN DE PAGO PRINCIPAL MEJORADO */}
                     <button
                       type="button"
-                      onClick={procesarPagoDirecto}
-                      disabled={cargandoPago}
+                      onClick={modoCheckout === 'api' ? procesarPagoConCheckoutAPI : procesarPagoDirecto}
+                      disabled={cargandoPago || (modoCheckout === 'api' && (!cardForm.cardNumber || !cardForm.cardholderName || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.securityCode || !cardForm.identificationNumber))}
                       className={`w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl ${
-                        cargandoPago ? 'opacity-70 cursor-not-allowed' : 'hover:from-blue-700 hover:to-teal-700 transform hover:-translate-y-0.5'
+                        cargandoPago || (modoCheckout === 'api' && (!cardForm.cardNumber || !cardForm.cardholderName || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.securityCode || !cardForm.identificationNumber))
+                          ? 'opacity-70 cursor-not-allowed' 
+                          : 'hover:from-blue-700 hover:to-teal-700 transform hover:-translate-y-0.5'
                       }`}
                     >
                       {cargandoPago ? (
@@ -1552,8 +1920,8 @@ const PaginaProcesoPago = () => {
                           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                           </svg>
-                          Pagar S/ {total.toFixed(2)}
-                          {IS_SANDBOX && <span className="ml-2 text-xs opacity-75">(Sandbox)</span>}
+                          {modoCheckout === 'api' ? 'Pagar con tarjeta' : 'Pagar'} S/ {total.toFixed(2)}
+                          {IS_SANDBOX && <span className="ml-2 text-xs opacity-75">(Test)</span>}
                         </span>
                       )}
                     </button>
@@ -1652,7 +2020,8 @@ const PaginaProcesoPago = () => {
           {ACTUAL_ENV === 'development' && (
             <div className="text-xs text-gray-500 text-right">
               <div>ENV: {ACTUAL_ENV}</div>
-              <div>Sandbox: {IS_SANDBOX ? 'Activo' : 'Inactivo'}</div>
+              <div>Test Mode: {IS_SANDBOX ? 'Activo' : 'Inactivo'}</div>
+              <div>Modo: {modoCheckout}</div>
               {preferencia && (
                 <div>Pref ID: {preferencia.preference_id || preferencia.id}</div>
               )}
