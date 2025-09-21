@@ -159,36 +159,39 @@ func SetupRoutes(
 		public.GET("/idiomas", idiomaController.List)
 
 		//reservas mercado pago
-		//reservas mercado pago
+		// ========== CHECKOUT PRO (EXISTENTES) ==========
 		public.POST("/mercadopago/reservar", func(ctx *gin.Context) {
 			clienteHandlers.ReservarConMercadoPago(ctx, reservaController)
 		})
-
-		// Verificar disponibilidad de instancia
 		public.GET("/mercadopago/public-key", mercadoPagoController.GetPublicKey)
 		public.GET("/mercadopago/verificar-pago", mercadoPagoController.VerificarPago)
-		// Ruta pública para verificar y confirmar pagos
 
-		// ========== CHECKOUT API (NUEVAS) ==========
-		// 🆕 Procesar pago con tarjeta
-		public.POST("/mercadopago/process-card-payment", mercadoPagoController.ProcessCardPayment)
-
-		// 🆕 Obtener métodos de pago disponibles
-		public.GET("/mercadopago/payment-methods", mercadoPagoController.GetPaymentMethods)
-
-		// 🆕 Obtener emisores de tarjetas
-		public.GET("/mercadopago/card-issuers", mercadoPagoController.GetCardIssuers)
-
-		// 🆕 Obtener opciones de cuotas
-		public.GET("/mercadopago/installments", mercadoPagoController.GetInstallments)
-
-		// ========== WEBHOOKS (COMPARTIDOS) ==========
+		// ========== CHECKOUT API (NUEVAS - CORREGIDAS) ==========
+		// 🔧 CORREGIR: Asegurar que estas rutas estén correctamente configuradas
+		fmt.Printf("🔧 Registrando ruta POST /api/v1/mercadopago/process-card-payment\n")
+		public.POST("/mercadopago/process-card-payment", func(ctx *gin.Context) {
+			fmt.Printf("🎯 RUTA EJECUTADA: /mercadopago/process-card-payment\n")
+			mercadoPagoController.ProcessCardPayment(ctx)
+		})
+		fmt.Printf("🔧 Registrando ruta GET /api/v1/mercadopago/payment-methods\n")
+		public.GET("/mercadopago/payment-methods", func(ctx *gin.Context) {
+			fmt.Printf("🎯 RUTA EJECUTADA: /mercadopago/payment-methods\n")
+			mercadoPagoController.GetPaymentMethods(ctx)
+		})
+		fmt.Printf("🔧 Registrando ruta GET /api/v1/mercadopago/card-issuers\n")
+		public.GET("/mercadopago/card-issuers", func(ctx *gin.Context) {
+			fmt.Printf("🎯 RUTA EJECUTADA: /mercadopago/card-issuers\n")
+			mercadoPagoController.GetCardIssuers(ctx)
+		})
+		fmt.Printf("🔧 Registrando ruta GET /api/v1/mercadopago/installments\n")
+		public.GET("/mercadopago/installments", func(ctx *gin.Context) {
+			fmt.Printf("🎯 RUTA EJECUTADA: /mercadopago/installments\n")
+			mercadoPagoController.GetInstallments(ctx)
+		})
+		// ========== WEBHOOKS Y VERIFICACIONES ==========
 		public.POST("/webhook/mercadopago", reservaController.WebhookMercadoPago)
-
-		// ========== VERIFICACIONES (COMPARTIDAS) ==========
 		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
 		public.GET("/reservas/verificar-confirmar-pago", reservaController.VerificarYConfirmarPago)
-
 	}
 
 	// Rutas protegidas (requieren autenticación)
