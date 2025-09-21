@@ -39,18 +39,13 @@ interface PaqueteDatosReserva {
   seleccionado: boolean;
 }
 
-// Tipos para los estados de pago simulados
-type EstadoPagoSimulado = 'approved' | 'pending' | 'rejected';
-
 // Tipos para modos de checkout
-type ModoCheckout = 'pro' | 'api' | 'simulado';
+type ModoCheckout = 'pro' | 'api';
 
 // 🔧 CONSTANTES ACTUALIZADAS
-const IS_PRODUCTION = false; // Hardcodear como false para forzar test mode
-const IS_SANDBOX = true; // Hardcodear como true para forzar test mode
-const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutos en milisegundos
-
-// Detectar si realmente estamos en desarrollo o producción (solo para logging)
+const IS_PRODUCTION = false;
+const IS_SANDBOX = true;
+const CACHE_DURATION_MS = 15 * 60 * 1000;
 const ACTUAL_ENV = process.env.NODE_ENV;
 
 const PaginaProcesoPago = () => {
@@ -59,26 +54,21 @@ const PaginaProcesoPago = () => {
   const location = useLocation();
   const { usuario, autenticado } = useSelector((state: RootState) => state.autenticacion);
   
-  // Recuperar datos de la reserva del state o de sessionStorage
   const datosReserva = location.state || JSON.parse(sessionStorage.getItem('datosReservaPendiente') || '{}');
   
-  // Estados para el flujo de pago
   const [cargandoPago, setCargandoPago] = useState(false);
   const [cargandoMercadoPago, setCargandoMercadoPago] = useState(true);
   const [metodoPago, setMetodoPago] = useState('mercadopago');
   const [error, setError] = useState<string | null>(null);
   const [preferencia, setPreferencia] = useState<any>(null);
   const [sdkCargado, setSdkCargado] = useState(false);
-  const [usarModoSimulado, setUsarModoSimulado] = useState(ACTUAL_ENV === 'development');
   const [publicKey, setPublicKey] = useState('');
-  const [estadoSimuladoSeleccionado, setEstadoSimuladoSeleccionado] = useState<EstadoPagoSimulado>('approved');
   const [intentosVerificacion, setIntentosVerificacion] = useState(0);
   const [estadoPagoVerificado, setEstadoPagoVerificado] = useState(false);
   const [pagoIniciado, setPagoIniciado] = useState(false);
   const maxIntentosVerificacion = 10;
   
-  // 🆕 NUEVOS ESTADOS PARA CHECKOUT API
-  const [modoCheckout, setModoCheckout] = useState<ModoCheckout>('api'); // API por defecto
+  const [modoCheckout, setModoCheckout] = useState<ModoCheckout>('api');
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [cardIssuers, setCardIssuers] = useState<any[]>([]);
   const [installmentOptions, setInstallmentOptions] = useState<any[]>([]);
@@ -95,7 +85,6 @@ const PaginaProcesoPago = () => {
   });
   const [mp, setMp] = useState<any>(null);
   
-  // Estados para datos de usuario
   const [editandoUsuario, setEditandoUsuario] = useState(false);
   const [datosUsuario, setDatosUsuario] = useState({
     nombres: usuario?.nombres || '',
@@ -105,28 +94,23 @@ const PaginaProcesoPago = () => {
     numero_documento: usuario?.numero_documento || ''
   });
 
-  // Referencia al contenedor del botón
   const mercadoPagoButtonRef = useRef<HTMLDivElement>(null);
   
-  // Calcular subtotal, IGV y total
   const subtotal = Number(datosReserva.total || 0);
   const igv = subtotal * 0.18;
   const total = subtotal;
 
-  // Log inicial para verificar configuración
   useEffect(() => {
     console.log("🔧 ========== CONFIGURACIÓN DE ENTORNO ==========");
     console.log("   🌍 NODE_ENV actual:", ACTUAL_ENV);
     console.log("   🎯 IS_SANDBOX (forzado):", IS_SANDBOX);
     console.log("   🎯 IS_PRODUCTION (forzado):", IS_PRODUCTION);
-    console.log("   🧪 Usar modo simulado:", usarModoSimulado);
     console.log("   🔄 Modo checkout actual:", modoCheckout);
     console.log("================================================");
     
     window.scrollTo(0, 0);
   }, []);
 
-  // Manejar cambios en los campos de usuario
   const handleUsuarioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setDatosUsuario(prev => ({
@@ -135,13 +119,11 @@ const PaginaProcesoPago = () => {
     }));
   };
   
-  // Guardar cambios del usuario
   const guardarCambiosUsuario = () => {
     setEditandoUsuario(false);
     alert('Cambios guardados correctamente.');
   };
 
-  // 🆕 MANEJAR CAMBIOS EN FORMULARIO DE TARJETA
   const handleCardFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -150,13 +132,11 @@ const PaginaProcesoPago = () => {
       [name]: value
     }));
 
-    // 🔧 CORREGIDO: Identificar método de pago cuando cambia el número de tarjeta
     if (name === 'cardNumber') {
       identifyPaymentMethod(value.replace(/\s/g, ''));
     }
   };
 
-  // Función para limpiar los datos de reserva en progreso
   const limpiarDatosReservaEnProgreso = useCallback(() => {
     const instanciaId = datosReserva.instanciaId;
     if (instanciaId) {
@@ -166,7 +146,6 @@ const PaginaProcesoPago = () => {
     sessionStorage.removeItem('reservaEnProceso');
   }, [datosReserva.instanciaId]);
 
-  // Función para analizar errores de MercadoPago
   const analizarErrorMercadoPago = useCallback((error: any) => {
     let mensajeUsuario = "Ocurrió un error al procesar el pago. Por favor, intenta nuevamente.";
     
@@ -207,7 +186,6 @@ const PaginaProcesoPago = () => {
     return mensajeUsuario;
   }, []);
 
-  // Obtener la clave pública desde el backend
   const obtenerClavePublica = useCallback(async () => {
     try {
       const cachedKey = localStorage.getItem('mp_public_key');
@@ -230,7 +208,6 @@ const PaginaProcesoPago = () => {
       if (response.data && response.data.public_key) {
         const newKey = response.data.public_key;
         
-        // VERIFICAR QUE SEA LA CLAVE DE TEST CORRECTA
         if (newKey.includes("TEST-4e0f5e55-d687-4b7e-83db-12a20d3d6beb")) {
           console.log("✅ Clave pública de TEST confirmada (Checkout API)");
         } else {
@@ -253,7 +230,6 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // 🆕 OBTENER MÉTODOS DE PAGO DISPONIBLES
   const obtenerMetodosPago = useCallback(async () => {
     try {
       console.log("📋 Obteniendo métodos de pago...");
@@ -268,13 +244,11 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // 🔧 CORREGIDO: IDENTIFICAR MÉTODO DE PAGO POR BIN (SDK v2)
   const identifyPaymentMethod = useCallback(async (cardNumber: string) => {
     if (mp && cardNumber.length >= 6) {
       try {
         console.log("🔍 Identificando método de pago para BIN:", cardNumber.substring(0, 6));
         
-        // 🔧 SDK v2: Usar getPaymentMethods con bin (NO getPaymentMethod)
         const response = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
         
         console.log("📋 Respuesta de identificación:", response);
@@ -288,7 +262,6 @@ const PaginaProcesoPago = () => {
             paymentMethodId: method.id
           }));
 
-          // Obtener emisores si es tarjeta de crédito
           if (method.payment_type_id === 'credit_card') {
             await obtenerEmisores(method.id);
           }
@@ -301,7 +274,6 @@ const PaginaProcesoPago = () => {
     }
   }, [mp]);
 
-  // 🆕 OBTENER EMISORES DE TARJETAS
   const obtenerEmisores = useCallback(async (paymentMethodId: string) => {
     try {
       console.log("🏛️ Obteniendo emisores para:", paymentMethodId);
@@ -318,7 +290,7 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // 🆕 PROCESAR PAGO CON CHECKOUT API
+  // 🔧 CORREGIDO: Procesar pago con Checkout API
   const procesarPagoConCheckoutAPI = useCallback(async () => {
     if (cargandoPago) return;
     
@@ -327,86 +299,87 @@ const PaginaProcesoPago = () => {
     setPagoIniciado(true);
     
     try {
-      console.log("💳 Procesando pago con Checkout API...");
-      console.log("📋 Datos del formulario:", cardForm);
-      
-      if (!mp) {
-        throw new Error('MercadoPago SDK no está inicializado');
-      }
-
-      // 🔧 CORREGIDO: Crear token de tarjeta con datos completos
-      const tokenData = {
-        cardNumber: cardForm.cardNumber.replace(/\s/g, ''),
-        cardholderName: cardForm.cardholderName,
-        cardExpirationMonth: cardForm.expiryMonth,
-        cardExpirationYear: cardForm.expiryYear,
-        securityCode: cardForm.securityCode,
-        identificationType: cardForm.identificationType,
-        identificationNumber: cardForm.identificationNumber,
-      };
-
-      console.log("🎫 Creando token con datos:", tokenData);
-
-      const cardToken = await mp.createCardToken(tokenData);
-
-      console.log("✅ Token de tarjeta creado:", cardToken.id);
-
-      // 🔧 CORREGIDO: Datos completos para el backend
-      const paymentData = {
-        token: cardToken.id,
-        transaction_amount: total,
-        payment_method_id: cardForm.paymentMethodId || 'visa', // Fallback si no se detectó
-        issuer_id: cardForm.issuerId || undefined,
-        installments: 1,
-        reserva_id: datosReserva.reservaId || datosReserva.instanciaId,
-        email: datosUsuario.correo,
-        first_name: datosUsuario.nombres,
-        last_name: datosUsuario.apellidos,
-        identification_type: cardForm.identificationType,
-        identification_number: cardForm.identificationNumber
-      };
-
-      console.log("📤 Enviando datos de pago completos:", paymentData);
-
-      const response = await clienteAxios.post(endpoints.mercadoPago.processCardPayment, paymentData);
-
-      console.log("📥 Respuesta del pago:", response.data);
-
-      if (response.data && response.data.success) {
-        const paymentResult = response.data.data;
+        console.log("💳 Procesando pago con Checkout API...");
+        console.log("📋 Datos del formulario:", cardForm);
         
-        // Navegar según el resultado
-        navegarSegunEstadoPago(
-          paymentResult.status,
-          paymentResult.payment_id?.toString() || null,
-          paymentResult.reserva_id || datosReserva.reservaId || datosReserva.instanciaId
-        );
-      } else {
-        throw new Error('Error al procesar el pago');
-      }
+        if (!mp) {
+            throw new Error('MercadoPago SDK no está inicializado');
+        }
+
+        const tokenData = {
+            cardNumber: cardForm.cardNumber.replace(/\s/g, ''),
+            cardholderName: cardForm.cardholderName,
+            cardExpirationMonth: cardForm.expiryMonth,
+            cardExpirationYear: cardForm.expiryYear,
+            securityCode: cardForm.securityCode,
+            identificationType: cardForm.identificationType,
+            identificationNumber: cardForm.identificationNumber,
+        };
+
+        console.log("🎫 Creando token con datos:", tokenData);
+        const cardToken = await mp.createCardToken(tokenData);
+        console.log("✅ Token de tarjeta creado:", cardToken.id);
+
+        // 🔧 OBTENER EL ID DE RESERVA CORRECTO
+        const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
+        
+        let reservaIdFinal;
+        
+        if (reservaEnProceso.id) {
+            reservaIdFinal = reservaEnProceso.id;
+            console.log("✅ Usando ID de reserva en proceso:", reservaIdFinal);
+        } else if (datosReserva.reservaId) {
+            reservaIdFinal = datosReserva.reservaId;
+            console.log("✅ Usando ID de reserva de datos:", reservaIdFinal);
+        } else {
+            console.error("❌ No se encontró ID de reserva válido");
+            console.error("   - reservaEnProceso:", reservaEnProceso);
+            console.error("   - datosReserva:", datosReserva);
+            throw new Error("No se encontró ID de reserva válido");
+        }
+        
+        console.log("🔍 ID de reserva final a usar:", reservaIdFinal);
+
+        const paymentData = {
+            token: cardToken.id,
+            transaction_amount: total,
+            payment_method_id: cardForm.paymentMethodId || 'visa',
+            issuer_id: cardForm.issuerId || undefined,
+            installments: 1,
+            reserva_id: reservaIdFinal, // 🔧 USAR EL ID CORRECTO
+            email: datosUsuario.correo,
+            first_name: datosUsuario.nombres,
+            last_name: datosUsuario.apellidos,
+            identification_type: cardForm.identificationType,
+            identification_number: cardForm.identificationNumber
+        };
+
+        console.log("📤 Enviando datos de pago completos:", paymentData);
+
+        const response = await clienteAxios.post(endpoints.mercadoPago.processCardPayment, paymentData);
+
+        console.log("📥 Respuesta del pago:", response.data);
+
+        if (response.data && response.data.success) {
+            const paymentResult = response.data.data;
+            
+            navegarSegunEstadoPago(
+                paymentResult.status,
+                paymentResult.payment_id?.toString() || null,
+                paymentResult.reserva_id || reservaIdFinal
+            );
+        } else {
+            throw new Error('Error al procesar el pago');
+        }
 
     } catch (error: any) {
-      console.error('❌ Error en el pago con Checkout API:', error);
-      setError(analizarErrorMercadoPago(error));
+        console.error('❌ Error en el pago con Checkout API:', error);
+        setError(analizarErrorMercadoPago(error));
     } finally {
-      setCargandoPago(false);
+        setCargandoPago(false);
     }
-  }, [mp, cardForm, total, datosUsuario, datosReserva, analizarErrorMercadoPago]);
+}, [mp, cardForm, total, datosUsuario, datosReserva, analizarErrorMercadoPago]);
 
-  // Crear una preferencia simulada (para pruebas)
-  const crearPreferenciaSimulada = useCallback(() => {
-    const preferencia = {
-      id: `TEST-${Date.now()}`,
-      preference_id: `TEST-${Date.now()}`,
-      init_point: "https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=123456789",
-      sandbox_init_point: "https://sandbox.mercadopago.com.pe/checkout/v1/redirect?pref_id=123456789"
-    };
-    
-    console.log("🧪 Preferencia simulada creada:", preferencia);
-    return preferencia;
-  }, []);
-
-  // Navegar según el estado del pago
   const navegarSegunEstadoPago = useCallback((estado: string, paymentId: string | null, reservationId: number | null) => {
     const datosBase = {
       reservaId: reservationId || datosReserva.reservaId || datosReserva.instanciaId,
@@ -458,7 +431,6 @@ const PaginaProcesoPago = () => {
     }
   }, [navigate, datosReserva, total, limpiarDatosReservaEnProgreso]);
 
-  // Verificar y confirmar reserva después del pago
   const verificarYConfirmarReserva = useCallback(async (idReserva: number, status: string, paymentId?: string) => {
     try {
       console.log(`🔍 Verificando y confirmando reserva ID=${idReserva}, status=${status}, paymentId=${paymentId || 'no disponible'}`);
@@ -504,7 +476,6 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // Función unificada para verificar el pago
   const verificarPagoUnificado = useCallback(async (idReserva: number, preferenceId: string, paymentId?: string) => {
     try {
       console.log(`🔍 Verificando pago unificado: reserva=${idReserva}, preferencia=${preferenceId}, pago=${paymentId || 'no disponible'}`);
@@ -576,7 +547,6 @@ const PaginaProcesoPago = () => {
     }
   }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago]);
 
-  // Crear preferencia real usando el backend (CHECKOUT PRO)
   const crearPreferenciaReal = useCallback(async () => {
     try {
       if (preferencia) {
@@ -628,7 +598,6 @@ const PaginaProcesoPago = () => {
           throw new Error("No se encontró ID de instancia");
         }
         
-        // Preparar datos de pasajes
         let pasajes: Pasaje[] = [];
         
         if (datosReserva.cantidadesPasajes && Array.isArray(datosReserva.cantidadesPasajes)) {
@@ -640,12 +609,6 @@ const PaginaProcesoPago = () => {
               precio_unitario: p.precioUnitario
             }));
         } else if (datosReserva.seleccionPasajes) {
-          const precios: Record<string, number> = {
-            "1": 120, // Adulto
-            "2": 80,  // Niño
-            "3": 100  // Estudiante
-          };
-          
           pasajes = Object.entries(datosReserva.seleccionPasajes)
             .filter(([_, cantidadValue]) => {
               const cantidad = Number(cantidadValue);
@@ -653,12 +616,11 @@ const PaginaProcesoPago = () => {
             })
             .map(([tipoId, cantidadValue]) => {
               const cantidad = Number(cantidadValue);
-              const precio = precios[tipoId] || 100;
               
               return {
                 id_tipo_pasaje: parseInt(tipoId),
                 cantidad: cantidad,
-                precio_unitario: precio
+                precio_unitario: cantidad > 0 ? (subtotal / datosReserva.totalPasajeros) : 0
               };
             });
         }
@@ -670,7 +632,6 @@ const PaginaProcesoPago = () => {
           throw new Error("Debe seleccionar al menos un pasaje");
         }
         
-        // Preparar datos de paquetes
         let paquetes: Paquete[] = [];
         
         if (datosReserva.paquetes && Array.isArray(datosReserva.paquetes)) {
@@ -681,19 +642,13 @@ const PaginaProcesoPago = () => {
               precio: p.precio
             }));
         } else if (datosReserva.seleccionPaquetes) {
-          const preciosPaquetes: Record<string, number> = {
-            "1": 250, // Paquete familiar
-            "2": 200, // Paquete estándar
-            "3": 300  // Paquete premium
-          };
-          
           paquetes = Object.entries(datosReserva.seleccionPaquetes)
             .filter(([_, seleccionadoValue]) => {
               return seleccionadoValue === true || seleccionadoValue === 1 || Number(seleccionadoValue) > 0;
             })
             .map(([paqueteId, _]) => ({
               id_paquete: parseInt(paqueteId),
-              precio: preciosPaquetes[paqueteId] || 200
+              precio: 0
             }));
         }
         
@@ -718,7 +673,6 @@ const PaginaProcesoPago = () => {
           session_id: sessionId
         };
         
-        // Validaciones críticas
         if (!datosParaEnviar.email) {
           console.error("❌ Error: No hay email");
           throw new Error("El email es obligatorio");
@@ -806,9 +760,8 @@ const PaginaProcesoPago = () => {
       
       throw error;
     }
-  }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago]);
+  }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago, subtotal]);
   
-  // Obtener o crear preferencia
   const obtenerOCrearPreferencia = useCallback(async () => {
     if (preferencia && preferencia.id) {
       return preferencia;
@@ -833,7 +786,6 @@ const PaginaProcesoPago = () => {
     return await crearPreferenciaReal();
   }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal]);
   
-  // 🔧 CORREGIDO: Cargar el SDK de Mercado Pago v2
   const cargarMercadoPagoSDK = useCallback(() => {
     if (window.MercadoPago) {
       console.log("✅ SDK de MercadoPago ya está cargado");
@@ -843,7 +795,6 @@ const PaginaProcesoPago = () => {
     
     return new Promise<void>((resolve, reject) => {
       const script = document.createElement('script');
-      // 🔧 CAMBIO CRÍTICO: Usar SDK v2
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.async = true;
       
@@ -881,7 +832,6 @@ const PaginaProcesoPago = () => {
     });
   }, []);
 
-  // 🔧 CORREGIDO: INICIALIZAR MERCADOPAGO SDK PARA CHECKOUT API
   const inicializarMercadoPagoSDK = useCallback(async () => {
     try {
       if (!publicKey) {
@@ -890,7 +840,6 @@ const PaginaProcesoPago = () => {
       }
 
       if (window.MercadoPago && publicKey) {
-        // 🔧 SDK v2: Inicialización corregida
         const mercadoPago = new window.MercadoPago(publicKey, {
           locale: 'es-PE'
         });
@@ -898,7 +847,6 @@ const PaginaProcesoPago = () => {
         setMp(mercadoPago);
         console.log("✅ MercadoPago SDK v2 inicializado para Checkout API");
         
-        // Obtener métodos de pago al inicializar
         await obtenerMetodosPago();
       }
     } catch (error) {
@@ -906,7 +854,6 @@ const PaginaProcesoPago = () => {
     }
   }, [publicKey, obtenerClavePublica, obtenerMetodosPago]);
 
-  // Renderizar el botón de Mercado Pago (CHECKOUT PRO)
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
       console.log("⏸️ No hay preferencia para renderizar el botón");
@@ -988,7 +935,6 @@ const PaginaProcesoPago = () => {
     }
   }, [preferencia, publicKey]);
 
-  // Iniciar el proceso de pago
   const iniciarProcesoPago = useCallback(async () => {
     try {
       setCargandoMercadoPago(true);
@@ -998,26 +944,18 @@ const PaginaProcesoPago = () => {
       
       if (!publicKey) {
         const key = await obtenerClavePublica();
-        if (!key && !usarModoSimulado) {
+        if (!key) {
           throw new Error('No se pudo obtener la clave pública de Mercado Pago');
         }
       }
       
-      let nuevaPreferencia;
-      
-      if (usarModoSimulado) {
-        console.log("🧪 Usando modo simulado para crear preferencia");
-        nuevaPreferencia = crearPreferenciaSimulada();
-      } else {
-        console.log("💳 Usando modo real para obtener o crear preferencia");
-        nuevaPreferencia = await obtenerOCrearPreferencia();
-      }
+      console.log("💳 Usando modo real para obtener o crear preferencia");
+      const nuevaPreferencia = await obtenerOCrearPreferencia();
       
       if (!preferencia) {
         setPreferencia(nuevaPreferencia);
       }
 
-      // 🆕 Inicializar SDK para Checkout API
       await inicializarMercadoPagoSDK();
       
       return nuevaPreferencia;
@@ -1028,9 +966,8 @@ const PaginaProcesoPago = () => {
     } finally {
       setCargandoMercadoPago(false);
     }
-  }, [cargarMercadoPagoSDK, crearPreferenciaSimulada, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, usarModoSimulado, preferencia, analizarErrorMercadoPago, inicializarMercadoPagoSDK]);
+  }, [cargarMercadoPagoSDK, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, preferencia, analizarErrorMercadoPago, inicializarMercadoPagoSDK]);
 
-  // 🔧 FUNCIÓN CORREGIDA - Procesar pago directo
   const procesarPagoDirecto = async () => {
     if (cargandoPago) return;
     
@@ -1041,64 +978,12 @@ const PaginaProcesoPago = () => {
     
     try {
       console.log("🚀 Procesando pago directo...");
-      
-      if (usarModoSimulado) {
-        console.log(`🧪 Usando estado simulado: ${estadoSimuladoSeleccionado}`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const datosBase = {
-          reservaId: datosReserva.reservaId || datosReserva.instanciaId,
-          paymentId: `sim_${Date.now()}`,
-          metodoPago: 'mercadopago',
-          fechaPago: new Date().toISOString(),
-          tourNombre: datosReserva.tourNombre,
-          total: total,
-          fecha: datosReserva.fecha,
-          horario: datosReserva.horario,
-          totalPasajeros: datosReserva.totalPasajeros
-        };
-        
-        limpiarDatosReservaEnProgreso();
-        
-        switch (estadoSimuladoSeleccionado) {
-          case 'approved':
-            navigate('/reserva-exitosa', {
-              state: {
-                ...datosBase,
-                estado: 'CONFIRMADA',
-                mensaje: 'Tu pago ha sido procesado exitosamente'
-              }
-            });
-            break;
-          case 'pending':
-            navigate('/reserva-exitosa', {
-              state: {
-                ...datosBase,
-                estado: 'PENDIENTE',
-                mensaje: 'Tu pago está pendiente de confirmación'
-              }
-            });
-            break;
-          case 'rejected':
-            navigate('/pago-fallido', {
-              state: {
-                ...datosBase,
-                estado: 'RECHAZADO',
-                mensaje: 'El pago no pudo ser procesado'
-              }
-            });
-            break;
-        }
-        return;
-      }
 
-      // 🆕 CHECKOUT API - Procesar con tarjeta directamente
       if (modoCheckout === 'api') {
         await procesarPagoConCheckoutAPI();
         return;
       }
       
-      // 🔧 CHECKOUT PRO - Lógica existente corregida
       if (preferencia) {
         console.log("🔍 ========== VERIFICACIÓN DE PREFERENCIA ==========");
         console.log("📋 Preferencia completa:", JSON.stringify(preferencia, null, 2));
@@ -1108,12 +993,10 @@ const PaginaProcesoPago = () => {
         
         let url;
         
-        // NUEVA LÓGICA: SIEMPRE PRIORIZAR SANDBOX_INIT_POINT SI EXISTE
         if (IS_SANDBOX && preferencia.sandbox_init_point) {
           url = preferencia.sandbox_init_point;
           console.log("✅ Usando sandbox_init_point (CORRECTO):", url);
         } else if (preferencia.sandbox_init_point) {
-          // Incluso si no detectamos sandbox, si existe sandbox_init_point, usarlo
           url = preferencia.sandbox_init_point;
           console.log("✅ Forzando uso de sandbox_init_point:", url);
         } else if (preferencia.init_point) {
@@ -1126,7 +1009,6 @@ const PaginaProcesoPago = () => {
         
         console.log("🎯 URL FINAL seleccionada:", url);
         
-        // Verificar que sea realmente una URL de sandbox
         if (url.includes('sandbox.mercadopago.com')) {
           console.log("🎉 CONFIRMADO: URL es de SANDBOX");
         } else if (url.includes('www.mercadopago.com')) {
@@ -1145,11 +1027,9 @@ const PaginaProcesoPago = () => {
         return;
       }
       
-      // Si no tenemos preferencia, intentar crearla
       const nuevaPreferencia = await iniciarProcesoPago();
       
       if (nuevaPreferencia) {
-        // Aplicar la misma lógica para la nueva preferencia
         let url;
         
         if (nuevaPreferencia.sandbox_init_point) {
@@ -1179,7 +1059,6 @@ const PaginaProcesoPago = () => {
     }
   };
   
-  // Iniciar el proceso cuando el componente se monta
   useEffect(() => {
     const iniciarMercadoPago = async () => {
       try {
@@ -1207,7 +1086,6 @@ const PaginaProcesoPago = () => {
     iniciarMercadoPago();
   }, [obtenerClavePublica, iniciarProcesoPago, publicKey, preferencia]);
 
-  // Renderizar el botón cuando la preferencia cambia (solo para Checkout Pro)
   useEffect(() => {
     if (preferencia && sdkCargado && publicKey && modoCheckout === 'pro') {
       const debouncedRender = debounce(() => {
@@ -1222,7 +1100,6 @@ const PaginaProcesoPago = () => {
     }
   }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago, modoCheckout]);
   
-  // Verificar periódicamente el estado del pago en modo sandbox
   useEffect(() => {
     if (IS_SANDBOX && preferencia && preferencia.id && !estadoPagoVerificado && pagoIniciado) {
       console.log("🔄 Iniciando verificación periódica del estado de pago...");
@@ -1253,7 +1130,6 @@ const PaginaProcesoPago = () => {
     }
   }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva]);
 
-  // Verificar si estamos regresando de un pago en Mercado Pago
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
@@ -1308,7 +1184,6 @@ const PaginaProcesoPago = () => {
     }
   }, [location.search, navegarSegunEstadoPago, datosReserva, verificarYConfirmarReserva]);
   
-  // Formatear fecha para mostrar
   const formatearFecha = (fechaStr: string) => {
     if (!fechaStr) return '';
     
@@ -1330,7 +1205,6 @@ const PaginaProcesoPago = () => {
     }
   };
   
-  // Limpiar al desmontar el componente
   useEffect(() => {
     return () => {
       if (!estadoPagoVerificado) {
@@ -1343,7 +1217,6 @@ const PaginaProcesoPago = () => {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-white via-blue-50 to-cyan-50 min-h-screen">
       <div className="flex flex-col space-y-6">
-        {/* 🎨 ENCABEZADO MEJORADO CON INDICADOR DE TEST MODE */}
         <div className="bg-gradient-to-r from-blue-600 to-teal-500 text-white p-6 rounded-xl shadow-lg">
           <div className="flex justify-between items-start">
             <div>
@@ -1351,7 +1224,6 @@ const PaginaProcesoPago = () => {
               <p className="mt-1 opacity-90">{t('pago.subtitulo', 'Completa tu reserva realizando el pago')}</p>
             </div>
             
-            {/* 🧪 INDICADOR DE MODO TEST */}
             {IS_SANDBOX && (
               <div className="bg-yellow-500 text-yellow-900 px-3 py-1 rounded-lg text-sm font-medium">
                 🧪 Modo Test
@@ -1359,7 +1231,6 @@ const PaginaProcesoPago = () => {
             )}
           </div>
           
-             {/* Paso de proceso */}
           <div className="mt-4 pt-4 border-t border-white/20">
             <div className="flex items-center justify-between max-w-md">
               <div className="flex flex-col items-center">
@@ -1393,11 +1264,9 @@ const PaginaProcesoPago = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Información de la reserva */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Datos del tour */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                 </svg>
@@ -1447,7 +1316,6 @@ const PaginaProcesoPago = () => {
               </div>
             </div>
             
-            {/* Información del cliente */}
             {usuario && (
               <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
                 <div className="flex justify-between items-center mb-4 pb-2 border-b border-cyan-100">
@@ -1569,7 +1437,6 @@ const PaginaProcesoPago = () => {
             )}
           </div>
           
-          {/* 🎨 PANEL DE PAGO MEJORADO CON CHECKOUT API */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
@@ -1580,7 +1447,6 @@ const PaginaProcesoPago = () => {
                 Opciones de pago
               </h2>
               
-              {/* 🚨 INDICADOR DE ENTORNO MEJORADO */}
               {IS_SANDBOX && (
                 <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl">
                   <div className="flex items-center mb-2">
@@ -1598,7 +1464,6 @@ const PaginaProcesoPago = () => {
                 </div>
               )}
               
-              {/* Muestra error si existe */}
               {error && (
                 <div className="mt-4 mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg">
                   <div className="flex items-center">
@@ -1610,7 +1475,6 @@ const PaginaProcesoPago = () => {
                 </div>
               )}
 
-              {/* 🆕 SELECTOR DE MODO DE CHECKOUT */}
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-4">
                   <button
@@ -1636,24 +1500,9 @@ const PaginaProcesoPago = () => {
                   >
                     🌐 Pro
                   </button>
-                  
-                  {ACTUAL_ENV === 'development' && (
-                    <button
-                      type="button"
-                      onClick={() => setModoCheckout('simulado')}
-                      className={`flex-1 px-2 py-2 rounded-lg font-medium transition-all ${
-                        modoCheckout === 'simulado'
-                          ? 'bg-purple-600 text-white shadow-lg'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      🧪 Sim
-                    </button>
-                  )}
                 </div>
               </div>
 
-              {/* 🆕 CHECKOUT API - FORMULARIO DE TARJETA */}
               {modoCheckout === 'api' && (
                 <div className="space-y-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
@@ -1664,7 +1513,6 @@ const PaginaProcesoPago = () => {
                       Datos de la tarjeta
                     </h3>
                     
-                    {/* Número de tarjeta */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Número de tarjeta *
@@ -1674,7 +1522,7 @@ const PaginaProcesoPago = () => {
                         name="cardNumber"
                         value={cardForm.cardNumber}
                         onChange={handleCardFormChange}
-                        placeholder="5031 7557 3453 0604"
+                        placeholder="4509 9535 6623 3704"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         maxLength={19}
                         required
@@ -1686,7 +1534,6 @@ const PaginaProcesoPago = () => {
                       )}
                     </div>
 
-                    {/* Nombre del titular */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Nombre del titular *
@@ -1702,7 +1549,6 @@ const PaginaProcesoPago = () => {
                       />
                     </div>
 
-                    {/* Vencimiento y CVV */}
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1764,7 +1610,6 @@ const PaginaProcesoPago = () => {
                       </div>
                     </div>
 
-                    {/* Documento */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1800,101 +1645,7 @@ const PaginaProcesoPago = () => {
                   </div>
                 </div>
               )}
-
-              {/* 🧪 CONTROLES DE DESARROLLO MEJORADOS */}
-              {ACTUAL_ENV === 'development' && modoCheckout === 'simulado' && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                  <div className="flex items-center mb-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-400 mr-2 flex items-center justify-center">
-                      <span className="text-blue-900 text-xs font-bold">DEV</span>
-                    </div>
-                    <span className="font-medium text-blue-800">Controles de Desarrollo</span>
-                  </div>
-                  
-                  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="text-sm font-medium text-purple-800 mb-2">Simular resultado:</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'approved', label: 'Aprobado', color: 'green' },
-                        { value: 'pending', label: 'Pendiente', color: 'yellow' },
-                        { value: 'rejected', label: 'Rechazado', color: 'red' }
-                      ].map(({ value, label, color }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setEstadoSimuladoSeleccionado(value as EstadoPagoSimulado)}
-                          className={`p-2 rounded text-center text-xs font-medium transition-all ${
-                            estadoSimuladoSeleccionado === value 
-                              ? `bg-${color}-600 text-white shadow-lg` 
-                              : `bg-white text-${color}-800 border border-${color}-200 hover:bg-${color}-50`
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
               
-              {/* 💳 TARJETAS DE PRUEBA MEJORADAS */}
-              {ACTUAL_ENV === 'development' && modoCheckout !== 'simulado' && IS_SANDBOX && (
-                <div className="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
-                  <div className="flex items-center mb-3">
-                    <span className="text-2xl mr-2">💳</span>
-                    <span className="font-semibold text-emerald-800">Tarjetas de Prueba - Test Mode</span>
-                  </div>
-                  <div className="text-xs text-emerald-600 mb-3">
-                    Usa estas tarjetas para probar diferentes escenarios de pago:
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      {
-                        status: 'APROBADA',
-                        card: 'Mastercard',
-                        number: '5031 7557 3453 0604',
-                        cvv: '123',
-                        date: '12/26',
-                        name: 'APRO',
-                        color: 'emerald',
-                        icon: '✅'
-                      },
-                      {
-                        status: 'RECHAZADA',
-                        card: 'Visa',
-                        number: '4509 9535 6623 3704',
-                        cvv: '123',
-                        date: '12/26',
-                        name: 'RECH',
-                        color: 'red',
-                        icon: '❌'
-                      }
-                    ].map((tarjeta, index) => (
-                      <div key={index} className={`p-2 bg-white rounded-lg border border-${tarjeta.color}-200 shadow-sm`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center">
-                            <span className="mr-1 text-sm">{tarjeta.icon}</span>
-                            <span className={`font-medium text-${tarjeta.color}-700 text-sm`}>
-                              {tarjeta.card}
-                            </span>
-                          </div>
-                          <span className={`text-xs px-2 py-1 rounded bg-${tarjeta.color}-100 text-${tarjeta.color}-700`}>
-                            {tarjeta.status}
-                          </span>
-                        </div>
-                        <div className="text-gray-700 font-mono text-xs mb-1">{tarjeta.number}</div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>CVV: {tarjeta.cvv}</span>
-                          <span>Exp: {tarjeta.date}</span>
-                          <span>Nom: {tarjeta.name}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* 💰 SECCIÓN DE PAGO PRINCIPAL */}
               <div>
                 {cargandoMercadoPago ? (
                   <div className="w-full py-8 flex flex-col justify-center items-center bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg border border-cyan-200">
@@ -1906,7 +1657,6 @@ const PaginaProcesoPago = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Contenedor para el botón de Mercado Pago (CHECKOUT PRO) */}
                     {modoCheckout === 'pro' && (
                       <div 
                         className="mercado-pago-button w-full min-h-[60px] bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-dashed border-blue-200 mb-4 flex items-center justify-center"
@@ -1919,7 +1669,6 @@ const PaginaProcesoPago = () => {
                       </div>
                     )}
                     
-                    {/* 🚀 BOTÓN DE PAGO PRINCIPAL MEJORADO */}
                     <button
                       type="button"
                       onClick={modoCheckout === 'api' ? procesarPagoConCheckoutAPI : procesarPagoDirecto}
@@ -1949,7 +1698,6 @@ const PaginaProcesoPago = () => {
                       )}
                     </button>
                     
-                    {/* 🔄 INDICADOR DE VERIFICACIÓN MEJORADO */}
                     {intentosVerificacion > 0 && !estadoPagoVerificado && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center justify-center text-blue-600">
@@ -1961,7 +1709,6 @@ const PaginaProcesoPago = () => {
                       </div>
                     )}
                     
-                    {/* 📄 TÉRMINOS Y CONDICIONES */}
                     <p className="mt-4 text-xs text-center text-gray-500 leading-relaxed">
                       Al hacer clic en "Pagar", aceptas nuestros{' '}
                       <a href="#" className="text-blue-600 hover:underline font-medium">
@@ -1977,7 +1724,6 @@ const PaginaProcesoPago = () => {
               </div>
             </div>
             
-            {/* 🛡️ INFORMACIÓN DE SEGURIDAD MEJORADA */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200">
               <div className="space-y-4">
                 <div className="flex items-center">
@@ -2026,7 +1772,6 @@ const PaginaProcesoPago = () => {
           </div>
         </div>
         
-        {/* 🔙 BOTÓN PARA VOLVER MEJORADO */}
         <div className="mt-6 flex justify-between items-center">
           <button
             type="button"
@@ -2039,7 +1784,6 @@ const PaginaProcesoPago = () => {
             Volver atrás
           </button>
           
-          {/* 🔍 INFORMACIÓN DE DEBUG (solo en desarrollo) */}
           {ACTUAL_ENV === 'development' && (
             <div className="text-xs text-gray-500 text-right">
               <div>ENV: {ACTUAL_ENV}</div>
