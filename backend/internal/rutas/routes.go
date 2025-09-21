@@ -165,11 +165,9 @@ func SetupRoutes(
 		})
 
 		// Verificar disponibilidad de instancia
-		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
 		public.GET("/mercadopago/public-key", mercadoPagoController.GetPublicKey)
 		public.GET("/mercadopago/verificar-pago", mercadoPagoController.VerificarPago)
 		// Ruta pública para verificar y confirmar pagos
-		public.GET("/reservas/verificar-confirmar-pago", reservaController.VerificarYConfirmarPago)
 
 		// ========== CHECKOUT API (NUEVAS) ==========
 		// 🆕 Procesar pago con tarjeta
