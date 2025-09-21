@@ -2466,22 +2466,30 @@ const PaginaProcesoPago = () => {
       }
       
       // Si tenemos una preferencia con URL de pago, redirigir a ella
-      if (preferencia) {
-        // Determinar qué URL usar según el entorno
-        const url = IS_SANDBOX
-          ? (preferencia.sandbox_init_point || preferencia.init_point)
-          : preferencia.init_point;
-        
-        console.log("Redirigiendo a URL de pago:", url);
-        
-        if (url) {
-          // En modo real, redirigir a la URL de pago
-          window.location.href = url;
-        } else {
-          throw new Error("No se encontró URL de pago en la preferencia");
-        }
-        return;
-      }
+    // En la función procesarPagoDirecto, mejorar esta parte:
+if (preferencia) {
+  // MEJORA: Priorizar sandbox_init_point en desarrollo
+  const url = IS_SANDBOX && preferencia.sandbox_init_point
+    ? preferencia.sandbox_init_point
+    : preferencia.init_point;
+  
+  console.log("🚀 Redirigiendo a MercadoPago:", {
+    entorno: IS_SANDBOX ? 'SANDBOX' : 'PRODUCCIÓN',
+    url_seleccionada: url,
+    sandbox_url: preferencia.sandbox_init_point,
+    production_url: preferencia.init_point,
+    preferencia_id: preferencia.id
+  });
+  
+  if (url) {
+    // Agregar parámetros adicionales para mejor tracking
+    const urlConParametros = `${url}&source=website&version=v2`;
+    window.location.href = urlConParametros;
+  } else {
+    throw new Error("No se encontró URL de pago válida en la preferencia");
+  }
+  return;
+}
       
       // Si no tenemos preferencia, intentar crearla
       const nuevaPreferencia = await iniciarProcesoPago();
