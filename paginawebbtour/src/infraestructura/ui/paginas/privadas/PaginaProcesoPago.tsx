@@ -1,4 +1,4 @@
- import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -150,7 +150,7 @@ const PaginaProcesoPago = () => {
       [name]: value
     }));
 
-    // Identificar método de pago cuando cambia el número de tarjeta
+    // 🔧 CORREGIDO: Identificar método de pago cuando cambia el número de tarjeta
     if (name === 'cardNumber') {
       identifyPaymentMethod(value.replace(/\s/g, ''));
     }
@@ -170,11 +170,15 @@ const PaginaProcesoPago = () => {
   const analizarErrorMercadoPago = useCallback((error: any) => {
     let mensajeUsuario = "Ocurrió un error al procesar el pago. Por favor, intenta nuevamente.";
     
+    console.error("🔍 Analizando error completo:", error);
+    
     if (error.response && error.response.data) {
       const respuesta = error.response.data;
+      console.error("📋 Datos del error:", respuesta);
       
       if (respuesta.cause && Array.isArray(respuesta.cause)) {
         const causa = respuesta.cause[0];
+        console.error("🎯 Causa específica:", causa);
         switch (causa.code) {
           case "2001":
             mensajeUsuario = "La tarjeta fue rechazada por fondos insuficientes.";
@@ -192,10 +196,14 @@ const PaginaProcesoPago = () => {
         }
       } else if (respuesta.message) {
         mensajeUsuario = respuesta.message;
+      } else if (respuesta.error) {
+        mensajeUsuario = respuesta.error;
       }
+    } else if (error.message) {
+      mensajeUsuario = error.message;
     }
     
-    console.error("Error analizado de MercadoPago:", error);
+    console.error("📝 Mensaje final para usuario:", mensajeUsuario);
     return mensajeUsuario;
   }, []);
 
@@ -260,13 +268,21 @@ const PaginaProcesoPago = () => {
     }
   }, []);
 
-  // 🆕 IDENTIFICAR MÉTODO DE PAGO POR BIN
+  // 🔧 CORREGIDO: IDENTIFICAR MÉTODO DE PAGO POR BIN (SDK v2)
   const identifyPaymentMethod = useCallback(async (cardNumber: string) => {
     if (mp && cardNumber.length >= 6) {
       try {
-        const paymentMethod = await mp.getPaymentMethod({ bin: cardNumber.substring(0, 6) });
-        if (paymentMethod.results && paymentMethod.results.length > 0) {
-          const method = paymentMethod.results[0];
+        console.log("🔍 Identificando método de pago para BIN:", cardNumber.substring(0, 6));
+        
+        // 🔧 SDK v2: Usar getPaymentMethods con bin (NO getPaymentMethod)
+        const response = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
+        
+        console.log("📋 Respuesta de identificación:", response);
+        
+        if (response.results && response.results.length > 0) {
+          const method = response.results[0];
+          console.log("✅ Método identificado:", method);
+          
           setCardForm(prev => ({
             ...prev,
             paymentMethodId: method.id
@@ -276,9 +292,11 @@ const PaginaProcesoPago = () => {
           if (method.payment_type_id === 'credit_card') {
             await obtenerEmisores(method.id);
           }
+        } else {
+          console.log("⚠️ No se encontraron métodos para este BIN");
         }
       } catch (error) {
-        console.error('Error al identificar método de pago:', error);
+        console.error('❌ Error al identificar método de pago:', error);
       }
     }
   }, [mp]);
@@ -310,13 +328,14 @@ const PaginaProcesoPago = () => {
     
     try {
       console.log("💳 Procesando pago con Checkout API...");
+      console.log("📋 Datos del formulario:", cardForm);
       
       if (!mp) {
         throw new Error('MercadoPago SDK no está inicializado');
       }
 
-      // Crear token de tarjeta
-      const cardToken = await mp.createCardToken({
+      // 🔧 CORREGIDO: Crear token de tarjeta con datos completos
+      const tokenData = {
         cardNumber: cardForm.cardNumber.replace(/\s/g, ''),
         cardholderName: cardForm.cardholderName,
         cardExpirationMonth: cardForm.expiryMonth,
@@ -324,15 +343,19 @@ const PaginaProcesoPago = () => {
         securityCode: cardForm.securityCode,
         identificationType: cardForm.identificationType,
         identificationNumber: cardForm.identificationNumber,
-      });
+      };
 
-      console.log("🎫 Token de tarjeta creado:", cardToken.id);
+      console.log("🎫 Creando token con datos:", tokenData);
 
-      // Procesar pago con el token
+      const cardToken = await mp.createCardToken(tokenData);
+
+      console.log("✅ Token de tarjeta creado:", cardToken.id);
+
+      // 🔧 CORREGIDO: Datos completos para el backend
       const paymentData = {
         token: cardToken.id,
         transaction_amount: total,
-        payment_method_id: cardForm.paymentMethodId,
+        payment_method_id: cardForm.paymentMethodId || 'visa', // Fallback si no se detectó
         issuer_id: cardForm.issuerId || undefined,
         installments: 1,
         reserva_id: datosReserva.reservaId || datosReserva.instanciaId,
@@ -343,7 +366,7 @@ const PaginaProcesoPago = () => {
         identification_number: cardForm.identificationNumber
       };
 
-      console.log("📤 Enviando datos de pago:", paymentData);
+      console.log("📤 Enviando datos de pago completos:", paymentData);
 
       const response = await clienteAxios.post(endpoints.mercadoPago.processCardPayment, paymentData);
 
@@ -810,7 +833,7 @@ const PaginaProcesoPago = () => {
     return await crearPreferenciaReal();
   }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal]);
   
-  // Cargar el SDK de Mercado Pago
+  // 🔧 CORREGIDO: Cargar el SDK de Mercado Pago v2
   const cargarMercadoPagoSDK = useCallback(() => {
     if (window.MercadoPago) {
       console.log("✅ SDK de MercadoPago ya está cargado");
@@ -820,11 +843,12 @@ const PaginaProcesoPago = () => {
     
     return new Promise<void>((resolve, reject) => {
       const script = document.createElement('script');
+      // 🔧 CAMBIO CRÍTICO: Usar SDK v2
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.async = true;
       
       script.onload = () => {
-        console.log("✅ SDK de MercadoPago cargado correctamente");
+        console.log("✅ SDK de MercadoPago v2 cargado correctamente");
         setSdkCargado(true);
         
         window.addEventListener('error', function(event) {
@@ -848,7 +872,7 @@ const PaginaProcesoPago = () => {
       };
       
       script.onerror = () => {
-        console.error("❌ Error al cargar el SDK de MercadoPago");
+        console.error("❌ Error al cargar el SDK de MercadoPago v2");
         setError("No se pudo cargar el procesador de pagos. Verifica tu conexión a internet.");
         reject();
       };
@@ -857,7 +881,7 @@ const PaginaProcesoPago = () => {
     });
   }, []);
 
-  // 🆕 INICIALIZAR MERCADOPAGO SDK PARA CHECKOUT API
+  // 🔧 CORREGIDO: INICIALIZAR MERCADOPAGO SDK PARA CHECKOUT API
   const inicializarMercadoPagoSDK = useCallback(async () => {
     try {
       if (!publicKey) {
@@ -866,18 +890,19 @@ const PaginaProcesoPago = () => {
       }
 
       if (window.MercadoPago && publicKey) {
+        // 🔧 SDK v2: Inicialización corregida
         const mercadoPago = new window.MercadoPago(publicKey, {
           locale: 'es-PE'
         });
         
         setMp(mercadoPago);
-        console.log("✅ MercadoPago SDK inicializado para Checkout API");
+        console.log("✅ MercadoPago SDK v2 inicializado para Checkout API");
         
         // Obtener métodos de pago al inicializar
         await obtenerMetodosPago();
       }
     } catch (error) {
-      console.error("❌ Error al inicializar MercadoPago SDK:", error);
+      console.error("❌ Error al inicializar MercadoPago SDK v2:", error);
     }
   }, [publicKey, obtenerClavePublica, obtenerMetodosPago]);
 
@@ -1334,7 +1359,7 @@ const PaginaProcesoPago = () => {
             )}
           </div>
           
-          {/* Paso de proceso */}
+             {/* Paso de proceso */}
           <div className="mt-4 pt-4 border-t border-white/20">
             <div className="flex items-center justify-between max-w-md">
               <div className="flex flex-col items-center">
@@ -1370,7 +1395,7 @@ const PaginaProcesoPago = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Información de la reserva */}
           <div className="lg:col-span-2 space-y-6">
-                       {/* Datos del tour */}
+            {/* Datos del tour */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
@@ -1587,11 +1612,11 @@ const PaginaProcesoPago = () => {
 
               {/* 🆕 SELECTOR DE MODO DE CHECKOUT */}
               <div className="mb-6">
-                <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center space-x-2 mb-4">
                   <button
                     type="button"
                     onClick={() => setModoCheckout('api')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
                       modoCheckout === 'api'
                         ? 'bg-blue-600 text-white shadow-lg'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1603,26 +1628,26 @@ const PaginaProcesoPago = () => {
                   <button
                     type="button"
                     onClick={() => setModoCheckout('pro')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
                       modoCheckout === 'pro'
                         ? 'bg-blue-600 text-white shadow-lg'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    🌐 Checkout Pro
+                    🌐 Pro
                   </button>
                   
                   {ACTUAL_ENV === 'development' && (
                     <button
                       type="button"
                       onClick={() => setModoCheckout('simulado')}
-                      className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                      className={`flex-1 px-2 py-2 rounded-lg font-medium transition-all ${
                         modoCheckout === 'simulado'
                           ? 'bg-purple-600 text-white shadow-lg'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      🧪 Simulado
+                      🧪 Sim
                     </button>
                   )}
                 </div>
@@ -1649,11 +1674,16 @@ const PaginaProcesoPago = () => {
                         name="cardNumber"
                         value={cardForm.cardNumber}
                         onChange={handleCardFormChange}
-                        placeholder="1234 5678 9012 3456"
+                        placeholder="5031 7557 3453 0604"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         maxLength={19}
                         required
                       />
+                      {cardForm.paymentMethodId && (
+                        <div className="mt-1 text-xs text-green-600">
+                          ✅ {cardForm.paymentMethodId.toUpperCase()} detectada
+                        </div>
+                      )}
                     </div>
 
                     {/* Nombre del titular */}
@@ -1666,7 +1696,7 @@ const PaginaProcesoPago = () => {
                         name="cardholderName"
                         value={cardForm.cardholderName}
                         onChange={handleCardFormChange}
-                        placeholder="JUAN PEREZ"
+                        placeholder="APRO"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
@@ -1817,7 +1847,7 @@ const PaginaProcesoPago = () => {
                   <div className="text-xs text-emerald-600 mb-3">
                     Usa estas tarjetas para probar diferentes escenarios de pago:
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {[
                       {
                         status: 'APROBADA',
@@ -1838,32 +1868,25 @@ const PaginaProcesoPago = () => {
                         name: 'RECH',
                         color: 'red',
                         icon: '❌'
-                      },
-                      {
-                        status: 'PENDIENTE',
-                        card: 'Visa',
-                        number: '4075 5957 1648 3764',
-                        cvv: '123',
-                        date: '12/26',
-                        name: 'CONT',
-                        color: 'amber',
-                        icon: '⏳'
                       }
                     ].map((tarjeta, index) => (
-                      <div key={index} className={`p-3 bg-white rounded-lg border border-${tarjeta.color}-200 shadow-sm`}>
-                        <div className="flex items-center justify-between mb-2">
+                      <div key={index} className={`p-2 bg-white rounded-lg border border-${tarjeta.color}-200 shadow-sm`}>
+                        <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center">
-                            <span className="mr-2">{tarjeta.icon}</span>
-                            <span className={`font-medium text-${tarjeta.color}-700`}>
-                              {tarjeta.card} ({tarjeta.status})
+                            <span className="mr-1 text-sm">{tarjeta.icon}</span>
+                            <span className={`font-medium text-${tarjeta.color}-700 text-sm`}>
+                              {tarjeta.card}
                             </span>
                           </div>
+                          <span className={`text-xs px-2 py-1 rounded bg-${tarjeta.color}-100 text-${tarjeta.color}-700`}>
+                            {tarjeta.status}
+                          </span>
                         </div>
-                        <div className="text-gray-700 font-mono text-sm mb-1">{tarjeta.number}</div>
+                        <div className="text-gray-700 font-mono text-xs mb-1">{tarjeta.number}</div>
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>CVV: {tarjeta.cvv}</span>
-                          <span>Vence: {tarjeta.date}</span>
-                          <span>Nombre: {tarjeta.name}</span>
+                          <span>Exp: {tarjeta.date}</span>
+                          <span>Nom: {tarjeta.name}</span>
                         </div>
                       </div>
                     ))}
@@ -2024,6 +2047,9 @@ const PaginaProcesoPago = () => {
               <div>Modo: {modoCheckout}</div>
               {preferencia && (
                 <div>Pref ID: {preferencia.preference_id || preferencia.id}</div>
+              )}
+              {cardForm.paymentMethodId && (
+                <div>Method: {cardForm.paymentMethodId}</div>
               )}
             </div>
           )}
