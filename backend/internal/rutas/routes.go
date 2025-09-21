@@ -174,6 +174,26 @@ func SetupRoutes(
 		// Ruta pública para verificar y confirmar pagos
 		public.GET("/reservas/verificar-confirmar-pago", reservaController.VerificarYConfirmarPago)
 
+		// ========== CHECKOUT API (NUEVAS) ==========
+		// 🆕 Procesar pago con tarjeta
+		public.POST("/mercadopago/process-card-payment", mercadoPagoController.ProcessCardPayment)
+
+		// 🆕 Obtener métodos de pago disponibles
+		public.GET("/mercadopago/payment-methods", mercadoPagoController.GetPaymentMethods)
+
+		// 🆕 Obtener emisores de tarjetas
+		public.GET("/mercadopago/card-issuers", mercadoPagoController.GetCardIssuers)
+
+		// 🆕 Obtener opciones de cuotas
+		public.GET("/mercadopago/installments", mercadoPagoController.GetInstallments)
+
+		// ========== WEBHOOKS (COMPARTIDOS) ==========
+		public.POST("/webhook/mercadopago", reservaController.WebhookMercadoPago)
+
+		// ========== VERIFICACIONES (COMPARTIDAS) ==========
+		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
+		public.GET("/reservas/verificar-confirmar-pago", reservaController.VerificarYConfirmarPago)
+
 	}
 
 	// Rutas protegidas (requieren autenticación)
