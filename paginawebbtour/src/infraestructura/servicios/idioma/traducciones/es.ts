@@ -222,7 +222,42 @@ contacto: {
     certificacionesTitulo: 'Nuestras Certificaciones y Alianzas'
   },
   
- 
+ reserva: {
+    estados: {
+      confirmada: 'Confirmada',
+      reservado: 'Reservada',
+      pendiente: 'Pendiente',
+      cancelada: 'Cancelada',
+      procesado: 'Procesada',
+      anulado: 'Anulada'
+    },
+    gestionReservas: 'Gestiona tus reservas y planifica tu próxima aventura',
+    sinReservas: 'No hay reservas disponibles',
+    sinReservasEstado: 'No hay reservas en estado {estado}',
+    fechaNoDisponible: 'Fecha no disponible',
+    fechaInvalida: 'Fecha inválida',
+    hoy: 'Hoy',
+    manana: 'Mañana',
+    ayer: 'Ayer',
+    enDias: 'En {dias} días',
+    haceDias: 'Hace {dias} días',
+    tourNoEspecificado: 'Tour no especificado',
+    horarioNoEspecificado: 'Horario no especificado',
+    noSesion: 'No has iniciado sesión',
+    iniciarSesionParaVerReservas: 'Inicia sesión para ver tus reservas',
+    explorarTours: 'Explora nuestros tours y reserva tu próxima aventura',
+    todos: 'Todos',
+    verTours: 'Ver Tours',
+    fecha: 'Fecha',
+    pasajeros: 'Pasajeros',
+    total: 'Total',
+    estado: 'Estado',
+    acciones: 'Acciones',
+    verDetalles: 'Ver Detalles',
+    filtrarPorEstado: 'Filtrar por estado',
+    reservadoEl: 'Reservado el',
+    estadisticasReservas: 'Estadísticas de Reservas'
+  },
 
 };
 

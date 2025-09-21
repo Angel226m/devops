@@ -219,6 +219,43 @@ contacto: {
     
     certificacionesTitulo: 'Our Certifications and Partnerships'
   },
+
+  reserva: {
+    estados: {
+      confirmed: 'Confirmed',
+      reserved: 'Reserved',
+      pending: 'Pending',
+      cancelled: 'Cancelled',
+      processed: 'Processed',
+      voided: 'Voided'
+    },
+    gestionReservas: 'Manage your bookings and plan your next adventure',
+    sinReservas: 'No bookings available',
+    sinReservasEstado: 'No bookings in {estado} status',
+    fechaNoDisponible: 'Date not available',
+    fechaInvalida: 'Invalid date',
+    hoy: 'Today',
+    manana: 'Tomorrow',
+    ayer: 'Yesterday',
+    enDias: 'In {dias} days',
+    haceDias: '{dias} days ago',
+    tourNoEspecificado: 'Tour not specified',
+    horarioNoEspecificado: 'Schedule not specified',
+    noSesion: 'You are not logged in',
+    iniciarSesionParaVerReservas: 'Log in to view your bookings',
+    explorarTours: 'Explore our tours and book your next adventure',
+    todos: 'All',
+    verTours: 'View Tours',
+    fecha: 'Date',
+    pasajeros: 'Passengers',
+    total: 'Total',
+    estado: 'Status',
+    acciones: 'Actions',
+    verDetalles: 'View Details',
+    filtrarPorEstado: 'Filter by status',
+    reservadoEl: 'Booked on',
+    estadisticasReservas: 'Booking Statistics'
+  },
 };
 
 export default en;
