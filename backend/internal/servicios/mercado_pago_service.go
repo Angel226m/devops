@@ -538,7 +538,7 @@ func (s *MercadoPagoService) GeneratePreferenceForExistingReserva(
 
 		return "", "", 0, errors.New("se requiere preferenceID o paymentID para verificar estado")
 	}
-*/ package servicios
+*/package servicios
 
 import (
 	"bytes"
@@ -548,7 +548,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sistema-toursseft/internal/entidades"
 	"strconv"
 	"strings"
@@ -565,38 +564,23 @@ type MercadoPagoService struct {
 
 // NewMercadoPagoService crea una nueva instancia del servicio de Mercado Pago
 func NewMercadoPagoService() *MercadoPagoService {
-	// Determinar entorno
-	environment := os.Getenv("ENVIRONMENT")
-	isSandbox := environment == "development" || environment == "sandbox" || environment == ""
+	// 🔧 FORZAR SANDBOX PARA DEBUGGING
+	fmt.Printf("🧪 FORZANDO MODO SANDBOX PARA PRUEBAS\n")
 
-	var accessToken, publicKey string
+	// Hardcodear sandbox temporalmente
+	isSandbox := true
+	accessToken := "APP_USR-1479267288961423-092100-4b20738369b4ae4efc6647bba62b1533-2503618286"
+	publicKey := "APP_USR-bab1c568-ca8d-4fbc-9c87-b2b797744fc6"
 
-	if isSandbox {
-		// CREDENCIALES DE SANDBOX - TUS CREDENCIALES REALES DE PRUEBA
-		accessToken = os.Getenv("MERCADOPAGO_SANDBOX_ACCESS_TOKEN")
-		publicKey = os.Getenv("MERCADOPAGO_SANDBOX_PUBLIC_KEY")
-
-		// Si no están en env, usar tus credenciales de sandbox
-		if accessToken == "" {
-			accessToken = "APP_USR-1479267288961423-092100-4b20738369b4ae4efc6647bba62b1533-2503618286"
-		}
-		if publicKey == "" {
-			publicKey = "APP_USR-bab1c568-ca8d-4fbc-9c87-b2b797744fc6"
-		}
-	} else {
-		// CREDENCIALES DE PRODUCCIÓN (para cuando vayas a producción)
-		accessToken = os.Getenv("MERCADOPAGO_ACCESS_TOKEN")
-		publicKey = os.Getenv("MERCADOPAGO_PUBLIC_KEY")
-
-		if accessToken == "" || publicKey == "" {
-			panic("Credenciales de producción de MercadoPago no configuradas")
-		}
+	// Verificar que las credenciales sean de sandbox
+	if !strings.HasPrefix(accessToken, "APP_USR-1479267288961423") {
+		panic("❌ ERROR: No se están usando las credenciales de sandbox correctas")
 	}
 
-	fmt.Printf("🔧 MercadoPago Service iniciado:\n")
-	fmt.Printf("   - Sandbox: %v\n", isSandbox)
-	fmt.Printf("   - Public Key: %s...%s\n", publicKey[:12], publicKey[len(publicKey)-12:])
-	fmt.Printf("   - Access Token: %s...%s\n", accessToken[:12], accessToken[len(accessToken)-12:])
+	fmt.Printf("✅ Credenciales de sandbox verificadas:\n")
+	fmt.Printf("   - Access Token: %s\n", accessToken)
+	fmt.Printf("   - Public Key: %s\n", publicKey)
+	fmt.Printf("   - Is Sandbox: %v\n", isSandbox)
 
 	return &MercadoPagoService{
 		AccessToken: accessToken,
@@ -724,7 +708,7 @@ func (s *MercadoPagoService) CreatePreference(
 	cliente *entidades.Cliente,
 	frontendURL string,
 ) (*PreferenceResponse, error) {
-	
+
 	fmt.Printf("🚀 CreatePreference: Iniciando creación\n")
 	fmt.Printf("   - Reserva ID: %d\n", idReserva)
 	fmt.Printf("   - Tour: %s\n", tourNombre)
@@ -760,7 +744,7 @@ func (s *MercadoPagoService) CreatePreference(
 		cleanNumber := strings.TrimSpace(cliente.NumeroCelular)
 		cleanNumber = strings.TrimPrefix(cleanNumber, "+")
 		cleanNumber = strings.TrimPrefix(cleanNumber, "51")
-		
+
 		if len(cleanNumber) >= 9 {
 			payer.Phone.AreaCode = "51"
 			payer.Phone.Number = cleanNumber
@@ -892,12 +876,12 @@ func (s *MercadoPagoService) CreatePreference(
 		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 			lastErr = fmt.Errorf("código HTTP %d: %s", resp.StatusCode, string(body))
 			fmt.Printf("❌ Error en respuesta: %v\n", lastErr)
-			
+
 			// Si es error 400/401, no reintentar
 			if resp.StatusCode == 400 || resp.StatusCode == 401 {
 				return nil, fmt.Errorf("error de credenciales o datos: %s", string(body))
 			}
-			
+
 			if i < maxRetries-1 {
 				time.Sleep(time.Duration(i+1) * time.Second)
 				continue
@@ -971,7 +955,7 @@ func (s *MercadoPagoService) GetPaymentInfo(paymentId string) (*PaymentResponse,
 		return nil, fmt.Errorf("error al deserializar: %v", err)
 	}
 
-	fmt.Printf("✅ Pago consultado - Status: %s, Method: %s\n", 
+	fmt.Printf("✅ Pago consultado - Status: %s, Method: %s\n",
 		paymentResp.Status, paymentResp.PaymentMethodId)
 
 	return &paymentResp, nil
@@ -979,7 +963,7 @@ func (s *MercadoPagoService) GetPaymentInfo(paymentId string) (*PaymentResponse,
 
 // VerificarEstadoPago verifica el estado usando preference_id o payment_id
 func (s *MercadoPagoService) VerificarEstadoPago(preferenceID string, paymentID string) (string, string, int, error) {
-	fmt.Printf("🔍 VerificarEstadoPago: preferenceID=%s, paymentID=%s (Sandbox: %v)\n", 
+	fmt.Printf("🔍 VerificarEstadoPago: preferenceID=%s, paymentID=%s (Sandbox: %v)\n",
 		preferenceID, paymentID, s.IsSandbox)
 
 	// Si tenemos paymentID, usarlo directamente
@@ -1066,13 +1050,13 @@ func (s *MercadoPagoService) VerificarEstadoPago(preferenceID string, paymentID 
 // Mapeo de estados
 func (s *MercadoPagoService) MapMercadoPagoStatusToInternal(mpStatus string) string {
 	statusMap := map[string]string{
-		"approved":    "CONFIRMADA",
-		"rejected":    "CANCELADA",
-		"cancelled":   "CANCELADA",
-		"refunded":    "CANCELADA",
-		"pending":     "RESERVADO",
-		"in_process":  "RESERVADO",
-		"authorized":  "RESERVADO",
+		"approved":   "CONFIRMADA",
+		"rejected":   "CANCELADA",
+		"cancelled":  "CANCELADA",
+		"refunded":   "CANCELADA",
+		"pending":    "RESERVADO",
+		"in_process": "RESERVADO",
+		"authorized": "RESERVADO",
 	}
 
 	if status, exists := statusMap[mpStatus]; exists {
@@ -1083,13 +1067,13 @@ func (s *MercadoPagoService) MapMercadoPagoStatusToInternal(mpStatus string) str
 
 func (s *MercadoPagoService) MapMercadoPagoStatusToPagoStatus(mpStatus string) string {
 	statusMap := map[string]string{
-		"approved":    "PROCESADO",
-		"rejected":    "ANULADO",
-		"cancelled":   "ANULADO",
-		"refunded":    "ANULADO",
-		"pending":     "PENDIENTE",
-		"in_process":  "PENDIENTE",
-		"authorized":  "PENDIENTE",
+		"approved":   "PROCESADO",
+		"rejected":   "ANULADO",
+		"cancelled":  "ANULADO",
+		"refunded":   "ANULADO",
+		"pending":    "PENDIENTE",
+		"in_process": "PENDIENTE",
+		"authorized": "PENDIENTE",
 	}
 
 	if status, exists := statusMap[mpStatus]; exists {
