@@ -1093,7 +1093,7 @@ import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store';
 import { useDashboard } from '../../hooks/useDashboard';
 import { formatCurrency, formatNumber, formatDate } from '../../../shared/utils/formatters';
-import Card from '../components/Card'; // ✅ Correcto - import por defecto
+import Card from '../components/Card'; 
 import { ROUTES } from '../../../shared/constants/appRoutes';
 
 // Componente para tarjetas de métricas del vendedor
