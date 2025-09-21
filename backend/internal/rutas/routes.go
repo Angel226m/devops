@@ -164,9 +164,6 @@ func SetupRoutes(
 			clienteHandlers.ReservarConMercadoPago(ctx, reservaController)
 		})
 
-		// Webhook para recibir notificaciones de Mercado Pago
-		public.POST("/webhook/mercadopago", reservaController.WebhookMercadoPago)
-
 		// Verificar disponibilidad de instancia
 		public.GET("/instancias-tour/:idInstancia/verificar-disponibilidad", reservaController.VerificarDisponibilidadInstancia)
 		public.GET("/mercadopago/public-key", mercadoPagoController.GetPublicKey)
