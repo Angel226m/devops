@@ -571,11 +571,11 @@ func NewMercadoPagoService() *MercadoPagoService {
 
 	// Si no están configuradas, usar valores de prueba
 	if accessToken == "" {
-		accessToken = "APP_USR-1824922729537047-092023-c555b6a23317b13b1e6625fc21f89cab-2503618286"
+		accessToken = "APP_USR-1312781531660701-092100-cb46e27606fd20ccbb72eb3b7531629c-2503618286"
 	}
 
 	if publicKey == "" {
-		publicKey = "APP_USR-c7b0e387-9c1f-409c-af63-cc7b1ed37aa5"
+		publicKey = "APP_USR-acf65485-5ef8-4394-af05-93b036615bc5"
 	}
 
 	return &MercadoPagoService{
