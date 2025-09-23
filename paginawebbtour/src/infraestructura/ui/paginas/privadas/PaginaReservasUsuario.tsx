@@ -835,15 +835,9 @@ import { RootState, AppDispatch } from '../../../store';
 import { listarMisReservas } from '../../../store/slices/sliceReserva';
 import Cargador from '../../componentes/comunes/Cargador';
 import Alerta from '../../componentes/comunes/Alerta';
-
-// Define los tipos aquí ya que no se puede encontrar el módulo
-type EstadoReserva = 'RESERVADO' | 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO';
-
-// Definición de tipos para las reservas
+ 
 interface CantidadPasaje {
-  id_tipo_pasaje: number;
   cantidad: number;
-  precio_unitario: number;
   nombre_tipo?: string;
 }
 
@@ -882,6 +876,8 @@ interface ReservaExtendida {
   };
 }
 
+type EstadoReserva = 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO' | 'RESERVADO';
+
 const PaginaReservasUsuario = () => {
   // Scroll al inicio de la página
   useEffect(() => {
@@ -909,31 +905,35 @@ const PaginaReservasUsuario = () => {
   // Función mejorada para formatear fechas
   const formatearFecha = (fechaStr?: string, formato: 'completo' | 'corto' | 'relativo' = 'completo'): string => {
     if (!fechaStr) return t('reservas.fechaNoDisponible');
-    
+
     try {
-      // Normalizar la fecha - manejar diferentes formatos
       let fecha: Date;
-      
-      // Si viene en formato ISO o con timezone
-      if (fechaStr.includes('T') || fechaStr.includes('Z')) {
-        fecha = new Date(fechaStr);
-      } else {
-        // Si viene solo la fecha (YYYY-MM-DD)
-        const partes = fechaStr.split('-');
-        if (partes.length === 3) {
-          fecha = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-        } else {
-          fecha = new Date(fechaStr);
-        }
+
+      // Manejar formato DD/MM/YYYY
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaStr)) {
+        const [dia, mes, anio] = fechaStr.split('/').map(Number);
+        fecha = new Date(anio, mes - 1, dia);
       }
-      
+      // Manejar formato ISO o YYYY-MM-DD
+      else if (fechaStr.includes('T') || fechaStr.includes('Z') || /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+        fecha = new Date(fechaStr);
+      }
+      // Otros formatos
+      else {
+        fecha = new Date(fechaStr);
+      }
+
       // Verificar si la fecha es válida
       if (isNaN(fecha.getTime())) {
+        console.error(`Fecha inválida detectada: ${fechaStr}`);
         return t('reservas.fechaInvalida');
       }
 
+      // Depuración: Mostrar la fecha procesada
+      console.log(`Fecha procesada: ${fechaStr} -> ${fecha.toISOString()}`);
+
       const opciones: Intl.DateTimeFormatOptions = {};
-      
+
       switch (formato) {
         case 'completo':
           opciones.year = 'numeric';
@@ -950,14 +950,13 @@ const PaginaReservasUsuario = () => {
           const ahora = new Date();
           const diferencia = fecha.getTime() - ahora.getTime();
           const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
-          
+
           if (dias === 0) return t('reservas.hoy');
           if (dias === 1) return t('reservas.manana');
           if (dias === -1) return t('reservas.ayer');
           if (dias > 0 && dias <= 7) return t('reservas.enDias', { dias });
           if (dias < 0 && dias >= -7) return t('reservas.haceDias', { dias: Math.abs(dias) });
-          
-          // Para fechas más lejanas, usar formato corto
+
           opciones.year = 'numeric';
           opciones.month = 'short';
           opciones.day = 'numeric';
@@ -966,7 +965,7 @@ const PaginaReservasUsuario = () => {
 
       return fecha.toLocaleDateString('es-PE', opciones);
     } catch (error) {
-      console.error('Error al formatear fecha:', error);
+      console.error('Error al formatear fecha:', error, 'Fecha original:', fechaStr);
       return t('reservas.fechaInvalida');
     }
   };
@@ -1071,11 +1070,18 @@ const PaginaReservasUsuario = () => {
     return 0;
   };
 
-  // Obtener fecha del tour
+  // Obtener fecha del tour con validación
   const getFechaTour = (reserva: ReservaExtendida): string => {
-    return reserva.fecha_tour || 
-           (reserva.instancia && reserva.instancia.fecha_especifica) || 
-           '';
+    const fecha = reserva.fecha_tour || (reserva.instancia && reserva.instancia.fecha_especifica) || '';
+    
+    // Depuración: Mostrar qué fecha se está utilizando
+    console.log(`getFechaTour - reserva.id_reserva: ${reserva.id_reserva}, fecha_tour: ${reserva.fecha_tour}, instancia.fecha_especifica: ${reserva.instancia?.fecha_especifica}, resultado: ${fecha}`);
+    
+    if (!fecha) {
+      console.warn(`No se encontró fecha válida para la reserva ${reserva.id_reserva}`);
+      return '';
+    }
+    return fecha;
   };
 
   // Obtener fecha de reserva
