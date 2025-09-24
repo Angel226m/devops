@@ -74,7 +74,7 @@ export const endpoints = {
     cancelarReserva: (id: number) => `/cliente/mis-reservas/${id}/cancelar`,
     pagarReserva: (id: number) => `/cliente/mis-reservas/${id}/pagar`,
     verificarConfirmarPago: "/reservas/verificar-confirmar-pago"
-
+  
   },
   
   // Endpoints para Mercado Pago
@@ -86,7 +86,8 @@ export const endpoints = {
     webhook: "/webhook/mercadopago",
     publicKey: "/mercadopago/public-key",
     verificarPago: "/mercadopago/verificar-pago",
-    
+    confirmarPago: "/reservas/verificar-confirmar-pago", // ⬅️ AGREGAR ESTA LÍNEA
+
     // 🟢 Checkout API (nuevos)
     processCardPayment: "/mercadopago/process-card-payment",
     paymentMethods: "/mercadopago/payment-methods",
