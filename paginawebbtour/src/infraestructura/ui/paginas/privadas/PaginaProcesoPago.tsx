@@ -1,4 +1,4 @@
-/* import { useState, useEffect, useRef, useCallback } from 'react';
+/*import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1803,7 +1803,7 @@ const PaginaProcesoPago = () => {
   );
 };
 
-export default PaginaProcesoPago; */
+export default PaginaProcesoPago;*/
 
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1850,11 +1850,82 @@ interface PaqueteDatosReserva {
 // Tipos para modos de checkout
 type ModoCheckout = 'pro' | 'api';
 
-// 🔧 CONSTANTES CORREGIDAS
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const IS_SANDBOX = !IS_PRODUCTION; // Cambiar automáticamente según el entorno
+// Interfaz para el logger mejorado
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  category: string;
+  message: string;
+  data?: any;
+}
+
+// 🔧 CONSTANTES ACTUALIZADAS
+const IS_PRODUCTION = false;
+const IS_SANDBOX = true;
 const CACHE_DURATION_MS = 15 * 60 * 1000;
 const ACTUAL_ENV = process.env.NODE_ENV;
+
+// 📊 Logger mejorado
+class PaymentLogger {
+  private logs: LogEntry[] = [];
+  private maxLogs = 100;
+
+  private createEntry(level: LogEntry['level'], category: string, message: string, data?: any): LogEntry {
+    return {
+      timestamp: new Date().toISOString(),
+      level,
+      category,
+      message,
+      data: data ? JSON.parse(JSON.stringify(data)) : undefined
+    };
+  }
+
+  info(category: string, message: string, data?: any) {
+    const entry = this.createEntry('info', category, message, data);
+    this.logs.push(entry);
+    console.log(`🔵 [${category}] ${message}`, data || '');
+    this.trimLogs();
+  }
+
+  warn(category: string, message: string, data?: any) {
+    const entry = this.createEntry('warn', category, message, data);
+    this.logs.push(entry);
+    console.warn(`🟡 [${category}] ${message}`, data || '');
+    this.trimLogs();
+  }
+
+  error(category: string, message: string, data?: any) {
+    const entry = this.createEntry('error', category, message, data);
+    this.logs.push(entry);
+    console.error(`🔴 [${category}] ${message}`, data || '');
+    this.trimLogs();
+  }
+
+  debug(category: string, message: string, data?: any) {
+    const entry = this.createEntry('debug', category, message, data);
+    this.logs.push(entry);
+    console.debug(`🟣 [${category}] ${message}`, data || '');
+    this.trimLogs();
+  }
+
+  private trimLogs() {
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs);
+    }
+  }
+
+  getLogs(): LogEntry[] {
+    return [...this.logs];
+  }
+
+  exportLogs(): string {
+    return JSON.stringify(this.logs, null, 2);
+  }
+
+  clearLogs() {
+    this.logs = [];
+  }
+}
 
 const PaginaProcesoPago = () => {
   const { t } = useTranslation();
@@ -1864,7 +1935,11 @@ const PaginaProcesoPago = () => {
   
   const datosReserva = location.state || JSON.parse(sessionStorage.getItem('datosReservaPendiente') || '{}');
   
-  // 🔧 ESTADOS CORREGIDOS Y MEJORADOS
+  // 📊 Logger mejorado
+  const loggerRef = useRef(new PaymentLogger());
+  const logger = loggerRef.current;
+  
+  // Estados principales
   const [cargandoPago, setCargandoPago] = useState(false);
   const [cargandoMercadoPago, setCargandoMercadoPago] = useState(true);
   const [metodoPago, setMetodoPago] = useState('mercadopago');
@@ -1872,10 +1947,10 @@ const PaginaProcesoPago = () => {
   const [preferencia, setPreferencia] = useState<any>(null);
   const [sdkCargado, setSdkCargado] = useState(false);
   const [publicKey, setPublicKey] = useState('');
-  const [publicKeyObtenida, setPublicKeyObtenida] = useState(false); // 🆕 NUEVO ESTADO
   const [intentosVerificacion, setIntentosVerificacion] = useState(0);
   const [estadoPagoVerificado, setEstadoPagoVerificado] = useState(false);
   const [pagoIniciado, setPagoIniciado] = useState(false);
+  const [procesandoPago, setProcesandoPago] = useState(false);
   const maxIntentosVerificacion = 10;
   
   const [modoCheckout, setModoCheckout] = useState<ModoCheckout>('api');
@@ -1893,12 +1968,9 @@ const PaginaProcesoPago = () => {
     paymentMethodId: '',
     issuerId: ''
   });
-  
-  // 🔧 ESTADOS CRÍTICOS NUEVOS PARA CONTROLAR LA INICIALIZACIÓN
   const [mp, setMp] = useState<any>(null);
-  const [mpInicializado, setMpInicializado] = useState(false); // 🆕 NUEVO ESTADO CRÍTICO
-  const [sistemaListo, setSistemaListo] = useState(false); // 🆕 NUEVO ESTADO CRÍTICO
   
+  // Estados para manejo de usuario
   const [editandoUsuario, setEditandoUsuario] = useState(false);
   const [datosUsuario, setDatosUsuario] = useState({
     nombres: usuario?.nombres || '',
@@ -1908,27 +1980,70 @@ const PaginaProcesoPago = () => {
     numero_documento: usuario?.numero_documento || ''
   });
 
+  // Estados para UI mejorada
+  const [mostrandoLogs, setMostrandoLogs] = useState(false);
+  const [validacionFormulario, setValidacionFormulario] = useState<{[key: string]: string}>({});
+
   const mercadoPagoButtonRef = useRef<HTMLDivElement>(null);
   
   const subtotal = Number(datosReserva.total || 0);
   const igv = subtotal * 0.18;
   const total = subtotal;
 
-  // 🔧 LOGGING MEJORADO
+  // 🚀 Inicialización mejorada
   useEffect(() => {
-    console.log("🔧 ========== CONFIGURACIÓN DE ENTORNO CORREGIDA ==========");
-    console.log("   🌍 NODE_ENV actual:", ACTUAL_ENV);
-    console.log("   🎯 IS_SANDBOX (automático):", IS_SANDBOX);
-    console.log("   🎯 IS_PRODUCTION (automático):", IS_PRODUCTION);
-    console.log("   🔄 Modo checkout actual:", modoCheckout);
-    console.log("   📱 SDK cargado:", sdkCargado);
-    console.log("   🔑 Public Key obtenida:", publicKeyObtenida);
-    console.log("   💳 MP inicializado:", mpInicializado);
-    console.log("   ✅ Sistema listo:", sistemaListo);
-    console.log("===========================================================");
+    logger.info('INIT', 'Inicializando componente de pago', {
+      NODE_ENV: ACTUAL_ENV,
+      IS_SANDBOX,
+      IS_PRODUCTION,
+      modoCheckout,
+      datosReserva: {
+        ...datosReserva,
+        // No loggear datos sensibles
+        usuario: undefined
+      }
+    });
     
     window.scrollTo(0, 0);
-  }, [sdkCargado, publicKeyObtenida, mpInicializado, sistemaListo]);
+  }, []);
+
+  // 📝 Validación mejorada del formulario
+  const validarFormulario = useCallback(() => {
+    const errores: {[key: string]: string} = {};
+
+    if (modoCheckout === 'api') {
+      if (!cardForm.cardNumber.replace(/\s/g, '')) {
+        errores.cardNumber = 'El número de tarjeta es requerido';
+      } else if (cardForm.cardNumber.replace(/\s/g, '').length < 13) {
+        errores.cardNumber = 'Número de tarjeta incompleto';
+      }
+
+      if (!cardForm.cardholderName.trim()) {
+        errores.cardholderName = 'El nombre del titular es requerido';
+      }
+
+      if (!cardForm.expiryMonth) {
+        errores.expiryMonth = 'El mes es requerido';
+      }
+
+      if (!cardForm.expiryYear) {
+        errores.expiryYear = 'El año es requerido';
+      }
+
+      if (!cardForm.securityCode) {
+        errores.securityCode = 'El CVV es requerido';
+      } else if (cardForm.securityCode.length < 3) {
+        errores.securityCode = 'CVV incompleto';
+      }
+
+      if (!cardForm.identificationNumber.trim()) {
+        errores.identificationNumber = 'El número de documento es requerido';
+      }
+    }
+
+    setValidacionFormulario(errores);
+    return Object.keys(errores).length === 0;
+  }, [cardForm, modoCheckout]);
 
   const handleUsuarioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -1936,29 +2051,36 @@ const PaginaProcesoPago = () => {
       ...prev,
       [name]: value
     }));
+    
+    logger.debug('USER_FORM', 'Campo de usuario actualizado', { campo: name, valor: value?.length > 0 ? '[PRESENTE]' : '[VACÍO]' });
   };
   
   const guardarCambiosUsuario = () => {
     setEditandoUsuario(false);
+    logger.info('USER_FORM', 'Cambios de usuario guardados');
+    
+    // Aquí podrías agregar una llamada a la API para guardar los cambios
+    // await actualizarDatosUsuario(datosUsuario);
+    
     alert('Cambios guardados correctamente.');
   };
 
   const handleCardFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // 🔧 FORMATEO MEJORADO DE TARJETA
     let valorFormateado = value;
     
+    // Formateo automático del número de tarjeta
     if (name === 'cardNumber') {
-      // Eliminar espacios y re-formatear con espacios cada 4 dígitos
       valorFormateado = value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
-      valorFormateado = valorFormateado.substring(0, 19); // Máximo 19 caracteres (16 dígitos + 3 espacios)
     }
     
+    // Limitar longitud del CVV
     if (name === 'securityCode') {
       valorFormateado = value.replace(/\D/g, '').slice(0, 4);
     }
     
+    // Limitar número de documento
     if (name === 'identificationNumber') {
       valorFormateado = value.replace(/\D/g, '').slice(0, 12);
     }
@@ -1968,36 +2090,59 @@ const PaginaProcesoPago = () => {
       [name]: valorFormateado
     }));
 
-    // 🔧 IDENTIFICAR MÉTODO DE PAGO SOLO SI MP ESTÁ INICIALIZADO
-    if (name === 'cardNumber' && mp && mpInicializado) {
+    // Limpiar error específico cuando el usuario empiece a escribir
+    if (validacionFormulario[name]) {
+      setValidacionFormulario(prev => {
+        const nuevo = {...prev};
+        delete nuevo[name];
+        return nuevo;
+      });
+    }
+
+    if (name === 'cardNumber') {
       const numeroLimpio = valorFormateado.replace(/\s/g, '');
       if (numeroLimpio.length >= 6) {
         identifyPaymentMethod(numeroLimpio);
       }
     }
+
+    logger.debug('CARD_FORM', 'Campo de tarjeta actualizado', { 
+      campo: name, 
+      longitud: valorFormateado.length,
+      esNumeroTarjeta: name === 'cardNumber'
+    });
   };
 
   const limpiarDatosReservaEnProgreso = useCallback(() => {
     const instanciaId = datosReserva.instanciaId;
     if (instanciaId) {
       localStorage.removeItem(`reserva_en_proceso_${instanciaId}`);
+      logger.info('CLEANUP', 'Datos de reserva en progreso limpiados', { instanciaId });
     }
     sessionStorage.removeItem('pagoIniciado');
     sessionStorage.removeItem('reservaEnProceso');
-  }, [datosReserva.instanciaId]);
+    logger.info('CLEANUP', 'Sessions storage limpiado');
+  }, [datosReserva.instanciaId, logger]);
 
   const analizarErrorMercadoPago = useCallback((error: any) => {
     let mensajeUsuario = "Ocurrió un error al procesar el pago. Por favor, intenta nuevamente.";
     
-    console.error("🔍 Analizando error completo:", error);
+    logger.error('ERROR_ANALYSIS', 'Analizando error de MercadoPago', { 
+      error: {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        cause: error.response?.data?.cause
+      }
+    });
     
     if (error.response && error.response.data) {
       const respuesta = error.response.data;
-      console.error("📋 Datos del error:", respuesta);
       
       if (respuesta.cause && Array.isArray(respuesta.cause)) {
         const causa = respuesta.cause[0];
-        console.error("🎯 Causa específica:", causa);
+        logger.error('ERROR_ANALYSIS', 'Causa específica encontrada', { causa });
+        
         switch (causa.code) {
           case "2001":
             mensajeUsuario = "La tarjeta fue rechazada por fondos insuficientes.";
@@ -2009,6 +2154,12 @@ const PaginaProcesoPago = () => {
             break;
           case "3001":
             mensajeUsuario = "La operación no está permitida para este método de pago.";
+            break;
+          case "3034":
+            mensajeUsuario = "La tarjeta no tiene suficiente saldo disponible.";
+            break;
+          case "4001":
+            mensajeUsuario = "Los datos de la tarjeta son incorrectos.";
             break;
           default:
             mensajeUsuario = `Error: ${causa.description || respuesta.message}`;
@@ -2022,88 +2173,90 @@ const PaginaProcesoPago = () => {
       mensajeUsuario = error.message;
     }
     
-    console.error("📝 Mensaje final para usuario:", mensajeUsuario);
+    logger.error('ERROR_ANALYSIS', 'Mensaje final para usuario', { mensajeUsuario });
     return mensajeUsuario;
-  }, []);
+  }, [logger]);
 
-  // 🔧 OBTENER CLAVE PÚBLICA CORREGIDA
   const obtenerClavePublica = useCallback(async () => {
     try {
-      // 🔍 Verificar cache primero
       const cachedKey = localStorage.getItem('mp_public_key');
       const cachedTimestamp = localStorage.getItem('mp_public_key_timestamp');
       
-      if (cachedKey && cachedTimestamp && !publicKeyObtenida) {
+      if (cachedKey && cachedTimestamp) {
         const timestamp = parseInt(cachedTimestamp);
         if (Date.now() - timestamp < CACHE_DURATION_MS) {
-          console.log("📋 Usando clave pública desde cache");
+          logger.info('PUBLIC_KEY', 'Usando clave pública desde cache');
           setPublicKey(cachedKey);
-          setPublicKeyObtenida(true);
           return cachedKey;
         }
       }
       
-      console.log("🔑 Solicitando clave pública al backend...");
+      logger.info('PUBLIC_KEY', 'Solicitando clave pública al backend');
       const response = await clienteAxios.get(endpoints.mercadoPago.publicKey);
       
-      console.log("🔍 Respuesta de public key:", response.data);
+      logger.debug('PUBLIC_KEY', 'Respuesta de public key', { 
+        hasPublicKey: !!response.data?.public_key,
+        keyPrefix: response.data?.public_key?.substring(0, 20) + '...'
+      });
       
       if (response.data && response.data.public_key) {
         const newKey = response.data.public_key;
         
         if (newKey.includes("TEST-4e0f5e55-d687-4b7e-83db-12a20d3d6beb")) {
-          console.log("✅ Clave pública de TEST confirmada (Checkout API)");
+          logger.info('PUBLIC_KEY', 'Clave pública de TEST confirmada (Checkout API)');
         } else {
-          console.log("⚠️ Usando clave pública diferente:", newKey.substring(0, 15) + "...");
+          logger.warn('PUBLIC_KEY', 'Esta no es la clave de TEST esperada', {
+            esperada: 'TEST-4e0f5e55-d687-4b7e-83db-12a20d3d6beb',
+            recibida: newKey
+          });
         }
         
         localStorage.setItem('mp_public_key', newKey);
         localStorage.setItem('mp_public_key_timestamp', Date.now().toString());
         
         setPublicKey(newKey);
-        setPublicKeyObtenida(true); // 🔧 MARCAR COMO OBTENIDA
         return newKey;
       }
       throw new Error('No se pudo obtener la clave pública de Mercado Pago');
     } catch (error) {
-      console.error('❌ Error al obtener clave pública:', error);
+      logger.error('PUBLIC_KEY', 'Error al obtener clave pública', error);
       setError('No se pudo conectar con el servidor de pagos. Por favor, intenta nuevamente.');
       return null;
     }
-  }, [publicKeyObtenida]);
+  }, [logger]);
 
   const obtenerMetodosPago = useCallback(async () => {
     try {
-      console.log("📋 Obteniendo métodos de pago...");
+      logger.info('PAYMENT_METHODS', 'Obteniendo métodos de pago');
       const response = await clienteAxios.get(endpoints.mercadoPago.paymentMethods);
       
       if (response.data && response.data.data) {
         setPaymentMethods(response.data.data);
-        console.log("✅ Métodos de pago obtenidos:", response.data.data.length);
+        logger.info('PAYMENT_METHODS', 'Métodos de pago obtenidos', { cantidad: response.data.data.length });
       }
     } catch (error) {
-      console.error("❌ Error al obtener métodos de pago:", error);
+      logger.error('PAYMENT_METHODS', 'Error al obtener métodos de pago', error);
     }
-  }, []);
+  }, [logger]);
 
-  // 🔧 IDENTIFICAR MÉTODO DE PAGO CORREGIDO
   const identifyPaymentMethod = useCallback(async (cardNumber: string) => {
-    if (!mp || !mpInicializado) {
-      console.log("⏸️ MP no está inicializado, no se puede identificar método de pago");
-      return;
-    }
-    
-    if (cardNumber.length >= 6) {
+    if (mp && cardNumber.length >= 6) {
       try {
-        console.log("🔍 Identificando método de pago para BIN:", cardNumber.substring(0, 6));
+        const bin = cardNumber.substring(0, 6);
+        logger.debug('PAYMENT_METHOD_ID', 'Identificando método de pago', { bin });
         
-        const response = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
+        const response = await mp.getPaymentMethods({ bin });
         
-        console.log("📋 Respuesta de identificación:", response);
+        logger.debug('PAYMENT_METHOD_ID', 'Respuesta de identificación', { 
+          resultados: response.results?.length || 0
+        });
         
         if (response.results && response.results.length > 0) {
           const method = response.results[0];
-          console.log("✅ Método identificado:", method);
+          logger.info('PAYMENT_METHOD_ID', 'Método identificado', { 
+            id: method.id,
+            tipo: method.payment_type_id 
+          });
           
           setCardForm(prev => ({
             ...prev,
@@ -2114,77 +2267,59 @@ const PaginaProcesoPago = () => {
             await obtenerEmisores(method.id);
           }
         } else {
-          console.log("⚠️ No se encontraron métodos para este BIN");
+          logger.warn('PAYMENT_METHOD_ID', 'No se encontraron métodos para este BIN', { bin });
         }
       } catch (error) {
-        console.error('❌ Error al identificar método de pago:', error);
+        logger.error('PAYMENT_METHOD_ID', 'Error al identificar método de pago', error);
       }
     }
-  }, [mp, mpInicializado]);
+  }, [mp, logger]);
 
   const obtenerEmisores = useCallback(async (paymentMethodId: string) => {
     try {
-      console.log("🏛️ Obteniendo emisores para:", paymentMethodId);
+      logger.info('CARD_ISSUERS', 'Obteniendo emisores', { paymentMethodId });
       const response = await clienteAxios.get(
         `${endpoints.mercadoPago.cardIssuers}?payment_method_id=${paymentMethodId}`
       );
       
       if (response.data && response.data.data) {
         setCardIssuers(response.data.data);
-        console.log("✅ Emisores obtenidos:", response.data.data.length);
+        logger.info('CARD_ISSUERS', 'Emisores obtenidos', { cantidad: response.data.data.length });
       }
     } catch (error) {
-      console.error("❌ Error al obtener emisores:", error);
+      logger.error('CARD_ISSUERS', 'Error al obtener emisores', error);
     }
-  }, []);
+  }, [logger]);
 
-  // 🔧 FUNCIÓN CRÍTICA CORREGIDA: PROCESAR PAGO CON CHECKOUT API
+  // 💳 Procesamiento de pago con Checkout API mejorado
   const procesarPagoConCheckoutAPI = useCallback(async () => {
-    if (cargandoPago) return;
-    
-    // 🔧 VERIFICACIONES CRÍTICAS ANTES DE PROCESAR
-    console.log("💳 Procesando pago con Checkout API...");
-    console.log("🔍 Verificando estados críticos:");
-    console.log("   - window.MercadoPago:", !!window.MercadoPago);
-    console.log("   - mp instancia:", !!mp);
-    console.log("   - mpInicializado:", mpInicializado);
-    console.log("   - publicKeyObtenida:", publicKeyObtenida);
-    console.log("   - sistemaListo:", sistemaListo);
-    
-    // 🚨 VERIFICACIÓN CRÍTICA 1: SDK disponible
-    if (!window.MercadoPago) {
-      console.error("❌ window.MercadoPago no está disponible");
-      setError('El sistema de pagos no está listo. Por favor, recarga la página e intenta nuevamente.');
+    if (cargandoPago || procesandoPago) {
+      logger.warn('CHECKOUT_API', 'Intento de procesamiento mientras ya está en curso');
       return;
     }
     
-    // 🚨 VERIFICACIÓN CRÍTICA 2: Instancia MP inicializada
-    if (!mp || !mpInicializado) {
-      console.error("❌ MercadoPago SDK no está inicializado");
-      console.error("   - mp:", !!mp);
-      console.error("   - mpInicializado:", mpInicializado);
-      setError('MercadoPago SDK no está inicializado. Por favor, espera un momento e intenta nuevamente.');
-      return;
-    }
-    
-    // 🚨 VERIFICACIÓN CRÍTICA 3: Clave pública disponible
-    if (!publicKey || !publicKeyObtenida) {
-      console.error("❌ Clave pública no está disponible");
-      setError('Clave de seguridad no disponible. Por favor, recarga la página.');
+    // Validar formulario antes de procesar
+    if (!validarFormulario()) {
+      logger.warn('CHECKOUT_API', 'Validación de formulario falló');
+      setError('Por favor, completa todos los campos requeridos correctamente.');
       return;
     }
     
     setCargandoPago(true);
+    setProcesandoPago(true);
     setError(null);
     setPagoIniciado(true);
     
+    const inicioTiempo = Date.now();
+    
     try {
-        console.log("📋 Datos del formulario:", cardForm);
+        logger.info('CHECKOUT_API', 'Iniciando procesamiento de pago', {
+          tieneMP: !!mp,
+          tieneToken: !!cardForm.cardNumber
+        });
         
-        // 🔧 VALIDAR CAMPOS OBLIGATORIOS
-        if (!cardForm.cardNumber || !cardForm.cardholderName || !cardForm.expiryMonth || 
-            !cardForm.expiryYear || !cardForm.securityCode || !cardForm.identificationNumber) {
-          throw new Error('Por favor, completa todos los campos obligatorios');
+        if (!mp) {
+            throw new Error('MercadoPago SDK no está inicializado');
         }
 
         const tokenData = {
@@ -2197,30 +2332,32 @@ const PaginaProcesoPago = () => {
             identificationNumber: cardForm.identificationNumber,
         };
 
-        console.log("🎫 Creando token con datos:", tokenData);
-        const cardToken = await mp.createCardToken(tokenData);
-        
-        if (!cardToken || !cardToken.id) {
-          throw new Error('No se pudo generar el token de la tarjeta');
-        }
-        
-        console.log("✅ Token de tarjeta creado:", cardToken.id);
+        logger.debug('CHECKOUT_API', 'Creando token de tarjeta', {
+          tieneNumero: !!tokenData.cardNumber,
+          tieneNombre: !!tokenData.cardholderName,
+          tieneFecha: !!(tokenData.cardExpirationMonth && tokenData.cardExpirationYear),
+          tieneCVV: !!tokenData.securityCode
+        });
 
-        // 🔧 OBTENER EL ID DE RESERVA CORRECTO
+        const cardToken = await mp.createCardToken(tokenData);
+        logger.info('CHECKOUT_API', 'Token de tarjeta creado exitosamente', { tokenId: cardToken.id });
+
+        // Obtener ID de reserva
         const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
         
         let reservaIdFinal;
         
         if (reservaEnProceso.id) {
             reservaIdFinal = reservaEnProceso.id;
-            console.log("✅ Usando ID de reserva en proceso:", reservaIdFinal);
+            logger.info('CHECKOUT_API', 'Usando ID de reserva en proceso', { reservaId: reservaIdFinal });
         } else if (datosReserva.reservaId) {
             reservaIdFinal = datosReserva.reservaId;
-            console.log("✅ Usando ID de reserva de datos:", reservaIdFinal);
+            logger.info('CHECKOUT_API', 'Usando ID de reserva de datos', { reservaId: reservaIdFinal });
         } else {
-            console.error("❌ No se encontró ID de reserva válido");
-            console.error("   - reservaEnProceso:", reservaEnProceso);
-            console.error("   - datosReserva:", datosReserva);
+            logger.error('CHECKOUT_API', 'No se encontró ID de reserva válido', {
+              reservaEnProceso,
+              datosReserva: { ...datosReserva, usuario: '[REDACTED]' }
+            });
             throw new Error("No se encontró ID de reserva válido");
         }
 
@@ -2238,14 +2375,30 @@ const PaginaProcesoPago = () => {
             identification_number: cardForm.identificationNumber
         };
 
-        console.log("📤 Enviando datos de pago completos:", paymentData);
+        logger.info('CHECKOUT_API', 'Enviando datos de pago', {
+          tieneToken: !!paymentData.token,
+          monto: paymentData.transaction_amount,
+          metodoPago: paymentData.payment_method_id,
+          reservaId: paymentData.reserva_id
+        });
 
         const response = await clienteAxios.post(endpoints.mercadoPago.processCardPayment, paymentData);
 
-        console.log("📥 Respuesta del pago:", response.data);
+        const tiempoTranscurrido = Date.now() - inicioTiempo;
+        logger.info('CHECKOUT_API', 'Respuesta del pago recibida', {
+          success: !!response.data?.success,
+          tiempoMs: tiempoTranscurrido,
+          status: response.data?.data?.status
+        });
 
         if (response.data && response.data.success) {
             const paymentResult = response.data.data;
+            
+            logger.info('CHECKOUT_API', 'Pago procesado exitosamente', {
+              paymentId: paymentResult.payment_id,
+              status: paymentResult.status,
+              reservaId: paymentResult.reserva_id
+            });
             
             navegarSegunEstadoPago(
                 paymentResult.status,
@@ -2257,12 +2410,19 @@ const PaginaProcesoPago = () => {
         }
 
     } catch (error: any) {
-        console.error('❌ Error en el pago con Checkout API:', error);
+        const tiempoTranscurrido = Date.now() - inicioTiempo;
+        logger.error('CHECKOUT_API', 'Error en el procesamiento', {
+          error: error.message,
+          tiempoMs: tiempoTranscurrido,
+          detalles: error.response?.data
+        });
         setError(analizarErrorMercadoPago(error));
     } finally {
         setCargandoPago(false);
+        setProcesandoPago(false);
+        logger.info('CHECKOUT_API', 'Procesamiento finalizado');
     }
-}, [mp, mpInicializado, publicKey, publicKeyObtenida, cardForm, total, datosUsuario, datosReserva, analizarErrorMercadoPago]);
+}, [mp, cardForm, total, datosUsuario, datosReserva, analizarErrorMercadoPago, validarFormulario, logger, cargandoPago, procesandoPago]);
 
   const navegarSegunEstadoPago = useCallback((estado: string, paymentId: string | null, reservationId: number | null) => {
     const datosBase = {
@@ -2277,7 +2437,12 @@ const PaginaProcesoPago = () => {
       totalPasajeros: datosReserva.totalPasajeros
     };
     
-    console.log(`🧭 Navegando según estado de pago: ${estado}, Payment ID: ${paymentId}, Reservation ID: ${reservationId}`);
+    logger.info('NAVIGATION', 'Navegando según estado de pago', {
+      estado,
+      paymentId,
+      reservationId,
+      datosBase: { ...datosBase, tourNombre: '[REDACTED]' }
+    });
     
     limpiarDatosReservaEnProgreso();
     
@@ -2313,23 +2478,31 @@ const PaginaProcesoPago = () => {
         });
         break;
     }
-  }, [navigate, datosReserva, total, limpiarDatosReservaEnProgreso]);
+  }, [navigate, datosReserva, total, limpiarDatosReservaEnProgreso, logger]);
 
   const verificarYConfirmarReserva = useCallback(async (idReserva: number, status: string, paymentId?: string) => {
     try {
-      console.log(`🔍 Verificando y confirmando reserva ID=${idReserva}, status=${status}, paymentId=${paymentId || 'no disponible'}`);
+      logger.info('VERIFY_RESERVATION', 'Verificando y confirmando reserva', {
+        idReserva,
+        status,
+        tienePaymentId: !!paymentId
+      });
       
       let url = `/api/v1/reservas/verificar-confirmar-pago?id_reserva=${idReserva}`;
       if (status) url += `&status=${status}`;
       if (paymentId) url += `&payment_id=${paymentId}`;
       
       const response = await clienteAxios.get(url);
-      console.log("✅ Respuesta de verificación-confirmación:", response.data);
+      logger.debug('VERIFY_RESERVATION', 'Respuesta de verificación', {
+        success: !!response.data?.success,
+        estado: response.data?.data?.estado
+      });
       
       if (response.data.success) {
         const reserva = response.data.data;
         if (reserva.estado === "CONFIRMADA") {
           setEstadoPagoVerificado(true);
+          logger.info('VERIFY_RESERVATION', 'Reserva confirmada exitosamente');
           return {
             success: true,
             status: "approved",
@@ -2339,6 +2512,7 @@ const PaginaProcesoPago = () => {
         
         if (reserva.estado === "CANCELADA" || reserva.estado === "ANULADA") {
           setEstadoPagoVerificado(true);
+          logger.warn('VERIFY_RESERVATION', 'Reserva cancelada o anulada', { estado: reserva.estado });
           return {
             success: true,
             status: "rejected",
@@ -2346,6 +2520,7 @@ const PaginaProcesoPago = () => {
           };
         }
         
+        logger.info('VERIFY_RESERVATION', 'Reserva en estado intermedio', { estado: reserva.estado });
         return {
           success: false,
           status: reserva.estado,
@@ -2355,21 +2530,28 @@ const PaginaProcesoPago = () => {
       
       return { success: false, status: null };
     } catch (error) {
-      console.error("❌ Error al verificar y confirmar reserva:", error);
+      logger.error('VERIFY_RESERVATION', 'Error al verificar y confirmar reserva', error);
       return { success: false, status: null };
     }
-  }, []);
+  }, [logger]);
 
   const verificarPagoUnificado = useCallback(async (idReserva: number, preferenceId: string, paymentId?: string) => {
     try {
-      console.log(`🔍 Verificando pago unificado: reserva=${idReserva}, preferencia=${preferenceId}, pago=${paymentId || 'no disponible'}`);
+      logger.debug('VERIFY_PAYMENT', 'Iniciando verificación unificada', {
+        idReserva,
+        preferenceId,
+        tienePaymentId: !!paymentId,
+        estadoPagoVerificado,
+        intentosVerificacion
+      });
       
       if (estadoPagoVerificado) {
+        logger.info('VERIFY_PAYMENT', 'Pago ya verificado, omitiendo verificación');
         return { success: true, status: null };
       }
       
       if (intentosVerificacion >= maxIntentosVerificacion) {
-        console.log(`⏸️ Máximo de intentos alcanzado (${maxIntentosVerificacion})`);
+        logger.warn('VERIFY_PAYMENT', 'Máximo de intentos alcanzado', { intentosVerificacion });
         return { success: false, status: null };
       }
       
@@ -2378,6 +2560,7 @@ const PaginaProcesoPago = () => {
       if (idReserva) {
         const resultado = await verificarYConfirmarReserva(idReserva, "approved", paymentId);
         if (resultado.success && resultado.status) {
+          logger.info('VERIFY_PAYMENT', 'Verificación exitosa, navegando');
           navegarSegunEstadoPago(
             resultado.status,
             paymentId || null,
@@ -2398,7 +2581,7 @@ const PaginaProcesoPago = () => {
         url += `&payment_id=${paymentId}`;
       }
       
-      console.log("🔗 URL de verificación general:", url);
+      logger.debug('VERIFY_PAYMENT', 'Verificando pago general', { url });
       const response = await clienteAxios.get(url);
       
       if (response.data && response.data.data && response.data.data.status) {
@@ -2406,11 +2589,13 @@ const PaginaProcesoPago = () => {
         
         const { status, payment_id, reservation_id } = response.data.data;
         
+        logger.info('VERIFY_PAYMENT', 'Estado de pago obtenido', { status, payment_id, reservation_id });
+        
         if (reservation_id) {
           try {
             await verificarYConfirmarReserva(reservation_id, status, payment_id);
           } catch (err) {
-            console.error("❌ Error al confirmar reserva explícitamente:", err);
+            logger.error('VERIFY_PAYMENT', 'Error al confirmar reserva explícitamente', err);
           }
         }
         
@@ -2426,31 +2611,38 @@ const PaginaProcesoPago = () => {
       
       return { success: false, status: null };
     } catch (error) {
-      console.error("❌ Error en verificación unificada:", error);
+      logger.error('VERIFY_PAYMENT', 'Error en verificación unificada', error);
       return { success: false, status: null };
     }
-  }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago]);
+  }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago, logger]);
 
   const crearPreferenciaReal = useCallback(async () => {
     try {
       if (preferencia) {
-        console.log("♻️ Ya existe una preferencia, reutilizando:", preferencia);
+        logger.info('PREFERENCE_CREATION', 'Reutilizando preferencia existente', {
+          preferenciaId: preferencia.preference_id || preferencia.id
+        });
         return preferencia;
       }
       
       if (datosReserva.reservaId) {
-        console.log("💳 Obteniendo preferencia para reserva existente:", datosReserva.reservaId);
+        logger.info('PREFERENCE_CREATION', 'Obteniendo preferencia para reserva existente', {
+          reservaId: datosReserva.reservaId
+        });
         
         const endpoint = endpoints.mercadoPago.pagarReserva(datosReserva.reservaId);
-        console.log("🔗 Endpoint utilizado:", endpoint);
+        logger.debug('PREFERENCE_CREATION', 'Endpoint utilizado', { endpoint });
         
         const response = await clienteAxios.post(endpoint);
-        console.log("📥 Respuesta del servidor para reserva existente:", response.data);
+        logger.info('PREFERENCE_CREATION', 'Respuesta para reserva existente', {
+          hasData: !!response.data?.data,
+          success: !!response.data?.success
+        });
         
         if (response.data && response.data.data) {
           return response.data.data;
         } else {
-          console.error("❌ Respuesta sin datos de preferencia:", response.data);
+          logger.error('PREFERENCE_CREATION', 'Respuesta sin datos de preferencia', response.data);
           throw new Error("La respuesta del servidor no contiene datos de preferencia");
         }
       } else if (datosReserva.instanciaId) {
@@ -2462,22 +2654,23 @@ const PaginaProcesoPago = () => {
           try {
             const reservaCache = JSON.parse(reservaExistente);
             if (reservaCache.timestamp && (ahora - reservaCache.timestamp < CACHE_DURATION_MS)) {
-              console.log("📋 Usando preferencia del cache:", reservaCache.data);
+              logger.info('PREFERENCE_CREATION', 'Usando preferencia del cache');
               return reservaCache.data;
             } else {
-              console.log("🗑️ Preferencia en cache expirada, eliminando");
+              logger.info('PREFERENCE_CREATION', 'Preferencia en cache expirada, eliminando');
               localStorage.removeItem(cacheKey);
             }
           } catch (e) {
-            console.error("❌ Error al parsear preferencia en cache:", e);
+            logger.error('PREFERENCE_CREATION', 'Error al parsear preferencia en cache', e);
             localStorage.removeItem(cacheKey);
           }
         }
         
-        console.log("🆕 Creando nueva reserva con MercadoPago para instancia:", datosReserva.instanciaId);
+        logger.info('PREFERENCE_CREATION', 'Creando nueva reserva', {
+          instanciaId: datosReserva.instanciaId
+        });
         
         if (!datosReserva.instanciaId) {
-          console.error("❌ Error: No hay ID de instancia");
           throw new Error("No se encontró ID de instancia");
         }
         
@@ -2508,10 +2701,12 @@ const PaginaProcesoPago = () => {
             });
         }
         
-        console.log("🎫 Pasajes formateados:", JSON.stringify(pasajes, null, 2));
+        logger.debug('PREFERENCE_CREATION', 'Pasajes procesados', {
+          cantidadPasajes: pasajes.length,
+          tienenPrecio: pasajes.every(p => p.precio_unitario > 0)
+        });
         
         if (pasajes.length === 0) {
-          console.error("❌ Error: No hay pasajes seleccionados");
           throw new Error("Debe seleccionar al menos un pasaje");
         }
         
@@ -2535,7 +2730,9 @@ const PaginaProcesoPago = () => {
             }));
         }
         
-        console.log("📦 Paquetes formateados:", JSON.stringify(paquetes, null, 2));
+        logger.debug('PREFERENCE_CREATION', 'Paquetes procesados', {
+          cantidadPaquetes: paquetes.length
+        });
         
         const sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         
@@ -2556,23 +2753,26 @@ const PaginaProcesoPago = () => {
           session_id: sessionId
         };
         
+        logger.info('PREFERENCE_CREATION', 'Validando datos para envío', {
+          tieneEmail: !!datosParaEnviar.email,
+          tieneNombre: !!datosParaEnviar.nombre,
+          tieneApellido: !!datosParaEnviar.apellido,
+          monto: datosParaEnviar.monto,
+          cantidadPasajes: datosParaEnviar.cantidad_pasajes.length,
+          cantidadPaquetes: datosParaEnviar.paquetes.length
+        });
+        
         if (!datosParaEnviar.email) {
-          console.error("❌ Error: No hay email");
           throw new Error("El email es obligatorio");
         }
         
         if (!datosParaEnviar.nombre) {
-          console.error("❌ Error: No hay nombre");
           throw new Error("El nombre es obligatorio");
         }
         
         if (!datosParaEnviar.apellido) {
-          console.error("❌ Error: No hay apellido");
           throw new Error("El apellido es obligatorio");
         }
-        
-        console.log("📤 DATOS QUE SE ENVIARÁN:", JSON.stringify(datosParaEnviar, null, 2));
-        console.log("🔗 Endpoint:", endpoints.mercadoPago.reservar);
         
         const reservaTemporalId = `reserva_temp_${datosReserva.instanciaId}_${Date.now()}`;
         localStorage.setItem(cacheKey, JSON.stringify({
@@ -2582,13 +2782,18 @@ const PaginaProcesoPago = () => {
         }));
         
         try {
-          console.log("🚀 Iniciando solicitud POST...");
+          logger.info('PREFERENCE_CREATION', 'Enviando solicitud de creación');
           const response = await clienteAxios.post(endpoints.mercadoPago.reservar, datosParaEnviar);
-          console.log("📥 Respuesta del servidor:", JSON.stringify(response.data, null, 2));
+          logger.info('PREFERENCE_CREATION', 'Respuesta recibida', {
+            hasData: !!response.data?.data,
+            hasReservaId: !!response.data?.data?.id_reserva
+          });
           
           if (response.data && response.data.data) {
             if (response.data.data.id_reserva) {
-              console.log("✅ ID de reserva creada:", response.data.data.id_reserva);
+              logger.info('PREFERENCE_CREATION', 'Reserva creada exitosamente', {
+                reservaId: response.data.data.id_reserva
+              });
               
               localStorage.setItem(cacheKey, JSON.stringify({
                 data: response.data.data,
@@ -2606,47 +2811,39 @@ const PaginaProcesoPago = () => {
             }
             return response.data.data;
           } else {
-            console.error("❌ Respuesta sin datos de preferencia:", response.data);
+            logger.error('PREFERENCE_CREATION', 'Respuesta sin datos de preferencia', response.data);
             throw new Error("La respuesta del servidor no contiene datos de preferencia");
           }
         } catch (error: any) {
           localStorage.removeItem(cacheKey);
           
-          console.error("❌ ERROR DETALLADO AL CREAR PREFERENCIA:", error);
+          logger.error('PREFERENCE_CREATION', 'Error al crear preferencia', {
+            status: error.response?.status,
+            message: error.message,
+            hasResponseData: !!error.response?.data
+          });
           
-          if (error.response) {
-            console.error("📊 Status del error:", error.response.status);
-            console.error("📋 Headers:", JSON.stringify(error.response.headers, null, 2));
-            console.error("💥 Datos del error:", JSON.stringify(error.response.data, null, 2));
-            
-            const mensajeError = analizarErrorMercadoPago(error);
-            throw new Error(mensajeError);
-          } else if (error.request) {
-            console.error("❌ Error: No se recibió respuesta del servidor");
-            console.error("🔗 Detalles de la solicitud:", JSON.stringify(error.request, null, 2));
-            throw new Error("No se recibió respuesta del servidor. Verifica tu conexión a internet.");
-          } else {
-            console.error("⚙️ Error al configurar la solicitud:", error.message);
-            throw error;
-          }
+          const mensajeError = analizarErrorMercadoPago(error);
+          throw new Error(mensajeError);
         }
       } else {
-        console.error("❌ Error: No hay ID de reserva ni de instancia");
+        logger.error('PREFERENCE_CREATION', 'No hay ID de reserva ni de instancia');
         throw new Error("No se encontró ID de reserva o instancia");
       }
     } catch (error: any) {
-      console.error("💥 ERROR COMPLETO AL CREAR PREFERENCIA REAL:", error);
-      console.error("📝 Mensaje:", error.message);
-      console.error("📚 Stack:", error.stack);
+      logger.error('PREFERENCE_CREATION', 'Error completo al crear preferencia', {
+        message: error.message,
+        stack: error.stack?.substring(0, 500)
+      });
       
       setError(analizarErrorMercadoPago(error));
-      
       throw error;
     }
-  }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago, subtotal]);
+  }, [datosReserva, datosUsuario, usuario, total, preferencia, analizarErrorMercadoPago, subtotal, logger]);
   
   const obtenerOCrearPreferencia = useCallback(async () => {
     if (preferencia && preferencia.id) {
+      logger.info('GET_CREATE_PREFERENCE', 'Retornando preferencia existente');
       return preferencia;
     }
     
@@ -2658,43 +2855,35 @@ const PaginaProcesoPago = () => {
         const datosCacheados = JSON.parse(reservaCache);
         if (datosCacheados.data && datosCacheados.timestamp && 
             (Date.now() - datosCacheados.timestamp < CACHE_DURATION_MS)) {
+          logger.info('GET_CREATE_PREFERENCE', 'Usando preferencia cacheada');
           setPreferencia(datosCacheados.data);
           return datosCacheados.data;
         }
       } catch (e) {
-        console.error("❌ Error al parsear preferencia cacheada:", e);
+        logger.error('GET_CREATE_PREFERENCE', 'Error al parsear preferencia cacheada', e);
       }
     }
     
+    logger.info('GET_CREATE_PREFERENCE', 'Creando nueva preferencia');
     return await crearPreferenciaReal();
-  }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal]);
+  }, [preferencia, datosReserva.instanciaId, crearPreferenciaReal, logger]);
   
-  // 🔧 CARGAR SDK DE MERCADOPAGO CORREGIDO CON REINTENTOS
   const cargarMercadoPagoSDK = useCallback(() => {
+    if (window.MercadoPago) {
+      logger.info('SDK_LOAD', 'SDK de MercadoPago ya está cargado');
+      setSdkCargado(true);
+      return Promise.resolve();
+    }
+    
+    logger.info('SDK_LOAD', 'Cargando SDK de MercadoPago');
+    
     return new Promise<void>((resolve, reject) => {
-      if (window.MercadoPago) {
-        console.log("✅ SDK de MercadoPago ya está cargado");
-        setSdkCargado(true);
-        resolve();
-        return;
-      }
-      
-      console.log("📦 Cargando SDK de MercadoPago...");
-      
       const script = document.createElement('script');
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.async = true;
       
-      const timeout = setTimeout(() => {
-        console.error("❌ Timeout al cargar SDK de MercadoPago");
-        script.remove();
-        setError("No se pudo cargar el procesador de pagos. Verifica tu conexión a internet.");
-        reject(new Error('SDK timeout'));
-      }, 15000); // 15 segundos timeout
-      
       script.onload = () => {
-        clearTimeout(timeout);
-        console.log("✅ SDK de MercadoPago v2 cargado correctamente");
+        logger.info('SDK_LOAD', 'SDK de MercadoPago v2 cargado correctamente');
         setSdkCargado(true);
         
         // Suprimir errores conocidos de MercadoPago
@@ -2708,7 +2897,7 @@ const PaginaProcesoPago = () => {
                 typeof src === 'string' && 
                 src.includes('mercadopago.com') && 
                 src.includes('jms/lgz/background/session/')) {
-              console.log("🔇 Ignorando error conocido de MercadoPago:", src);
+              logger.debug('SDK_LOAD', 'Ignorando error conocido de MercadoPago', { src });
               event.preventDefault();
               return false;
             }
@@ -2719,81 +2908,56 @@ const PaginaProcesoPago = () => {
       };
       
       script.onerror = () => {
-        clearTimeout(timeout);
-        console.error("❌ Error al cargar el SDK de MercadoPago v2");
+        logger.error('SDK_LOAD', 'Error al cargar el SDK de MercadoPago v2');
         setError("No se pudo cargar el procesador de pagos. Verifica tu conexión a internet.");
-        reject(new Error('SDK load error'));
+        reject();
       };
       
       document.head.appendChild(script);
     });
-  }, []);
+  }, [logger]);
 
-  // 🔧 INICIALIZAR MERCADOPAGO SDK CORREGIDO
   const inicializarMercadoPagoSDK = useCallback(async () => {
     try {
-      console.log("🔧 Inicializando MercadoPago SDK...");
-      console.log("   - publicKey disponible:", !!publicKey);
-      console.log("   - publicKeyObtenida:", publicKeyObtenida);
-      console.log("   - window.MercadoPago:", !!window.MercadoPago);
-      
-      if (!publicKey || !publicKeyObtenida) {
-        console.log("⏸️ Esperando obtención de clave pública...");
+      if (!publicKey) {
         const key = await obtenerClavePublica();
-        if (!key) {
-          console.error("❌ No se pudo obtener la clave pública");
-          throw new Error('No se pudo obtener la clave pública');
-        }
+        if (!key) return;
       }
 
-      if (window.MercadoPago && publicKey && publicKeyObtenida && !mpInicializado) {
-        console.log("🚀 Creando instancia de MercadoPago...");
-        
+      if (window.MercadoPago && publicKey) {
+        logger.info('SDK_INIT', 'Inicializando MercadoPago SDK v2');
         const mercadoPago = new window.MercadoPago(publicKey, {
           locale: 'es-PE'
         });
         
         setMp(mercadoPago);
-        setMpInicializado(true); // 🔧 MARCAR COMO INICIALIZADO
-        console.log("✅ MercadoPago SDK v2 inicializado exitosamente para Checkout API");
+        logger.info('SDK_INIT', 'MercadoPago SDK v2 inicializado para Checkout API');
         
-        // Obtener métodos de pago si es necesario
-        if (modoCheckout === 'api') {
-          await obtenerMetodosPago();
-        }
-        
-        return true;
-      } else if (mpInicializado) {
-        console.log("✅ MercadoPago SDK ya estaba inicializado");
-        return true;
+        await obtenerMetodosPago();
       }
-      
-      return false;
     } catch (error) {
-      console.error("❌ Error al inicializar MercadoPago SDK v2:", error);
-      setMpInicializado(false);
-      return false;
+      logger.error('SDK_INIT', 'Error al inicializar MercadoPago SDK v2', error);
     }
-  }, [publicKey, publicKeyObtenida, mpInicializado, obtenerClavePublica, obtenerMetodosPago, modoCheckout]);
+  }, [publicKey, obtenerClavePublica, obtenerMetodosPago, logger]);
 
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
-      console.log("⏸️ No hay preferencia para renderizar el botón");
+      logger.debug('BUTTON_RENDER', 'No hay preferencia para renderizar el botón');
       return;
     }
     
     if (!mercadoPagoButtonRef.current) {
-      console.log("⏸️ No se encontró la referencia al contenedor del botón");
+      logger.debug('BUTTON_RENDER', 'No se encontró la referencia al contenedor del botón');
       return;
     }
     
     if (!window.MercadoPago) {
-      console.log("⏸️ El SDK de MercadoPago no está disponible");
+      logger.debug('BUTTON_RENDER', 'El SDK de MercadoPago no está disponible');
       return;
     }
     
-    if (!publicKey || !publicKeyObtenida) {
-      console.log("⏸️ No hay clave pública disponible");
+    if (!publicKey) {
+      logger.debug('BUTTON_RENDER', 'No hay clave pública disponible');
       return;
     }
     
@@ -2801,11 +2965,11 @@ const PaginaProcesoPago = () => {
       const preferenceId = preferencia.preference_id || preferencia.id;
       
       if (!preferenceId) {
-        console.error("❌ No se encontró ID de preferencia válido");
+        logger.error('BUTTON_RENDER', 'No se encontró ID de preferencia válido');
         return;
       }
       
-      console.log("🎨 Renderizando botón con preferenceId:", preferenceId);
+      logger.info('BUTTON_RENDER', 'Renderizando botón de MercadoPago', { preferenceId });
       
       if (mercadoPagoButtonRef.current) {
         mercadoPagoButtonRef.current.innerHTML = '';
@@ -2837,88 +3001,78 @@ const PaginaProcesoPago = () => {
           autoOpen: false,
           callbacks: {
             onError: (error: any) => {
-              console.error("❌ Error en MercadoPago Checkout:", error);
+              logger.error('BUTTON_RENDER', 'Error en MercadoPago Checkout', error);
               setError(`Error en el procesamiento del pago: ${error.message || 'Error desconocido'}`);
             },
             onReady: () => {
-              console.log("✅ MercadoPago Checkout listo");
+              logger.info('BUTTON_RENDER', 'MercadoPago Checkout listo');
               setCargandoMercadoPago(false);
             }
           }
         });
         
-        console.log("✅ Botón de MercadoPago renderizado correctamente");
+        logger.info('BUTTON_RENDER', 'Botón de MercadoPago renderizado correctamente');
       } else {
-        console.log("⏸️ El contenedor ya tiene elementos, no se renderizará nuevamente");
+        logger.debug('BUTTON_RENDER', 'El contenedor ya tiene elementos, no se renderizará nuevamente');
       }
     } catch (error) {
-      console.error("❌ Error al renderizar el botón de MercadoPago:", error);
+      logger.error('BUTTON_RENDER', 'Error al renderizar el botón de MercadoPago', error);
       setError("Error al inicializar el botón de pago. Por favor, actualiza la página.");
     }
-  }, [preferencia, publicKey, publicKeyObtenida]);
+  }, [preferencia, publicKey, logger]);
 
-  // 🔧 INICIAR PROCESO DE PAGO CORREGIDO
   const iniciarProcesoPago = useCallback(async () => {
     try {
       setCargandoMercadoPago(true);
       setError(null);
-      setSistemaListo(false); // 🔧 MARCAR SISTEMA COMO NO LISTO
       
-      console.log("🚀 Iniciando proceso de pago completo...");
+      logger.info('PAYMENT_PROCESS', 'Iniciando proceso de pago');
       
-      // 1. Cargar SDK
-      console.log("📦 Paso 1: Cargando SDK...");
       await cargarMercadoPagoSDK();
       
-      // 2. Obtener clave pública
-      console.log("🔑 Paso 2: Obteniendo clave pública...");
-      if (!publicKey || !publicKeyObtenida) {
+      if (!publicKey) {
         const key = await obtenerClavePublica();
         if (!key) {
           throw new Error('No se pudo obtener la clave pública de Mercado Pago');
         }
       }
       
-      // 3. Inicializar SDK
-      console.log("⚙️ Paso 3: Inicializando MercadoPago SDK...");
-      const sdkInicializado = await inicializarMercadoPagoSDK();
-      if (!sdkInicializado) {
-        throw new Error('No se pudo inicializar MercadoPago SDK');
-      }
-      
-      // 4. Crear preferencia
-      console.log("💳 Paso 4: Obteniendo o creando preferencia...");
+      logger.info('PAYMENT_PROCESS', 'Obteniendo o creando preferencia');
       const nuevaPreferencia = await obtenerOCrearPreferencia();
       
       if (!preferencia) {
         setPreferencia(nuevaPreferencia);
       }
+
+      await inicializarMercadoPagoSDK();
       
-      // 🔧 MARCAR SISTEMA COMO LISTO
-      setSistemaListo(true);
-      console.log("✅ Sistema de pago inicializado completamente");
-      
+      logger.info('PAYMENT_PROCESS', 'Proceso de pago iniciado exitosamente');
       return nuevaPreferencia;
     } catch (error: any) {
-      console.error("❌ Error al iniciar el proceso de pago:", error);
+      logger.error('PAYMENT_PROCESS', 'Error al iniciar el proceso de pago', error);
       setError(analizarErrorMercadoPago(error));
-      setSistemaListo(false);
       return null;
     } finally {
       setCargandoMercadoPago(false);
     }
-  }, [cargarMercadoPagoSDK, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, publicKeyObtenida, preferencia, analizarErrorMercadoPago, inicializarMercadoPagoSDK]);
+  }, [cargarMercadoPagoSDK, obtenerOCrearPreferencia, obtenerClavePublica, publicKey, preferencia, analizarErrorMercadoPago, inicializarMercadoPagoSDK, logger]);
 
   const procesarPagoDirecto = async () => {
-    if (cargandoPago) return;
+    if (cargandoPago || procesandoPago) {
+      logger.warn('DIRECT_PAYMENT', 'Intento de procesamiento mientras ya está en curso');
+      return;
+    }
     
     setCargandoPago(true);
+    setProcesandoPago(true);
     setError(null);
     setPagoIniciado(true);
     sessionStorage.setItem('pagoIniciado', 'true');
     
+    const inicioTiempo = Date.now();
+    
     try {
-      console.log("🚀 Procesando pago directo...");
+      logger.info('DIRECT_PAYMENT', 'Iniciando procesamiento de pago directo', { modoCheckout });
 
       if (modoCheckout === 'api') {
         await procesarPagoConCheckoutAPI();
@@ -2926,41 +3080,38 @@ const PaginaProcesoPago = () => {
       }
       
       if (preferencia) {
-        console.log("🔍 ========== VERIFICACIÓN DE PREFERENCIA ==========");
-        console.log("📋 Preferencia completa:", JSON.stringify(preferencia, null, 2));
-        console.log("🎯 IS_SANDBOX (automático):", IS_SANDBOX);
-        console.log("🌐 preferencia.sandbox_init_point:", preferencia.sandbox_init_point);
-        console.log("🌐 preferencia.init_point:", preferencia.init_point);
+        logger.info('DIRECT_PAYMENT', 'Usando preferencia existente', {
+          tienePreferencia: !!preferencia,
+          IS_SANDBOX,
+          tieneSandboxUrl: !!preferencia.sandbox_init_point,
+          tieneInitPoint: !!preferencia.init_point
+        });
         
         let url;
         
         if (IS_SANDBOX && preferencia.sandbox_init_point) {
           url = preferencia.sandbox_init_point;
-          console.log("✅ Usando sandbox_init_point (CORRECTO):", url);
+          logger.info('DIRECT_PAYMENT', 'Usando sandbox_init_point (CORRECTO)', { url });
         } else if (preferencia.sandbox_init_point) {
           url = preferencia.sandbox_init_point;
-          console.log("✅ Forzando uso de sandbox_init_point:", url);
+          logger.info('DIRECT_PAYMENT', 'Forzando uso de sandbox_init_point', { url });
         } else if (preferencia.init_point) {
           url = preferencia.init_point;
-          console.log("⚠️ Usando init_point como fallback:", url);
+          logger.warn('DIRECT_PAYMENT', 'Usando init_point como fallback', { url });
         } else {
-          console.log("❌ No se encontró ninguna URL válida");
+          logger.error('DIRECT_PAYMENT', 'No se encontró ninguna URL válida');
           throw new Error("No se encontró URL de pago válida en la preferencia");
         }
         
-        console.log("🎯 URL FINAL seleccionada:", url);
-        
         if (url.includes('sandbox.mercadopago.com')) {
-          console.log("🎉 CONFIRMADO: URL es de SANDBOX");
+          logger.info('DIRECT_PAYMENT', 'URL confirmada como SANDBOX');
         } else if (url.includes('www.mercadopago.com')) {
-          console.log("🚨 ADVERTENCIA: URL es de PRODUCCIÓN - Esto no debería pasar en desarrollo");
+          logger.warn('DIRECT_PAYMENT', 'ADVERTENCIA: URL es de PRODUCCIÓN');
         }
-        
-        console.log("================================================");
         
         if (url) {
           const urlConParametros = `${url}&source=website&version=v2`;
-          console.log("🚀 Redirigiendo a:", urlConParametros);
+          logger.info('DIRECT_PAYMENT', 'Redirigiendo a MercadoPago', { url: urlConParametros });
           window.location.href = urlConParametros;
         } else {
           throw new Error("No se encontró URL de pago válida en la preferencia");
@@ -2968,6 +3119,7 @@ const PaginaProcesoPago = () => {
         return;
       }
       
+      logger.info('DIRECT_PAYMENT', 'No hay preferencia, iniciando proceso completo');
       const nuevaPreferencia = await iniciarProcesoPago();
       
       if (nuevaPreferencia) {
@@ -2975,14 +3127,14 @@ const PaginaProcesoPago = () => {
         
         if (nuevaPreferencia.sandbox_init_point) {
           url = nuevaPreferencia.sandbox_init_point;
-          console.log("✅ Nueva preferencia - Usando sandbox_init_point:", url);
+          logger.info('DIRECT_PAYMENT', 'Nueva preferencia - Usando sandbox_init_point', { url });
         } else {
           url = nuevaPreferencia.init_point;
-          console.log("⚠️ Nueva preferencia - Usando init_point como fallback:", url);
+          logger.warn('DIRECT_PAYMENT', 'Nueva preferencia - Usando init_point como fallback', { url });
         }
         
         if (url) {
-          console.log("🚀 Redirigiendo a nueva preferencia:", url);
+          logger.info('DIRECT_PAYMENT', 'Redirigiendo a nueva preferencia', { url });
           window.location.href = url;
         } else {
           throw new Error("No se encontró URL de pago en la nueva preferencia");
@@ -2993,44 +3145,48 @@ const PaginaProcesoPago = () => {
       setError("No se pudo generar el pago. Por favor, intenta nuevamente.");
       
     } catch (error: any) {
-      console.error('❌ Error al procesar el pago:', error);
+      const tiempoTranscurrido = Date.now() - inicioTiempo;
+      logger.error('DIRECT_PAYMENT', 'Error al procesar el pago directo', {
+        error: error.message,
+        tiempoMs: tiempoTranscurrido
+      });
       setError(analizarErrorMercadoPago(error));
     } finally {
       setCargandoPago(false);
+      setProcesandoPago(false);
     }
   };
   
-  // 🔧 USEEFFECT CORREGIDO PARA INICIALIZACIÓN
+  // 🔄 Efectos mejorados
   useEffect(() => {
     const iniciarMercadoPago = async () => {
       try {
-        if (preferencia && sistemaListo) {
-          console.log("♻️ Sistema ya está listo, no se reinicializará");
+        if (preferencia) {
+          logger.info('INIT_EFFECT', 'Ya existe una preferencia, no se creará otra');
           setCargandoMercadoPago(false);
           return;
         }
         
-        console.log("🔄 Iniciando sistema MercadoPago desde useEffect...");
+        setCargandoMercadoPago(true);
+        
+        if (!publicKey) {
+          await obtenerClavePublica();
+        }
+        
         await iniciarProcesoPago();
         
       } catch (error) {
-        console.error('❌ Error al inicializar Mercado Pago desde useEffect:', error);
+        logger.error('INIT_EFFECT', 'Error al inicializar Mercado Pago', error);
+      } finally {
+        setCargandoMercadoPago(false);
       }
     };
     
     iniciarMercadoPago();
-  }, []); // Solo ejecutar una vez al montar
+  }, [obtenerClavePublica, iniciarProcesoPago, publicKey, preferencia, logger]);
 
-  // 🔧 USEEFFECT PARA RENDERIZAR BOTÓN CUANDO TODO ESTÉ LISTO
   useEffect(() => {
-    if (preferencia && sdkCargado && publicKeyObtenida && sistemaListo && modoCheckout === 'pro') {
-      console.log("🎨 Condiciones cumplidas para renderizar botón:");
-      console.log("   - preferencia:", !!preferencia);
-      console.log("   - sdkCargado:", sdkCargado);
-      console.log("   - publicKeyObtenida:", publicKeyObtenida);
-      console.log("   - sistemaListo:", sistemaListo);
-      console.log("   - modoCheckout === 'pro':", modoCheckout === 'pro');
-      
+    if (preferencia && sdkCargado && publicKey && modoCheckout === 'pro') {
       const debouncedRender = debounce(() => {
         renderizarBotonMercadoPago();
       }, 500);
@@ -3041,18 +3197,18 @@ const PaginaProcesoPago = () => {
         debouncedRender.cancel();
       };
     }
-  }, [preferencia, sdkCargado, publicKeyObtenida, sistemaListo, renderizarBotonMercadoPago, modoCheckout]);
+  }, [preferencia, sdkCargado, publicKey, renderizarBotonMercadoPago, modoCheckout]);
   
   useEffect(() => {
     if (IS_SANDBOX && preferencia && preferencia.id && !estadoPagoVerificado && pagoIniciado) {
-      console.log("🔄 Iniciando verificación periódica del estado de pago...");
+      logger.info('VERIFICATION_EFFECT', 'Iniciando verificación periódica del estado de pago');
       
       const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
       const idReserva = reservaEnProceso.id || datosReserva.reservaId || datosReserva.instanciaId;
       
       verificarPagoUnificado(idReserva, preferencia.id).then(result => {
         if (result.success && result.status) {
-          console.log(`✅ Estado de pago verificado: ${result.status}`);
+          logger.info('VERIFICATION_EFFECT', 'Estado de pago verificado inmediatamente', { status: result.status });
           navegarSegunEstadoPago(result.status, result.payment_id || null, result.reservation_id || null);
         }
       });
@@ -3061,19 +3217,19 @@ const PaginaProcesoPago = () => {
         const result = await verificarPagoUnificado(idReserva, preferencia.id);
         if (result.success && result.status) {
           clearInterval(intervalId);
-          console.log(`✅ Estado de pago verificado en intervalo: ${result.status}`);
+          logger.info('VERIFICATION_EFFECT', 'Estado de pago verificado en intervalo', { status: result.status });
           navegarSegunEstadoPago(result.status, result.payment_id || null, result.reservation_id || null);
         }
       }, 3000);
       
       return () => {
         clearInterval(intervalId);
-        console.log("⏹️ Verificación periódica detenida");
+        logger.info('VERIFICATION_EFFECT', 'Verificación periódica detenida');
       };
     }
-  }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva]);
+  }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva, logger]);
 
-  useEffect(() => {
+   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
     const paymentId = params.get('payment_id');
@@ -3082,7 +3238,12 @@ const PaginaProcesoPago = () => {
     const preferenceId = params.get('preference_id');
     
     if (status || paymentId) {
-      console.log(`🔙 Retornando de MercadoPago con estado: ${status}, payment_id: ${paymentId}`);
+      logger.info('URL_PARAMS_EFFECT', 'Retornando de MercadoPago', {
+        status,
+        tienePaymentId: !!paymentId,
+        tieneExternalRef: !!externalReference,
+        tieneError: !!errorMessage
+      });
       
       if (errorMessage) {
         if (errorMessage.includes("insufficient_amount")) {
@@ -3097,35 +3258,40 @@ const PaginaProcesoPago = () => {
       let reservaId;
       if (externalReference && externalReference.startsWith('RESERVA-')) {
         reservaId = parseInt(externalReference.replace('RESERVA-', ''));
+        logger.debug('URL_PARAMS_EFFECT', 'ID de reserva extraído de external_reference', { reservaId });
       } else {
         const reservaEnProceso = JSON.parse(sessionStorage.getItem('reservaEnProceso') || '{}');
         reservaId = reservaEnProceso.id || datosReserva.reservaId || datosReserva.instanciaId;
+        logger.debug('URL_PARAMS_EFFECT', 'ID de reserva obtenido de session/datos', { reservaId });
       }
       
       if (reservaId) {
         verificarYConfirmarReserva(reservaId, status || "approved", paymentId || undefined)
           .then(result => {
             if (result.success && result.status) {
+              logger.info('URL_PARAMS_EFFECT', 'Verificación exitosa, navegando', { status: result.status });
               navegarSegunEstadoPago(result.status, paymentId || null, reservaId);
             } else {
               if (status) {
+                logger.info('URL_PARAMS_EFFECT', 'Navegando con status de URL', { status });
                 navegarSegunEstadoPago(status, paymentId || null, reservaId);
               }
             }
           })
           .catch(error => {
-            console.error("❌ Error al verificar y confirmar reserva:", error);
+            logger.error('URL_PARAMS_EFFECT', 'Error al verificar y confirmar reserva', error);
             if (status) {
               navegarSegunEstadoPago(status, paymentId || null, reservaId);
             }
           });
       } else {
         if (status) {
+          logger.info('URL_PARAMS_EFFECT', 'Navegando sin reservaId', { status });
           navegarSegunEstadoPago(status, paymentId || null, null);
         }
       }
     }
-  }, [location.search, navegarSegunEstadoPago, datosReserva, verificarYConfirmarReserva]);
+  }, [location.search, navegarSegunEstadoPago, datosReserva, verificarYConfirmarReserva, logger]);
   
   const formatearFecha = (fechaStr: string) => {
     if (!fechaStr) return '';
@@ -3143,7 +3309,7 @@ const PaginaProcesoPago = () => {
         day: 'numeric' 
       });
     } catch (error) {
-      console.error("❌ Error al formatear fecha:", error);
+      logger.error('DATE_FORMAT', 'Error al formatear fecha', { fechaStr, error });
       return 'Fecha no válida';
     }
   };
@@ -3151,77 +3317,144 @@ const PaginaProcesoPago = () => {
   useEffect(() => {
     return () => {
       if (!estadoPagoVerificado) {
-        console.log("🧹 Limpiando datos temporales al desmontar");
+        logger.info('CLEANUP_EFFECT', 'Limpiando datos temporales al desmontar');
         sessionStorage.removeItem('pagoIniciado');
       }
     };
-  }, [estadoPagoVerificado]);
+  }, [estadoPagoVerificado, logger]);
 
-  // 🔧 VALIDACIÓN MEJORADA DE FORMULARIO
-  const esFormularioValido = () => {
-    if (modoCheckout === 'api') {
-      return (
-                cardForm.cardNumber &&
-        cardForm.cardholderName &&
-        cardForm.expiryMonth &&
-        cardForm.expiryYear &&
-        cardForm.securityCode &&
-        cardForm.identificationNumber &&
-        cardForm.cardNumber.replace(/\s/g, '').length >= 13
-      );
-    }
-    return true; // Para modo 'pro'
-  };
-  
-  return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-white via-blue-50 to-cyan-50 min-h-screen">
-      {/* 🔧 INDICADOR DE CARGA MEJORADO CON ESTADOS */}
-      {cargandoMercadoPago && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="mb-4">
-                <Cargador />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Inicializando sistema de pagos
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Conectando con MercadoPago de forma segura...
-              </p>
-              
-              {/* 🔧 INDICADORES DE PROGRESO DETALLADOS */}
-              <div className="space-y-2 text-sm text-left">
-                <div className={`flex items-center ${sdkCargado ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${sdkCargado ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  {sdkCargado ? '✅ SDK cargado' : '📦 Cargando SDK...'}
-                </div>
-                <div className={`flex items-center ${publicKeyObtenida ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${publicKeyObtenida ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  {publicKeyObtenida ? '✅ Clave de seguridad obtenida' : '🔑 Obteniendo clave de seguridad...'}
-                </div>
-                <div className={`flex items-center ${mpInicializado ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${mpInicializado ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  {mpInicializado ? '✅ Sistema inicializado' : '⚙️ Inicializando sistema...'}
-                </div>
-                <div className={`flex items-center ${sistemaListo ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${sistemaListo ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  {sistemaListo ? '✅ Listo para pagar' : '🔄 Finalizando configuración...'}
-                </div>
-              </div>
-              
-              {IS_SANDBOX && (
-                <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-                  🧪 Modo test activo - Sin cargos reales
-                </div>
-              )}
+  // 🎨 Componente de logs mejorado
+  const LogViewer = () => {
+    const logs = logger.getLogs();
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div className="p-4 bg-gradient-to-r from-blue-600 to-teal-600 text-white flex justify-between items-center">
+            <h3 className="text-lg font-semibold">📊 Registro de Actividad</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  const dataStr = logger.exportLogs();
+                  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                  const url = URL.createObjectURL(dataBlob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `logs-pago-${new Date().toISOString().split('T')[0]}.json`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 rounded text-sm"
+              >
+                💾 Exportar
+              </button>
+              <button
+                onClick={() => logger.clearLogs()}
+                className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-sm"
+              >
+                🗑️ Limpiar
+              </button>
+              <button
+                onClick={() => setMostrandoLogs(false)}
+                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 rounded text-sm"
+              >
+                ✕
+              </button>
             </div>
+          </div>
+          
+          <div className="p-4 h-96 overflow-y-auto">
+            {logs.length === 0 ? (
+              <p className="text-gray-500 text-center">No hay registros disponibles</p>
+            ) : (
+              <div className="space-y-2">
+                {logs.map((log, index) => (
+                  <div key={index} className={`p-3 rounded-lg text-sm font-mono border-l-4 ${
+                    log.level === 'error' ? 'bg-red-50 border-red-500 text-red-800' :
+                    log.level === 'warn' ? 'bg-yellow-50 border-yellow-500 text-yellow-800' :
+                    log.level === 'info' ? 'bg-blue-50 border-blue-500 text-blue-800' :
+                    'bg-gray-50 border-gray-500 text-gray-800'
+                  }`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-semibold text-xs uppercase tracking-wider">
+                        {log.category}
+                      </span>
+                      <span className="text-xs opacity-75">
+                        {new Date(log.timestamp).toLocaleTimeString('es-PE')}
+                      </span>
+                    </div>
+                    <div className="mb-1">{log.message}</div>
+                    {log.data && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs opacity-75 hover:opacity-100">
+                          Ver datos
+                        </summary>
+                        <pre className="mt-1 text-xs bg-black bg-opacity-10 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(log.data, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 🎯 Indicador de estado mejorado
+  const EstadoIndicator = () => (
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-200 mb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className={`w-3 h-3 rounded-full animate-pulse ${
+            cargandoPago || procesandoPago ? 'bg-orange-500' :
+            error ? 'bg-red-500' :
+            estadoPagoVerificado ? 'bg-green-500' :
+            'bg-blue-500'
+          }`}></div>
+          <span className="font-medium text-gray-700">
+            {cargandoPago || procesandoPago ? 'Procesando pago...' :
+             error ? 'Error detectado' :
+             estadoPagoVerificado ? 'Pago verificado' :
+             'Sistema listo'}
+          </span>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          {ACTUAL_ENV === 'development' && (
+            <button
+              onClick={() => setMostrandoLogs(!mostrandoLogs)}
+              className="px-3 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors"
+              title="Ver registros de actividad"
+            >
+              📊 Logs
+            </button>
+          )}
+          
+          <div className="text-xs text-gray-500">
+            {IS_SANDBOX ? '🧪 Test' : '🔐 Producción'} | {modoCheckout.toUpperCase()}
+          </div>
+        </div>
+      </div>
+      
+      {intentosVerificacion > 0 && !estadoPagoVerificado && (
+        <div className="mt-2 text-sm text-indigo-600">
+          <div className="flex items-center">
+            <div className="animate-spin h-3 w-3 border border-indigo-500 border-t-transparent rounded-full mr-2"></div>
+            Verificando pago ({intentosVerificacion}/{maxIntentosVerificacion})
           </div>
         </div>
       )}
-      
+    </div>
+  );
+  
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-white via-blue-50 to-cyan-50 min-h-screen">
       <div className="flex flex-col space-y-6">
-        {/* Header con indicador de estado del sistema */}
+        {/* Header mejorado */}
         <div className="bg-gradient-to-r from-blue-600 to-teal-500 text-white p-6 rounded-xl shadow-lg">
           <div className="flex justify-between items-start">
             <div>
@@ -3236,20 +3469,16 @@ const PaginaProcesoPago = () => {
                 </div>
               )}
               
-              {/* 🔧 INDICADOR DE ESTADO DEL SISTEMA */}
-              <div className={`px-3 py-1 rounded-lg text-sm font-medium flex items-center ${
-                sistemaListo 
-                  ? 'bg-green-500 text-green-100' 
-                  : 'bg-orange-500 text-orange-100'
-              }`}>
-                <div className={`w-2 h-2 rounded-full mr-2 ${
-                  sistemaListo ? 'bg-green-200' : 'bg-orange-200 animate-pulse'
-                }`}></div>
-                {sistemaListo ? 'Sistema listo' : 'Inicializando...'}
-              </div>
+              {(cargandoPago || procesandoPago) && (
+                <div className="bg-orange-500 text-orange-100 px-3 py-1 rounded-lg text-sm font-medium flex items-center">
+                  <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full mr-2"></div>
+                  Procesando
+                </div>
+              )}
             </div>
           </div>
           
+          {/* Indicador de progreso mejorado */}
           <div className="mt-4 pt-4 border-t border-white/20">
             <div className="flex items-center justify-between max-w-md">
               <div className="flex flex-col items-center">
@@ -3265,9 +3494,15 @@ const PaginaProcesoPago = () => {
               
               <div className="flex flex-col items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  sistemaListo ? 'bg-white text-blue-600' : 'bg-white/40 text-white'
+                  estadoPagoVerificado ? 'bg-green-500' : 'bg-white'
                 }`}>
-                  <span className="font-bold text-sm">2</span>
+                  {estadoPagoVerificado ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <span className={`font-bold text-sm ${estadoPagoVerificado ? 'text-white' : 'text-blue-600'}`}>2</span>
+                  )}
                 </div>
                 <span className="text-xs mt-1">Pago</span>
               </div>
@@ -3283,11 +3518,14 @@ const PaginaProcesoPago = () => {
             </div>
           </div>
         </div>
+
+        {/* Indicador de estado */}
+        <EstadoIndicator />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Detalles de la reserva (mantener como está) */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
+            {/* Detalles de la reserva mejorados */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
@@ -3298,49 +3536,57 @@ const PaginaProcesoPago = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg">{datosReserva.tourNombre}</h3>
-                    <div className="mt-2 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
+                    <h3 className="font-semibold text-gray-800 text-lg line-clamp-2">{datosReserva.tourNombre}</h3>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
+                      <div className="flex items-center bg-gray-50 p-2 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-teal-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                         </svg>
                         <span className="font-medium">{formatearFecha(datosReserva.fecha)}</span>
                       </div>
-                      <div className="flex items-center mt-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
+                      <div className="flex items-center bg-gray-50 p-2 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-teal-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                         </svg>
                         <span className="font-medium">{datosReserva.horario}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-200">
-                    {datosReserva.totalPasajeros} pasajeros
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium border border-blue-200 ml-4 flex-shrink-0">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                      </svg>
+                      {datosReserva.totalPasajeros} {datosReserva.totalPasajeros === 1 ? 'pasajero' : 'pasajeros'}
+                    </div>
                   </div>
                 </div>
                 
                 <div className="border-t border-gray-100 pt-4 mt-4">
-                  <div className="text-sm">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="text-gray-800">S/ {subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">IGV (18%):</span>
-                      <span className="text-gray-800">S/ {igv.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold mt-2 pt-2 border-t border-gray-200">
-                      <span className="text-gray-800">Total a pagar:</span>
-                      <span className="text-teal-600 text-lg">S/ {total.toFixed(2)}</span>
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-800 mb-3">Resumen de costos</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="text-gray-800 font-medium">S/ {subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">IGV (18%):</span>
+                        <span className="text-gray-800 font-medium">S/ {igv.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-200">
+                        <span className="text-gray-800">Total a pagar:</span>
+                        <span className="text-teal-600">S/ {total.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             
-            {/* Datos del cliente (mantener como está) */}
+            {/* Datos del cliente mejorados */}
             {usuario && (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-center mb-4 pb-2 border-b border-cyan-100">
                   <h2 className="text-xl font-semibold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
@@ -3352,10 +3598,19 @@ const PaginaProcesoPago = () => {
                   <button 
                     type="button"
                     onClick={() => setEditandoUsuario(!editandoUsuario)}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    className={`text-sm flex items-center px-3 py-1 rounded-lg transition-colors ${
+                      editandoUsuario 
+                        ? 'text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100' 
+                        : 'text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100'
+                    }`}
                   >
                     {editandoUsuario ? (
-                      <>Cancelar</>
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cancelar
+                      </>
                     ) : (
                       <>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3368,9 +3623,10 @@ const PaginaProcesoPago = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Campos del usuario con validación visual */}
                   {Object.entries({
                     nombres: 'Nombre',
-                    apellidos: 'Apellidos',
+                    apellidos: 'Apellidos', 
                     correo: 'Email',
                     numero_celular: 'Teléfono',
                     numero_documento: 'Documento'
@@ -3380,12 +3636,12 @@ const PaginaProcesoPago = () => {
                       <input 
                         type={key === 'correo' ? 'email' : 'text'}
                         name={key}
-                        value={datosUsuario[key as keyof typeof datosUsuario]}
+                        value={datosUsuario[key as keyof typeof datosUsuario] || ''}
                         onChange={handleUsuarioChange}
                         disabled={!editandoUsuario}
-                        className={`w-full px-3 py-2 border rounded-md ${
+                        className={`w-full px-3 py-2 border rounded-md transition-colors ${
                           editandoUsuario 
-                            ? 'border-cyan-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500' 
+                            ? 'border-cyan-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white' 
                             : 'bg-gray-50 border-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       />
@@ -3394,11 +3650,18 @@ const PaginaProcesoPago = () => {
                 </div>
                 
                 {editandoUsuario && (
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditandoUsuario(false)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                    >
+                      Cancelar
+                    </button>
                     <button
                       type="button"
                       onClick={guardarCambiosUsuario}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-md hover:from-blue-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-md hover:from-blue-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all"
                     >
                       Guardar cambios
                     </button>
@@ -3408,22 +3671,18 @@ const PaginaProcesoPago = () => {
             )}
           </div>
           
-          {/* 🔧 PANEL DE PAGO COMPLETAMENTE CORREGIDO */}
+          {/* Panel de pago mejorado */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
                   <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
                 </svg>
                 Opciones de pago
-                {sistemaListo && (
-                  <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">
-                    ✅ Listo
-                  </span>
-                )}
               </h2>
               
+              {/* Indicador de modo test mejorado */}
               {IS_SANDBOX && (
                 <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl">
                   <div className="flex items-center mb-2">
@@ -3443,20 +3702,21 @@ const PaginaProcesoPago = () => {
                 </div>
               )}
               
+              {/* Error mejorado */}
               {error && (
                 <div className="mt-4 mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg">
                   <div className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    <div className="flex-1">
-                      <strong className="font-medium">Error:</strong>
+                    <div>
+                      <div className="font-medium">Error en el procesamiento</div>
                       <div className="mt-1">{error}</div>
                       <button
                         onClick={() => setError(null)}
                         className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
                       >
-                        Cerrar
+                        Descartar
                       </button>
                     </div>
                   </div>
@@ -3466,48 +3726,36 @@ const PaginaProcesoPago = () => {
               {/* Selector de modo mejorado */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Método de pago</label>
-                <div className="flex items-center space-x-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setModoCheckout('api')}
-                    disabled={!sistemaListo}
-                    className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex flex-col items-center ${
+                    className={`flex flex-col items-center p-3 rounded-lg font-medium transition-all ${
                       modoCheckout === 'api'
                         ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                        : sistemaListo 
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                          : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <span className="text-2xl mb-1">💳</span>
-                    <span className="text-sm">Checkout API</span>
-                    {modoCheckout === 'api' && (
-                      <span className="text-xs mt-1 opacity-80">Tarjeta directa</span>
-                    )}
+                    <span className="text-sm">Tarjeta</span>
                   </button>
                   
                   <button
                     type="button"
                     onClick={() => setModoCheckout('pro')}
-                    disabled={!sistemaListo}
-                    className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex flex-col items-center ${
+                    className={`flex flex-col items-center p-3 rounded-lg font-medium transition-all ${
                       modoCheckout === 'pro'
                         ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                        : sistemaListo 
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                          : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <span className="text-2xl mb-1">🌐</span>
-                    <span className="text-sm">Checkout Pro</span>
-                    {modoCheckout === 'pro' && (
-                      <span className="text-xs mt-1 opacity-80">Más opciones</span>
-                    )}
+                    <span className="text-sm">Checkout</span>
                   </button>
                 </div>
               </div>
 
-              {/* Formulario de tarjeta mejorado con validaciones */}
+              {/* Formulario de tarjeta mejorado */}
               {modoCheckout === 'api' && (
                 <div className="space-y-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
@@ -3518,182 +3766,182 @@ const PaginaProcesoPago = () => {
                       Datos de la tarjeta
                     </h3>
                     
-                    {/* 🔧 FORMULARIO DE TARJETA COMPLETAMENTE MEJORADO */}
-                    <div className="space-y-4">
-                      {/* Número de tarjeta */}
+                    {/* Número de tarjeta */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Número de tarjeta *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        value={cardForm.cardNumber}
+                        onChange={handleCardFormChange}
+                        placeholder="4509 9535 6623 3704"
+                        className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validacionFormulario.cardNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        maxLength={19}
+                        required
+                      />
+                      {validacionFormulario.cardNumber && (
+                        <p className="mt-1 text-xs text-red-600">{validacionFormulario.cardNumber}</p>
+                      )}
+                      {cardForm.paymentMethodId && !validacionFormulario.cardNumber && (
+                        <div className="mt-1 text-xs text-green-600 flex items-center">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          {cardForm.paymentMethodId.toUpperCase()} detectada
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nombre del titular */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre del titular *
+                      </label>
+                      <input
+                        type="text"
+                        name="cardholderName"
+                        value={cardForm.cardholderName}
+                        onChange={handleCardFormChange}
+                        placeholder="APRO"
+                        className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validacionFormulario.cardholderName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        required
+                      />
+                      {validacionFormulario.cardholderName && (
+                        <p className="mt-1 text-xs text-red-600">{validacionFormulario.cardholderName}</p>
+                      )}
+                    </div>
+
+                    {/* Fecha y CVV */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Número de tarjeta *
+                          Mes *
                         </label>
-                        <input
-                          type="text"
-                          name="cardNumber"
-                          value={cardForm.cardNumber}
+                        <select
+                          name="expiryMonth"
+                          value={cardForm.expiryMonth}
                           onChange={handleCardFormChange}
-                          placeholder="4509 9535 6623 3704"
-                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                            cardForm.cardNumber.replace(/\s/g, '').length >= 13 
-                              ? 'border-green-300 bg-green-50' 
-                              : 'border-gray-300'
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            validacionFormulario.expiryMonth ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
-                          maxLength={19}
                           required
-                          disabled={!sistemaListo || !mpInicializado}
-                        />
-                        {cardForm.paymentMethodId && (
-                          <div className="mt-1 text-xs text-green-600 flex items-center">
-                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            {cardForm.paymentMethodId.toUpperCase()} detectada
-                          </div>
+                        >
+                          <option value="">MM</option>
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                              {String(i + 1).padStart(2, '0')}
+                            </option>
+                          ))}
+                        </select>
+                        {validacionFormulario.expiryMonth && (
+                          <p className="mt-1 text-xs text-red-600">{validacionFormulario.expiryMonth}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Año *
+                        </label>
+                        <select
+                          name="expiryYear"
+                          value={cardForm.expiryYear}
+                          onChange={handleCardFormChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            validacionFormulario.expiryYear ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          required
+                        >
+                          <option value="">AA</option>
+                          {Array.from({ length: 10 }, (_, i) => {
+                            const year = new Date().getFullYear() + i;
+                            return (
+                              <option key={year} value={String(year).slice(-2)}>
+                                {String(year).slice(-2)}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {validacionFormulario.expiryYear && (
+                          <p className="mt-1 text-xs text-red-600">{validacionFormulario.expiryYear}</p>
                         )}
                       </div>
 
-                      {/* Nombre del titular */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nombre del titular *
+                          CVV *
                         </label>
                         <input
                           type="text"
-                          name="cardholderName"
-                          value={cardForm.cardholderName}
+                          name="securityCode"
+                          value={cardForm.securityCode}
                           onChange={handleCardFormChange}
-                          placeholder="APRO"
-                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                            cardForm.cardholderName.length >= 2 
-                              ? 'border-green-300 bg-green-50' 
-                              : 'border-gray-300'
+                          placeholder="123"
+                          maxLength={4}
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            validacionFormulario.securityCode ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
                           required
-                          disabled={!sistemaListo}
                         />
+                        {validacionFormulario.securityCode && (
+                          <p className="mt-1 text-xs text-red-600">{validacionFormulario.securityCode}</p>
+                        )}
                       </div>
+                    </div>
 
-                      {/* Fecha de vencimiento y CVV */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Mes *
-                          </label>
-                          <select
-                            name="expiryMonth"
-                            value={cardForm.expiryMonth}
-                            onChange={handleCardFormChange}
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              cardForm.expiryMonth ? 'border-green-300 bg-green-50' : 'border-gray-300'
-                            }`}
-                            required
-                            disabled={!sistemaListo}
-                          >
-                            <option value="">MM</option>
-                            {Array.from({ length: 12 }, (_, i) => (
-                              <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                                {String(i + 1).padStart(2, '0')}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Año *
-                          </label>
-                          <select
-                            name="expiryYear"
-                            value={cardForm.expiryYear}
-                            onChange={handleCardFormChange}
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              cardForm.expiryYear ? 'border-green-300 bg-green-50' : 'border-gray-300'
-                            }`}
-                            required
-                            disabled={!sistemaListo}
-                          >
-                            <option value="">AA</option>
-                            {Array.from({ length: 10 }, (_, i) => {
-                              const year = new Date().getFullYear() + i;
-                              return (
-                                <option key={year} value={String(year).slice(-2)}>
-                                  {String(year).slice(-2)}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            CVV *
-                          </label>
-                          <input
-                            type="text"
-                            name="securityCode"
-                            value={cardForm.securityCode}
-                            onChange={handleCardFormChange}
-                            placeholder="123"
-                            maxLength={4}
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              cardForm.securityCode.length >= 3 
-                                ? 'border-green-300 bg-green-50' 
-                                : 'border-gray-300'
-                            }`}
-                            required
-                            disabled={!sistemaListo}
-                          />
-                        </div>
+                    {/* Documento */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Tipo Doc.
+                        </label>
+                        <select
+                          name="identificationType"
+                          value={cardForm.identificationType}
+                          onChange={handleCardFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="DNI">DNI</option>
+                          <option value="CE">CE</option>
+                          <option value="PPN">Pasaporte</option>
+                        </select>
                       </div>
-
-                      {/* Documento */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Tipo Doc.
-                          </label>
-                          <select
-                            name="identificationType"
-                            value={cardForm.identificationType}
-                            onChange={handleCardFormChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            disabled={!sistemaListo}
-                          >
-                            <option value="DNI">DNI</option>
-                            <option value="CE">CE</option>
-                            <option value="PPN">Pasaporte</option>
-                          </select>
-                        </div>
-                        
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Número de documento *
-                          </label>
-                          <input
-                            type="text"
-                            name="identificationNumber"
-                            value={cardForm.identificationNumber}
-                            onChange={handleCardFormChange}
-                            placeholder="12345678"
-                            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              cardForm.identificationNumber.length >= 8 
-                                ? 'border-green-300 bg-green-50' 
-                                : 'border-gray-300'
-                            }`}
-                            required
-                            disabled={!sistemaListo}
-                          />
-                        </div>
+                      
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Número de documento *
+                        </label>
+                        <input
+                          type="text"
+                          name="identificationNumber"
+                          value={cardForm.identificationNumber}
+                          onChange={handleCardFormChange}
+                          placeholder="12345678"
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            validacionFormulario.identificationNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          required
+                        />
+                        {validacionFormulario.identificationNumber && (
+                          <p className="mt-1 text-xs text-red-600">{validacionFormulario.identificationNumber}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               )}
               
-              {/* 🔧 BOTONES DE PAGO COMPLETAMENTE CORREGIDOS */}
+              {/* Botones de pago mejorados */}
               <div>
-                {!sistemaListo ? (
+                {cargandoMercadoPago ? (
                   <div className="w-full py-8 flex flex-col justify-center items-center bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg border border-cyan-200">
                     <div className="animate-spin h-8 w-8 border-t-3 border-b-3 border-blue-500 rounded-full mb-3"></div>
-                    <span className="text-blue-600 font-medium">Preparando sistema de pago...</span>
+                    <span className="text-blue-600 font-medium">Conectando con MercadoPago...</span>
                     <span className="text-blue-500 text-sm mt-1">
                       {IS_SANDBOX ? '🧪 Modo test activo' : '🔐 Modo producción'}
                     </span>
@@ -3707,53 +3955,44 @@ const PaginaProcesoPago = () => {
                         ref={mercadoPagoButtonRef}
                       >
                         <div className="text-center">
-                          <span className="text-sm text-blue-500 block">🔄 Cargando opciones de pago...</span>
-                          <span className="text-xs text-blue-400">MercadoPago Checkout Pro</span>
+                          <div className="animate-pulse">
+                            <span className="text-sm text-blue-500 block">🔄 Cargando opciones de pago...</span>
+                            <span className="text-xs text-blue-400">MercadoPago Checkout Pro</span>
+                          </div>
                         </div>
                       </div>
                     )}
                     
-                    {/* 🔧 BOTÓN PRINCIPAL COMPLETAMENTE CORREGIDO */}
+                    {/* Botón principal de pago */}
                     <button
                       type="button"
                       onClick={modoCheckout === 'api' ? procesarPagoConCheckoutAPI : procesarPagoDirecto}
                       disabled={
-                        !sistemaListo ||
                         cargandoPago || 
-                        (modoCheckout === 'api' && (!mpInicializado || !esFormularioValido()))
+                        procesandoPago || 
+                        (modoCheckout === 'api' && Object.keys(validacionFormulario).length > 0) ||
+                        (modoCheckout === 'api' && (!cardForm.cardNumber || !cardForm.cardholderName || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.securityCode || !cardForm.identificationNumber))
                       }
                       className={`w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl ${
-                        (!sistemaListo || cargandoPago || (modoCheckout === 'api' && (!mpInicializado || !esFormularioValido())))
-                          ? 'opacity-50 cursor-not-allowed transform-none' 
+                        cargandoPago || procesandoPago || (modoCheckout === 'api' && (Object.keys(validacionFormulario).length > 0 || !cardForm.cardNumber || !cardForm.cardholderName || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.securityCode || !cardForm.identificationNumber))
+                          ? 'opacity-70 cursor-not-allowed' 
                           : 'hover:from-blue-700 hover:to-teal-700 transform hover:-translate-y-0.5'
                       }`}
                     >
-                      {cargandoPago ? (
+                      {cargandoPago || procesandoPago ? (
                         <span className="flex items-center justify-center">
                           <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Procesando pago...
-                        </span>
-                      ) : !sistemaListo ? (
-                        <span className="flex items-center justify-center">
-                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                          Inicializando...
-                        </span>
-                      ) : modoCheckout === 'api' && !mpInicializado ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="w-5 h-5 mr-2 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          SDK no inicializado
+                          {procesandoPago ? 'Procesando pago...' : 'Conectando...'}
                         </span>
                       ) : (
                         <span className="flex items-center justify-center">
                           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                           </svg>
-                          {modoCheckout === 'api' ? 'Pagar con tarjeta' : 'Pagar'} S/ {total.toFixed(2)}
+                          {modoCheckout === 'api' ? 'Pagar con tarjeta' : 'Continuar al pago'} S/ {total.toFixed(2)}
                           {IS_SANDBOX && <span className="ml-2 text-xs opacity-75">(Test)</span>}
                         </span>
                       )}
@@ -3778,24 +4017,26 @@ const PaginaProcesoPago = () => {
                     )}
                     
                     {/* Términos y condiciones */}
-                    <p className="mt-4 text-xs text-center text-gray-500 leading-relaxed">
-                      Al hacer clic en "Pagar", aceptas nuestros{' '}
-                      <a href="#" className="text-blue-600 hover:underline font-medium">
-                        términos y condiciones
-                      </a>{' '}
-                      y{' '}
-                      <a href="#" className="text-blue-600 hover:underline font-medium">
-                        política de privacidad
-                      </a>.
-                      <br />
-                      <span className="text-gray-400">🔒 Transacción procesada de forma segura</span>
-                    </p>
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-center text-gray-500 leading-relaxed">
+                        Al hacer clic en "Pagar", aceptas nuestros{' '}
+                        <a href="#" className="text-blue-600 hover:underline font-medium">
+                          términos y condiciones
+                        </a>{' '}
+                        y{' '}
+                        <a href="#" className="text-blue-600 hover:underline font-medium">
+                          política de privacidad
+                        </a>.
+                        <br />
+                        <span className="text-gray-400">Transacción procesada de forma segura</span>
+                      </p>
+                    </div>
                   </>
                 )}
               </div>
             </div>
             
-            {/* Panel de seguridad (mantener como está) */}
+            {/* Panel de seguridad mejorado */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200">
               <div className="space-y-4">
                 <div className="flex items-center">
@@ -3839,17 +4080,31 @@ const PaginaProcesoPago = () => {
                     </p>
                   </div>
                 </div>
+
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-orange-800">Soporte 24/7</h3>
+                    <p className="text-sm text-orange-600">
+                      Atención personalizada ante cualquier consulta
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Footer con botones (mantener como está pero con información de debug mejorada) */}
-        <div className="mt-6 flex justify-between items-center">
+        {/* Footer con botones mejorado */}
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="px-6 py-3 border-2 border-cyan-300 text-cyan-700 font-medium rounded-lg transition-all duration-200 hover:bg-cyan-50 hover:border-cyan-400 flex items-center shadow-sm hover:shadow-md"
+            className="w-full sm:w-auto px-6 py-3 border-2 border-cyan-300 text-cyan-700 font-medium rounded-lg transition-all duration-200 hover:bg-cyan-50 hover:border-cyan-400 flex items-center justify-center shadow-sm hover:shadow-md"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -3857,45 +4112,35 @@ const PaginaProcesoPago = () => {
             Volver atrás
           </button>
           
-          {/* 🔧 INFORMACIÓN DE DEBUG MEJORADA */}
+          {/* Info de desarrollo */}
           {ACTUAL_ENV === 'development' && (
-            <div className="text-xs text-gray-500 bg-gray-100 p-3 rounded-lg">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div>ENV: <span className="font-mono text-gray-800">{ACTUAL_ENV}</span></div>
-                <div>Test: <span className="font-mono text-gray-800">{IS_SANDBOX ? 'Activo' : 'Inactivo'}</span></div>
-                <div>Modo: <span className="font-mono text-gray-800">{modoCheckout}</span></div>
-                <div>SDK: <span className={`font-mono ${sdkCargado ? 'text-green-600' : 'text-red-600'}`}>
-                  {sdkCargado ? 'OK' : 'NO'}
-                </span></div>
-                <div>PubKey: <span className={`font-mono ${publicKeyObtenida ? 'text-green-600' : 'text-red-600'}`}>
-                  {publicKeyObtenida ? 'OK' : 'NO'}
-                </span></div>
-                <div>MP Init: <span className={`font-mono ${mpInicializado ? 'text-green-600' : 'text-red-600'}`}>
-                  {mpInicializado ? 'OK' : 'NO'}
-                </span></div>
-                <div>Sistema: <span className={`font-mono ${sistemaListo ? 'text-green-600' : 'text-orange-600'}`}>
-                  {sistemaListo ? 'LISTO' : 'CARGANDO'}
-                </span></div>
-                <div>Válido: <span className={`font-mono ${modoCheckout === 'api' ? (esFormularioValido() ? 'text-green-600' : 'text-red-600') : 'text-blue-600'}`}>
-                  {modoCheckout === 'api' ? (esFormularioValido() ? 'SÍ' : 'NO') : 'N/A'}
-                </span></div>
+            <div className="text-xs text-gray-500 text-center sm:text-right bg-gray-100 p-3 rounded-lg">
+              <div className="grid grid-cols-2 gap-2 text-left">
+                <div>ENV: <span className="font-mono">{ACTUAL_ENV}</span></div>
+                <div>Test: <span className="font-mono">{IS_SANDBOX ? 'Activo' : 'Inactivo'}</span></div>
+                <div>Modo: <span className="font-mono">{modoCheckout}</span></div>
+                <div>SDK: <span className="font-mono">{sdkCargado ? 'OK' : 'Cargando'}</span></div>
                 {preferencia && (
-                  <div className="col-span-2 mt-1 pt-1 border-t">
-                    Pref: <span className="font-mono text-xs text-gray-600">
-                      {(preferencia.preference_id || preferencia.id || 'NO_ID').substring(0, 20)}...
-                    </span>
+                  <div className="col-span-2">
+                    Pref ID: <span className="font-mono text-xs">{preferencia.preference_id || preferencia.id}</span>
                   </div>
                 )}
                 {cardForm.paymentMethodId && (
                   <div className="col-span-2">
-                    Method: <span className="font-mono text-green-600">{cardForm.paymentMethodId}</span>
+                    Method: <span className="font-mono">{cardForm.paymentMethodId}</span>
                   </div>
                 )}
+                <div className="col-span-2">
+                  Logs: <span className="font-mono">{logger.getLogs().length}</span>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal de logs */}
+      {mostrandoLogs && <LogViewer />}
     </div>
   );
 };
