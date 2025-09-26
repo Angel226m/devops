@@ -230,8 +230,7 @@ const FormularioIngreso = () => {
   );
 };
 
-export default FormularioIngreso;*/
-import { useState } from 'react';
+export default FormularioIngreso;*/import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -239,7 +238,7 @@ import { iniciarSesion } from '../../../store/slices/sliceAutenticacion';
 import { LoginClienteRequest } from '../../../../dominio/entidades/Cliente';
 import { AppDispatch } from '../../../store';
 import { motion } from 'framer-motion';
-import { FcGoogle } from 'react-icons/fc'; // Íconos para social login (instala react-icons si no lo tienes)
+import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF } from 'react-icons/fa';
 
 const FormularioIngreso = () => {
@@ -314,7 +313,7 @@ const FormularioIngreso = () => {
             required
             value={formData.correo}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg placeholder-gray-300 text-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm transition-all duration-300 backdrop-blur-sm"
+            className="block w-full px-4 py-3 bg-white/40 border border-white/50 rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm transition-all duration-300 backdrop-blur-sm"
             placeholder="correo@ejemplo.com"
           />
         </div>
@@ -338,12 +337,12 @@ const FormularioIngreso = () => {
             required
             value={formData.contrasena}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg placeholder-gray-300 text-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm pr-10 transition-all duration-300 backdrop-blur-sm"
+            className="block w-full px-4 py-3 bg-white/40 border border-white/50 rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm pr-10 transition-all duration-300 backdrop-blur-sm"
             placeholder="••••••"
           />
           <button
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-300 hover:text-white transition-colors duration-300"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/70 hover:text-white transition-colors duration-300"
             onClick={() => setMostrarContrasena(!mostrarContrasena)}
           >
             {mostrarContrasena ? (
@@ -400,13 +399,12 @@ const FormularioIngreso = () => {
         </button>
       </div>
 
-      {/* Social Login (Sorpresita: Opciones modernas) */}
       <div className="mt-6 text-center text-white/80 text-sm">O inicia con</div>
       <div className="mt-2 flex justify-center space-x-4">
-        <button className="flex items-center px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition duration-300 backdrop-blur-sm">
+        <button className="flex items-center px-4 py-2 bg-white/30 rounded-lg hover:bg-white/40 transition duration-300 backdrop-blur-sm text-white">
           <FcGoogle className="mr-2" /> Google
         </button>
-        <button className="flex items-center px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition duration-300 backdrop-blur-sm">
+        <button className="flex items-center px-4 py-2 bg-white/30 rounded-lg hover:bg-white/40 transition duration-300 backdrop-blur-sm text-white">
           <FaFacebookF className="mr-2 text-blue-400" /> Facebook
         </button>
       </div>

@@ -105,7 +105,7 @@ const PaginaIngreso = () => {
     >
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-teal-500/30" />
       
-      <div className="relative z-10 max-w-4xl w-full mx-4 grid grid-cols-1 md:grid-cols-2 gap-0 bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 max-w-4xl w-full mx-4 grid grid-cols-1 md:grid-cols-2 gap-0 bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden">
         {/* Lado Izquierdo: Imagen y Eslogan */}
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
@@ -122,11 +122,11 @@ const PaginaIngreso = () => {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="p-8 bg-white/30 backdrop-blur-md rounded-3xl md:rounded-l-none"
+          className="p-8 bg-white/20 backdrop-blur-md rounded-3xl md:rounded-l-none"
         >
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4 transition-transform duration-500 hover:rotate-6">
-              <OceanLogo /> {/* Sin className */}
+              <OceanLogo /> {/* Ajustado sin className si hay error */}
             </div>
             <h1 className="text-3xl font-extrabold text-white drop-shadow-md">
               {t('ingreso.titulo', 'Iniciar Sesión')}
