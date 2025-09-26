@@ -131,9 +131,9 @@ const PaginaIngreso = () => {
             <h1 className="text-3xl font-extrabold text-white drop-shadow-md">
               {t('ingreso.titulo', 'Iniciar Sesión')}
             </h1>
-            <p className="mt-2 text-sm text-white/80">
+            <p className="mt-2 text-sm text-black">
               {t('ingreso.subtitulo', '¿No tienes una cuenta?')}{' '}
-              <Link to="/registrarse" className="font-medium text-teal-300 hover:text-teal-100 transition-colors duration-300">
+              <Link to="/registrarse" className="font-medium text-teal-500 hover:text-teal-700 transition-colors duration-300">
                 {t('ingreso.registrarse', 'Regístrate aquí')}
               </Link>
             </p>

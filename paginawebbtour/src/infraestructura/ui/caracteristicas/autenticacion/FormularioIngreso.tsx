@@ -294,14 +294,14 @@ const FormularioIngreso = () => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4 backdrop-blur-sm"
+          className="bg-red-500/20 border border-red-500 text-red-900 p-3 rounded-lg text-sm mb-4"
         >
           <p>{error}</p>
         </motion.div>
       )}
       
       <div>
-        <label htmlFor="correo" className="block text-sm font-medium text-white mb-1 drop-shadow">
+        <label htmlFor="correo" className="block text-sm font-medium text-black mb-1">
           Correo Electrónico
         </label>
         <div className="relative">
@@ -313,7 +313,7 @@ const FormularioIngreso = () => {
             required
             value={formData.correo}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/60 border border-white/60 rounded-lg text-white placeholder-white/90 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm transition-all duration-300"
+            className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 sm:text-sm transition-all duration-300"
             placeholder="correo@ejemplo.com"
           />
         </div>
@@ -321,10 +321,10 @@ const FormularioIngreso = () => {
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label htmlFor="contrasena" className="block text-sm font-medium text-white drop-shadow">
+          <label htmlFor="contrasena" className="block text-sm font-medium text-black">
             Contraseña
           </label>
-          <Link to="/recuperar-contrasena" className="text-sm text-teal-300 hover:text-teal-100 transition-colors duration-300">
+          <Link to="/recuperar-contrasena" className="text-sm text-teal-500 hover:text-teal-700 transition-colors duration-300">
             ¿Olvidaste tu contraseña?
           </Link>
         </div>
@@ -337,12 +337,12 @@ const FormularioIngreso = () => {
             required
             value={formData.contrasena}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/60 border border-white/60 rounded-lg text-white placeholder-white/90 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm pr-10 transition-all duration-300"
+            className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 sm:text-sm pr-10 transition-all duration-300"
             placeholder="••••••"
           />
           <button
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/70 hover:text-white transition-colors duration-300"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800 transition-colors duration-300"
             onClick={() => setMostrarContrasena(!mostrarContrasena)}
           >
             {mostrarContrasena ? (
@@ -367,13 +367,13 @@ const FormularioIngreso = () => {
           type="checkbox"
           checked={formData.recordarme}
           onChange={handleChange}
-          className="h-4 w-4 text-teal-300 focus:ring-teal-500 border-white/60 rounded transition-colors duration-300"
+          className="h-4 w-4 text-teal-500 focus:ring-teal-500 border-gray-300 rounded transition-colors duration-300"
         />
-        <label htmlFor="recordarme" className="ml-2 block text-sm text-white drop-shadow">
+        <label htmlFor="recordarme" className="ml-2 block text-sm text-black">
           Mantener sesión activa por 7 días
         </label>
       </div>
-      <p className="text-xs text-white/70 ml-6 mb-4 drop-shadow">
+      <p className="text-xs text-black ml-6 mb-4">
         {formData.recordarme 
           ? 'Su sesión se mantendrá activa durante 7 días.' 
           : 'Su sesión expirará después de 1 hora de inactividad.'}
@@ -383,7 +383,7 @@ const FormularioIngreso = () => {
         <button
           type="submit"
           disabled={cargando}
-          className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-teal-500 hover:bg-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-offset-2 transition-all duration-300 ease-in-out ${
+          className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-all duration-300 ease-in-out ${
             cargando ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
@@ -399,12 +399,12 @@ const FormularioIngreso = () => {
         </button>
       </div>
 
-      <div className="mt-6 text-center text-white/80 text-sm">O inicia con</div>
+      <div className="mt-6 text-center text-black text-sm">O inicia con</div>
       <div className="mt-2 flex justify-center space-x-4">
-        <button className="flex items-center px-4 py-2 bg-blue-400/80 rounded-lg hover:bg-blue-400 text-white transition duration-300 shadow-md">
+        <button className="flex items-center px-4 py-2 bg-blue-400 rounded-lg hover:bg-blue-500 text-white transition duration-300 shadow-md">
           <FcGoogle className="mr-2 text-xl" /> Google
         </button>
-        <button className="flex items-center px-4 py-2 bg-blue-700/80 rounded-lg hover:bg-blue-700 text-white transition duration-300 shadow-md">
+        <button className="flex items-center px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-800 text-white transition duration-300 shadow-md">
           <FaFacebookF className="mr-2 text-xl" /> Facebook
         </button>
       </div>
