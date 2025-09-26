@@ -81,9 +81,6 @@ const PaginaIngreso = () => {
 };
 
 export default PaginaIngreso;*/
-
-
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -96,18 +93,19 @@ const PaginaIngreso = () => {
   const { t } = useTranslation();
   
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50 via-white to-cyan-50">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-100 via-cyan-50 to-teal-100">
+      <div className="max-w-md w-full space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          <div className="flex justify-center mb-4">
-            <OceanLogo />
-          </div>
-          <h1 className="mt-4 text-3xl font-extrabold text-gray-900">
+          // PaginaIngreso.tsx (alternativa con estilos en el contenedor)
+<div className="flex justify-center mb-4 transition-transform duration-300 hover:scale-105">
+  <OceanLogo />
+</div>
+          <h1 className="mt-4 text-3xl font-extrabold text-gray-900 tracking-wide">
             {t('ingreso.titulo', 'Iniciar Sesión')}
           </h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -119,10 +117,10 @@ const PaginaIngreso = () => {
         </motion.div>
         
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white py-8 px-6 sm:px-10 shadow-lg sm:rounded-xl border border-blue-100"
+          className="bg-white py-6 px-6 sm:px-8 shadow-xl rounded-2xl border border-blue-100 transition-shadow duration-300 hover:shadow-2xl"
         >
           <FormularioIngreso />
         </motion.div>
@@ -132,7 +130,7 @@ const PaginaIngreso = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <p className="text-center text-xs text-gray-500">
+          <p className="text-center text-xs text-gray-500 mt-4">
             © {new Date().getFullYear()} NAYARAK TOURS. Todos los derechos reservados.
           </p>
         </motion.div>
