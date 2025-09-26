@@ -313,7 +313,7 @@ const FormularioIngreso = () => {
             required
             value={formData.correo}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/40 border border-white/50 rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm transition-all duration-300 backdrop-blur-sm"
+            className="block w-full px-4 py-3 bg-white/60 border border-white/60 rounded-lg text-white placeholder-white/90 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm transition-all duration-300"
             placeholder="correo@ejemplo.com"
           />
         </div>
@@ -337,7 +337,7 @@ const FormularioIngreso = () => {
             required
             value={formData.contrasena}
             onChange={handleChange}
-            className="block w-full px-4 py-3 bg-white/40 border border-white/50 rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm pr-10 transition-all duration-300 backdrop-blur-sm"
+            className="block w-full px-4 py-3 bg-white/60 border border-white/60 rounded-lg text-white placeholder-white/90 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 sm:text-sm pr-10 transition-all duration-300"
             placeholder="••••••"
           />
           <button
@@ -367,7 +367,7 @@ const FormularioIngreso = () => {
           type="checkbox"
           checked={formData.recordarme}
           onChange={handleChange}
-          className="h-4 w-4 text-teal-300 focus:ring-teal-500 border-white/50 rounded transition-colors duration-300"
+          className="h-4 w-4 text-teal-300 focus:ring-teal-500 border-white/60 rounded transition-colors duration-300"
         />
         <label htmlFor="recordarme" className="ml-2 block text-sm text-white drop-shadow">
           Mantener sesión activa por 7 días
@@ -401,11 +401,11 @@ const FormularioIngreso = () => {
 
       <div className="mt-6 text-center text-white/80 text-sm">O inicia con</div>
       <div className="mt-2 flex justify-center space-x-4">
-        <button className="flex items-center px-4 py-2 bg-white/30 rounded-lg hover:bg-white/40 transition duration-300 backdrop-blur-sm text-white">
-          <FcGoogle className="mr-2" /> Google
+        <button className="flex items-center px-4 py-2 bg-blue-400/80 rounded-lg hover:bg-blue-400 text-white transition duration-300 shadow-md">
+          <FcGoogle className="mr-2 text-xl" /> Google
         </button>
-        <button className="flex items-center px-4 py-2 bg-white/30 rounded-lg hover:bg-white/40 transition duration-300 backdrop-blur-sm text-white">
-          <FaFacebookF className="mr-2 text-blue-400" /> Facebook
+        <button className="flex items-center px-4 py-2 bg-blue-700/80 rounded-lg hover:bg-blue-700 text-white transition duration-300 shadow-md">
+          <FaFacebookF className="mr-2 text-xl" /> Facebook
         </button>
       </div>
     </form>
