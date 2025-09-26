@@ -61,7 +61,7 @@ export const endpoints = {
 
   },  reserva: {
     listar: "/reservas",
-    obtenerPorId: (id: number) => `/reservas/${id}`,
+    obtenerPorId: (id: number) => `/cliente/mis-reservas/${id}`, // ✅ CORRECTO - coincide con tu backend
     crear: "/reservas",
     actualizar: (id: number) => `/reservas/${id}`,
     eliminar: (id: number) => `/reservas/${id}`,

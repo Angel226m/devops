@@ -1,11 +1,10 @@
  import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18n next';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { RootState, AppDispatch } from '../../../store';
 import { obtenerDetalleReservaPorId, limpiarReservaDetalle } from '../../../store/slices/sliceReserva';
-
 import Cargador from '../../componentes/comunes/Cargador';
 import Alerta from '../../componentes/comunes/Alerta';
 
@@ -96,27 +95,24 @@ const PaginaDetalleReserva = () => {
   const dispatch = useDispatch<AppDispatch>();
   
   const { reservaDetalle, cargando, error } = useSelector((state: RootState) => state.reserva);
-
   const { autenticado } = useSelector((state: RootState) => state.autenticacion);
   
   // Tratar la reserva como ReservaDetallada
   const reserva = reservaDetalle as ReservaDetallada | null;
-  
-  const [mostrarTodosDetalles, setMostrarTodosDetalles] = useState(false);
 
   // Cargar detalle de la reserva
- useEffect(() => {
-  if (id && autenticado) {
-    dispatch(obtenerDetalleReservaPorId(parseInt(id)));
-  } else if (!autenticado) {
-    navigate('/login');
-  }
-  
-  // Limpiar al desmontar
-  return () => {
-    dispatch(limpiarReservaDetalle());
-  };
-}, [id, dispatch, autenticado, navigate]);
+  useEffect(() => {
+    if (id && autenticado) {
+      dispatch(obtenerDetalleReservaPorId(parseInt(id)));
+    } else if (!autenticado) {
+      navigate('/login');
+    }
+    
+    // Limpiar al desmontar
+    return () => {
+      dispatch(limpiarReservaDetalle());
+    };
+  }, [id, dispatch, autenticado, navigate]);
 
   // Función para formatear fechas
   const formatearFecha = (fechaStr?: string, formato: 'completo' | 'corto' | 'relativo' = 'completo'): string => {
@@ -296,13 +292,14 @@ const PaginaDetalleReserva = () => {
     return desglose;
   };
 
+  // Estados de carga y error
   if (!autenticado) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50">
         <div className="text-center bg-white p-8 rounded-2xl shadow-xl max-w-md border border-blue-100">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">{t('reservas.noSesion')}</h2>
           <p className="text-gray-600 mb-6">{t('reservas.iniciarSesionParaVerReservas')}</p>
-          <Link to="/login" className="btn btn-primary">
+          <Link to="/ingresar" className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
             {t('auth.iniciarSesion')}
           </Link>
         </div>
@@ -333,7 +330,7 @@ const PaginaDetalleReserva = () => {
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <Alerta mensaje={error || 'No se pudo cargar la reserva'} tipo="error" />
               <div className="text-center mt-6">
-                <Link to="/reservas" className="btn btn-primary">
+                <Link to="/mis-reservas" className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
                   {t('general.volver')} a Mis Reservas
                 </Link>
               </div>
@@ -351,9 +348,10 @@ const PaginaDetalleReserva = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
+          
           {/* Header con navegación */}
           <motion.div
-            className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 mb-8 border border-blue-100"
+            className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-blue-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -361,7 +359,7 @@ const PaginaDetalleReserva = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center">
                 <button
-                  onClick={() => navigate('/reservas')}
+                  onClick={() => navigate('/mis-reservas')}
                   className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 mr-4 transition-all"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,7 +371,7 @@ const PaginaDetalleReserva = () => {
                     Reserva #{reserva.id_reserva}
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    {formatearFecha(reserva.fecha_creacion, 'completo')}
+                    Creada el {formatearFecha(reserva.fecha_creacion, 'completo')}
                   </p>
                 </div>
               </div>
@@ -389,6 +387,7 @@ const PaginaDetalleReserva = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
             {/* Información principal del tour */}
             <motion.div
               className="lg:col-span-2 space-y-8"
@@ -396,8 +395,9 @@ const PaginaDetalleReserva = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
+              
               {/* Información del Tour */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-xl p-8 border border-blue-100">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
                     <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-100 to-blue-100 flex items-center justify-center border border-sky-200">
@@ -408,7 +408,7 @@ const PaginaDetalleReserva = () => {
                   </div>
                   <div className="ml-6 flex-1">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      {reserva.nombre_tour || (reserva.instancia && reserva.instancia.nombre_tour) || 'Tour'}
+                      {reserva.nombre_tour || (reserva.instancia?.nombre_tour) || 'Tour'}
                     </h2>
                     
                     {reserva.descripcion_tour && (
@@ -419,6 +419,8 @@ const PaginaDetalleReserva = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
+                        
+                        {/* Fecha del Tour */}
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mr-4">
                             <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,14 +430,15 @@ const PaginaDetalleReserva = () => {
                           <div>
                             <div className="text-sm text-gray-500 font-medium">Fecha del Tour</div>
                             <div className="text-lg font-semibold text-gray-900">
-                              {formatearFecha(reserva.fecha_tour || (reserva.instancia && reserva.instancia.fecha_especifica), 'completo')}
+                              {formatearFecha(reserva.fecha_tour || reserva.instancia?.fecha_especifica, 'completo')}
                             </div>
                             <div className="text-sm text-blue-600">
-                              {formatearFecha(reserva.fecha_tour || (reserva.instancia && reserva.instancia.fecha_especifica), 'relativo')}
+                              {formatearFecha(reserva.fecha_tour || reserva.instancia?.fecha_especifica, 'relativo')}
                             </div>
                           </div>
                         </div>
 
+                        {/* Horario */}
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mr-4">
                             <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,7 +448,7 @@ const PaginaDetalleReserva = () => {
                           <div>
                             <div className="text-sm text-gray-500 font-medium">Horario</div>
                             <div className="text-lg font-semibold text-gray-900">
-                              {formatearHora(reserva.hora_inicio_tour || (reserva.instancia && reserva.instancia.hora_inicio))}
+                              {formatearHora(reserva.hora_inicio_tour || reserva.instancia?.hora_inicio)}
                               {reserva.hora_fin_tour && (
                                 <> - {formatearHora(reserva.hora_fin_tour)}</>
                               )}
@@ -460,6 +463,8 @@ const PaginaDetalleReserva = () => {
                       </div>
 
                       <div className="space-y-4">
+                        
+                        {/* Total de Pasajeros */}
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mr-4">
                             <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,6 +479,7 @@ const PaginaDetalleReserva = () => {
                           </div>
                         </div>
 
+                        {/* Total Pagado */}
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center mr-4">
                             <svg className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,10 +500,10 @@ const PaginaDetalleReserva = () => {
               </div>
 
               {/* Desglose detallado de pasajeros */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-xl p-8 border border-blue-100">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                   <svg className="h-6 w-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   Desglose de Pasajeros
                 </h3>
@@ -640,7 +646,7 @@ const PaginaDetalleReserva = () => {
 
               {/* Información adicional */}
               {(reserva.instancia?.punto_encuentro || reserva.instancia?.instrucciones || reserva.notas) && (
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-blue-100">
+                <div className="bg-white rounded-2xl shadow-xl p-8 border border-blue-100">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                     <svg className="h-6 w-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -703,9 +709,10 @@ const PaginaDetalleReserva = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
+              
               {/* Información del cliente */}
               {reserva.cliente && (
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-blue-100">
+                <div className="bg-white rounded-2xl shadow-xl p-6 border border-blue-100">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                     <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -743,7 +750,7 @@ const PaginaDetalleReserva = () => {
 
               {/* Información de la sede */}
               {reserva.sede && (
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-blue-100">
+                <div className="bg-white rounded-2xl shadow-xl p-6 border border-blue-100">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                     <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -772,7 +779,7 @@ const PaginaDetalleReserva = () => {
               )}
 
               {/* Resumen de fechas */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-blue-100">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                   <svg className="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -798,7 +805,7 @@ const PaginaDetalleReserva = () => {
               </div>
 
               {/* Acciones */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-blue-100">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
                 <div className="space-y-3">
                   <button
@@ -812,7 +819,7 @@ const PaginaDetalleReserva = () => {
                   </button>
                   
                   <Link
-                    to="/reservas"
+                    to="/mis-reservas"
                     className="w-full flex items-center justify-center px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl border border-gray-200 transition-all font-medium"
                   >
                     <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
