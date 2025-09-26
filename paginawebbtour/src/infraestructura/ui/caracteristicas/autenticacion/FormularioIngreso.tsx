@@ -232,7 +232,6 @@ const FormularioIngreso = () => {
 
 export default FormularioIngreso;*/
 
-
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
@@ -256,21 +255,15 @@ const FormularioIngreso = () => {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Manejar cambios en el formulario
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
-    
-    // Limpiar el error cuando el usuario comienza a escribir
-    if (error) {
-      setError(null);
-    }
+    if (error) setError(null);
   };
   
-  // Manejar envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCargando(true);
@@ -283,21 +276,13 @@ const FormularioIngreso = () => {
         recordarme: formData.recordarme
       };
       
-      const response = await dispatch(iniciarSesion(credenciales)).unwrap();
-      
-      // Redirigir al usuario a la página principal
+      await dispatch(iniciarSesion(credenciales)).unwrap();
       navigate('/');
     } catch (error: any) {
       console.error('Error al iniciar sesión:', error);
-      
-      // Manejo de errores específicos del servidor
-      if (error.status === 404) {
-        setError('Usuario no encontrado');
-      } else if (error.status === 401) {
-        setError('Contraseña incorrecta');
-      } else {
-        setError('Error al iniciar sesión. Por favor, intente nuevamente.');
-      }
+      if (error.status === 404) setError('Usuario no encontrado');
+      else if (error.status === 401) setError('Contraseña incorrecta');
+      else setError('Error al iniciar sesión. Por favor, intente nuevamente.');
     } finally {
       setCargando(false);
     }
@@ -308,11 +293,9 @@ const FormularioIngreso = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto"
+      className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto mt-10"
     >
-      <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
-        Iniciar Sesión
-      </h2>
+      <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Iniciar Sesión</h2>
 
       {error && (
         <motion.div 
@@ -434,6 +417,8 @@ const FormularioIngreso = () => {
           </Link>
         </p>
       </form>
+
+      <p className="mt-4 text-xs text-center text-gray-400">© 2025 NAYARAK Tours. Todos los derechos reservados.</p>
     </motion.div>
   );
 };
