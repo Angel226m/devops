@@ -1,6 +1,7 @@
- import { useEffect, useState } from 'react';
+  import { useTranslation } from 'react-i18next';
+  import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18n next';
+ 
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { RootState, AppDispatch } from '../../../store';
