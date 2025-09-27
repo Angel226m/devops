@@ -3497,28 +3497,44 @@ const PaginaProcesoPago = () => {
     });
   }, [logger]);
 
-  const inicializarMercadoPagoSDK = useCallback(async () => {
-    try {
-      if (!publicKey) {
-        const key = await obtenerClavePublica();
-        if (!key) return;
-      }
+const inicializarMercadoPagoSDK = useCallback(async () => {
+  try {
+    console.log('🔍 [SDK_INIT] Verificando prerrequisitos:', {
+      tieneWindow: !!window.MercadoPago,
+      publicKey: publicKey ? publicKey.substring(0, 20) + '...' : 'NO DISPONIBLE',
+      sdkCargado
+    });
 
-      if (window.MercadoPago && publicKey) {
-        logger.info('SDK_INIT', 'Inicializando MercadoPago SDK v2');
-        const mercadoPago = new window.MercadoPago(publicKey, {
-          locale: 'es-PE'
-        });
-        
-        setMp(mercadoPago);
-        logger.info('SDK_INIT', 'MercadoPago SDK v2 inicializado para Checkout API');
-        
-        await obtenerMetodosPago();
+    // ✅ OBTENER CLAVE SI NO LA TENEMOS
+    let claveAUsar = publicKey;
+    if (!claveAUsar) {
+      console.log('🔍 [SDK_INIT] Obteniendo clave pública...');
+      claveAUsar = await obtenerClavePublica();
+      if (!claveAUsar) {
+        throw new Error('No se pudo obtener la clave pública');
       }
-    } catch (error) {
-      logger.error('SDK_INIT', 'Error al inicializar MercadoPago SDK v2', error);
     }
-  }, [publicKey, obtenerClavePublica, obtenerMetodosPago, logger]);
+
+    // ✅ VERIFICAR QUE WINDOW.MERCADOPAGO EXISTE
+    if (!window.MercadoPago) {
+      throw new Error('window.MercadoPago no está disponible');
+    }
+
+    console.log('🔵 [SDK_INIT] Inicializando MercadoPago SDK v2 con clave:', claveAUsar.substring(0, 20) + '...');
+    
+    const mercadoPago = new window.MercadoPago(claveAUsar, {
+      locale: 'es-PE'
+    });
+    
+    setMp(mercadoPago);
+    console.log('✅ [SDK_INIT] MercadoPago SDK v2 inicializado correctamente');
+    
+    await obtenerMetodosPago();
+  } catch (error) {
+    console.error('🔴 [SDK_INIT] Error al inicializar MercadoPago SDK v2:', error);
+    setError('Error al inicializar el procesador de pagos. Por favor, recarga la página.');
+  }
+}, [publicKey, obtenerClavePublica, obtenerMetodosPago]);
 
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
@@ -3738,32 +3754,42 @@ const PaginaProcesoPago = () => {
   };
   
   // 🔄 Efectos mejorados
-  useEffect(() => {
-    const iniciarMercadoPago = async () => {
-      try {
-        if (preferencia) {
-          logger.info('INIT_EFFECT', 'Ya existe una preferencia, no se creará otra');
-          setCargandoMercadoPago(false);
-          return;
-        }
-        
-        setCargandoMercadoPago(true);
-        
-        if (!publicKey) {
-          await obtenerClavePublica();
-        }
-        
-        await iniciarProcesoPago();
-        
-      } catch (error) {
-        logger.error('INIT_EFFECT', 'Error al inicializar Mercado Pago', error);
-      } finally {
-        setCargandoMercadoPago(false);
+ useEffect(() => {
+  const iniciarMercadoPago = async () => {
+    try {
+      if (preferencia) {
+        logger.info('INIT_EFFECT', 'Ya existe una preferencia, PERO INICIEMOS SDK');
+        // ✅ CORREGIDO: Inicializar SDK aunque exista preferencia
       }
-    };
-    
-    iniciarMercadoPago();
-  }, [obtenerClavePublica, iniciarProcesoPago, publicKey, preferencia, logger]);
+      
+      setCargandoMercadoPago(true);
+      
+      // ✅ PASO 1: Cargar SDK primero
+      await cargarMercadoPagoSDK();
+      
+      // ✅ PASO 2: Obtener clave pública
+      if (!publicKey) {
+        await obtenerClavePublica();
+      }
+      
+      // ✅ PASO 3: Inicializar SDK con clave pública
+      await inicializarMercadoPagoSDK();
+      
+      // ✅ PASO 4: Crear preferencia si no existe
+      if (!preferencia) {
+        await iniciarProcesoPago();
+      }
+      
+    } catch (error) {
+      logger.error('INIT_EFFECT', 'Error al inicializar Mercado Pago', error);
+    } finally {
+      setCargandoMercadoPago(false);
+    }
+  };
+  
+  iniciarMercadoPago();
+}, [obtenerClavePublica, iniciarProcesoPago, publicKey, preferencia, logger]);
+
 
     useEffect(() => {
     if (preferencia && sdkCargado && publicKey && modoCheckout === 'pro') {
