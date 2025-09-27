@@ -1835,8 +1835,7 @@ export default PaginaDetalleReserva;
  
 
 
-*/  
-                   import { useEffect } from 'react';
+*/   import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -1850,43 +1849,47 @@ import Cargador from '../../componentes/comunes/Cargador';
 import Alerta from '../../componentes/comunes/Alerta';
 
 interface CantidadPasaje {
-  cantidad: number;
+  id_tipo_pasaje?: number;
   nombre_tipo?: string;
+  cantidad: number;
   precio_unitario?: number;
   subtotal?: number;
 }
 
 interface PaqueteReserva {
   id_paquete: number;
-  nombre?: string;
+  nombre_paquete?: string; // Cambiado de "nombre" a "nombre_paquete" para coincidir con backend
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
-  desglose_pasajes?: { tipo: string; cantidad: number }[];
+  cantidad_total?: number; // Añadido para coincidir con backend
+  desglose_pasajes?: { tipo: string; cantidad: number }[]; // Opcional
 }
 
 interface ReservaDetallada {
-  id_reserva: number;
+  id: number; // Cambiado de id_reserva para coincidir con backend
+  id_vendedor?: number | null;
   id_cliente: number;
   id_instancia?: number;
-  id_sede: number;
+  id_sede?: number;
   total_pagar: number;
   cantidad_pasajes?: CantidadPasaje[];
   paquetes?: PaqueteReserva[];
   notas?: string;
-  fecha_creacion: string;
+  fecha_reserva: string; // Cambiado de fecha_creacion
   fecha_actualizacion: string;
   fecha_expiracion?: string;
   metodo_pago?: string;
   estado: EstadoReserva;
   fecha_cancelacion?: string;
+  nombre_cliente?: string;
+  nombre_vendedor?: string;
   nombre_tour?: string;
   descripcion_tour?: string;
+  fecha_tour?: string;
   hora_inicio_tour?: string;
   hora_fin_tour?: string;
-  fecha_tour?: string;
   duracion_tour?: number;
-  nombre_vendedor?: string; // Agregado del backend
   cliente?: {
     nombres: string;
     apellidos: string;
@@ -1899,17 +1902,6 @@ interface ReservaDetallada {
     nombre: string;
     direccion?: string;
     telefono?: string;
-  };
-  instancia?: {
-    id_instancia: number;
-    nombre_tour?: string;
-    fecha_especifica: string;
-    hora_inicio: string;
-    hora_fin?: string;
-    cupo_disponible: number;
-    estado: string;
-    punto_encuentro?: string;
-    instrucciones?: string;
   };
 }
 
@@ -1989,8 +1981,7 @@ const PaginaDetalleReserva = () => {
     if (!reserva) return 0;
     const totalIndividuales = reserva.cantidad_pasajes?.reduce((sum, p) => sum + (p.cantidad || 0), 0) || 0;
     const totalPaquetes = reserva.paquetes?.reduce((sum, paquete) => {
-      const pasajerosPorPaquete = paquete.desglose_pasajes?.reduce((sum, d) => sum + (d.cantidad || 0), 0) || 0;
-      return sum + pasajerosPorPaquete * (paquete.cantidad || 0);
+      return sum + (paquete.cantidad_total || paquete.desglose_pasajes?.reduce((s, d) => s + (d.cantidad || 0), 0) || 0) * (paquete.cantidad || 0);
     }, 0) || 0;
     return totalIndividuales + totalPaquetes;
   };
@@ -2008,34 +1999,38 @@ const PaginaDetalleReserva = () => {
       desglose[tipo].total += p.cantidad || 0;
     });
     reserva.paquetes?.forEach(paquete => {
-      paquete.desglose_pasajes?.forEach(d => {
-        const tipo = d.tipo || 'Pasajero';
+      if (paquete.desglose_pasajes?.length) {
+        paquete.desglose_pasajes.forEach(d => {
+          const tipo = d.tipo || 'Pasajero';
+          inicializar(tipo);
+          const total = (d.cantidad || 0) * (paquete.cantidad || 0);
+          desglose[tipo].paquetes += total;
+          desglose[tipo].total += total;
+        });
+      } else if (paquete.cantidad_total) {
+        const tipo = 'Pasajero'; // Fallback si no hay desglose
         inicializar(tipo);
-        const total = (d.cantidad || 0) * (paquete.cantidad || 0);
-        desglose[tipo].paquetes += total;
-        desglose[tipo].total += total;
-      });
+        desglose[tipo].paquetes += paquete.cantidad_total * (paquete.cantidad || 0);
+        desglose[tipo].total += paquete.cantidad_total * (paquete.cantidad || 0);
+      }
     });
     return desglose;
   };
 
-  // PDF MEJORADO: Más detalles, tabla simple con líneas
   const generarPDF = () => {
     if (!reserva) return;
     const doc = new jsPDF();
     let y = 20;
     const hoy = new Date().toLocaleDateString('es-ES');
 
-    // Título
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.text('Comprobante de Reserva', 20, y);
     doc.setFontSize(12);
-    doc.text(`#${reserva.id_reserva} - ${getEstadoTexto(reserva.estado)}`, 20, y + 10);
-
+    doc.text(`#${reserva.id} - ${getEstadoTexto(reserva.estado)}`, 20, y + 10);
     y += 20;
     doc.setFontSize(10);
-    doc.text(`Fecha de creación: ${formatearFecha(reserva.fecha_creacion)}`, 20, y);
+    doc.text(`Fecha de creación: ${formatearFecha(reserva.fecha_reserva)}`, 20, y);
     y += 7;
     doc.text(`Total a pagar: S/ ${reserva.total_pagar.toFixed(2)}`, 20, y);
     y += 7;
@@ -2044,7 +2039,6 @@ const PaginaDetalleReserva = () => {
     if (reserva.nombre_vendedor) doc.text(`Vendedor: ${reserva.nombre_vendedor}`, 20, y);
     y += 10;
 
-    // Detalles del Tour
     if (reserva.nombre_tour) {
       doc.text('Detalles del Tour:', 20, y);
       y += 7;
@@ -2060,34 +2054,37 @@ const PaginaDetalleReserva = () => {
       y += 10;
     }
 
-    // Desglose de Pasajes (tabla simple)
     if (reserva.cantidad_pasajes?.length) {
       doc.text('Pasajes Individuales:', 20, y);
       y += 7;
       reserva.cantidad_pasajes.forEach(p => {
-        doc.text(`${p.nombre_tipo || 'Pasajero'}: ${p.cantidad} x S/ ${p.precio_unitario?.toFixed(2)} = S/ ${p.subtotal?.toFixed(2)}`, 25, y);
+        doc.text(`${p.nombre_tipo || 'Pasajero'}: ${p.cantidad} x S/ ${p.precio_unitario?.toFixed(2) || 'N/A'} = S/ ${p.subtotal?.toFixed(2) || 'N/A'}`, 25, y);
         y += 7;
       });
       y += 5;
     }
 
-    // Desglose de Paquetes
     if (reserva.paquetes?.length) {
       doc.text('Paquetes:', 20, y);
       y += 7;
       reserva.paquetes.forEach(p => {
-        doc.text(`${p.nombre || 'Paquete'}: ${p.cantidad} x S/ ${p.precio_unitario.toFixed(2)} = S/ ${p.subtotal.toFixed(2)}`, 25, y);
+        const totalPas = p.cantidad_total || p.desglose_pasajes?.reduce((s, d) => s + d.cantidad, 0) || 0;
+        doc.text(`${p.nombre_paquete || 'Paquete'}: ${p.cantidad} x ${totalPas} personas = S/ ${p.subtotal.toFixed(2)}`, 25, y);
         y += 7;
+        if (p.desglose_pasajes?.length) {
+          p.desglose_pasajes.forEach(d => {
+            doc.text(`- ${d.tipo}: ${d.cantidad}`, 30, y);
+            y += 7;
+          });
+        }
       });
       y += 5;
     }
 
-    // Total
     doc.setFont('helvetica', 'bold');
     doc.text(`TOTAL: S/ ${reserva.total_pagar.toFixed(2)}`, 20, y);
     y += 10;
 
-    // Método de pago y notas
     if (reserva.metodo_pago) {
       doc.text(`Método de pago: ${reserva.metodo_pago}`, 20, y);
       y += 7;
@@ -2099,11 +2096,9 @@ const PaginaDetalleReserva = () => {
       y += 10;
     }
 
-    // Pie de página
     doc.setFontSize(8);
     doc.text(`Generado el ${hoy} - No válido como recibo fiscal`, 20, 280);
-
-    doc.save(`reserva_${reserva.id_reserva}.pdf`);
+    doc.save(`reserva_${reserva.id}.pdf`);
   };
 
   if (!autenticado) {
@@ -2125,11 +2120,9 @@ const PaginaDetalleReserva = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 text-center border border-blue-100">
-              <Cargador tamanio="lg" color="text-blue-600" />
-              <p className="mt-4 text-gray-600 text-lg">{t('reservas.cargandoDetalles')}</p>
-            </div>
+          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center border border-blue-100">
+            <Cargador tamanio="lg" color="text-blue-600" />
+            <p className="mt-4 text-gray-600 text-lg">{t('reservas.cargandoDetalles')}</p>
           </div>
         </div>
       </div>
@@ -2140,15 +2133,13 @@ const PaginaDetalleReserva = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-blue-100">
-              <Alerta mensaje={error || t('reservas.noCargada')} tipo="error" />
-              <div className="text-center mt-6">
-                <Link to="/mis-reservas" className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium">
-                  <ArrowLeft className="h-5 w-5 mr-2" />
-                  {t('reservas.volverMisReservas')}
-                </Link>
-              </div>
+          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 border border-blue-100">
+            <Alerta mensaje={error || t('reservas.noCargada')} tipo="error" />
+            <div className="text-center mt-6">
+              <Link to="/mis-reservas" className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium">
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                {t('reservas.volverMisReservas')}
+              </Link>
             </div>
           </div>
         </div>
@@ -2172,8 +2163,8 @@ const PaginaDetalleReserva = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">{t('reservas.reserva')} #{reserva.id_reserva}</h1>
-                  <p className="text-gray-600 mt-2 text-lg">{t('reservas.creadaEl')} {formatearFecha(reserva.fecha_creacion, 'completo')}</p>
+                  <h1 className="text-3xl font-bold text-gray-900">{t('reservas.reserva')} #{reserva.id}</h1>
+                  <p className="text-gray-600 mt-2 text-lg">{t('reservas.creadaEl')} {formatearFecha(reserva.fecha_reserva, 'completo')}</p>
                 </div>
               </div>
               <span className={`px-6 py-2 inline-flex items-center text-base font-semibold rounded-full ${getEstadoClase(reserva.estado)} border shadow-sm`}>
@@ -2263,7 +2254,6 @@ const PaginaDetalleReserva = () => {
                     </div>
                   </div>
                 ))}
-                {/* Pasajes Individuales */}
                 {reserva.cantidad_pasajes?.length && (
                   <div className="mb-8">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">{t('reservas.pasajesIndividuales')}</h4>
@@ -2271,18 +2261,17 @@ const PaginaDetalleReserva = () => {
                       <div key={index} className="bg-blue-50 rounded-xl p-5 border border-blue-100 mb-4">
                         <div className="flex justify-between">
                           <div>
-                            <div className="font-semibold text-gray-900">{pasaje.nombre_tipo}</div>
+                            <div className="font-semibold text-gray-900">{pasaje.nombre_tipo || 'Pasajero'}</div>
                             <div className="text-sm text-gray-600">Cantidad: {pasaje.cantidad}</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-lg font-bold text-blue-600">S/ {pasaje.subtotal?.toFixed(2)}</div>
+                            <div className="text-lg font-bold text-blue-600">S/ {pasaje.subtotal?.toFixed(2) || 'N/A'}</div>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-                {/* Paquetes */}
                 {reserva.paquetes?.length && (
                   <div className="mb-8">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -2290,28 +2279,30 @@ const PaginaDetalleReserva = () => {
                       {t('reservas.paquetesAdquiridos')}
                     </h4>
                     {reserva.paquetes.map((paquete, index) => {
-                      const totalPas = paquete.desglose_pasajes?.reduce((s, d) => s + d.cantidad, 0) || 0;
+                      const totalPas = paquete.cantidad_total || paquete.desglose_pasajes?.reduce((s, d) => s + d.cantidad, 0) || 0;
                       return (
                         <div key={index} className="bg-emerald-50 rounded-xl p-6 border border-emerald-100 mb-4">
                           <div className="flex justify-between mb-4">
                             <div>
-                              <div className="font-bold text-gray-900 text-lg">{paquete.nombre}</div>
+                              <div className="font-bold text-gray-900 text-lg">{paquete.nombre_paquete || 'Paquete'}</div>
                               <div className="text-sm text-gray-600">{paquete.cantidad} paquetes x {totalPas} personas</div>
                             </div>
                             <div className="text-right">
                               <div className="text-xl font-bold text-emerald-600">S/ {paquete.subtotal.toFixed(2)}</div>
                             </div>
                           </div>
-                          {paquete.desglose_pasajes?.length && (
+                          {paquete.desglose_pasajes?.length ? (
                             <details>
                               <summary className="text-sm font-medium text-emerald-700 cursor-pointer">Desglose</summary>
                               <div className="mt-4 space-y-2 text-sm">
                                 {paquete.desglose_pasajes.map((d, i) => (
-                                  <div key={i}>{d.tipo}: {d.cantidad} x {paquete.cantidad}</div>
+                                  <div key={i}>{d.tipo}: {d.cantidad}</div>
                                 ))}
                               </div>
                             </details>
-                          )}
+                          ) : paquete.cantidad_total ? (
+                            <div className="text-sm text-gray-600">Total personas: {paquete.cantidad_total}</div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -2320,35 +2311,13 @@ const PaginaDetalleReserva = () => {
               </div>
 
               {/* Información Adicional */}
-              {(reserva.instancia?.punto_encuentro || reserva.instancia?.instrucciones || reserva.notas || reserva.metodo_pago) && (
+              {(reserva.notas || reserva.metodo_pago) && (
                 <div className="bg-white rounded-2xl shadow-2xl p-8 border border-blue-100">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                     <FileText className="h-6 w-6 text-blue-600 mr-3" />
                     {t('reservas.informacionAdicional')}
                   </h3>
                   <div className="space-y-6">
-                    {reserva.instancia?.punto_encuentro && (
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                          <MapPin className="h-5 w-5 text-red-500 mr-2" />
-                          {t('reservas.puntoEncuentro')}
-                        </h4>
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                          <p className="text-gray-700">{reserva.instancia.punto_encuentro}</p>
-                        </div>
-                      </div>
-                    )}
-                    {reserva.instancia?.instrucciones && (
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                          <FileText className="h-5 w-5 text-amber-500 mr-2" />
-                          {t('reservas.instrucciones')}
-                        </h4>
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                          <p className="text-gray-700">{reserva.instancia.instrucciones}</p>
-                        </div>
-                      </div>
-                    )}
                     {reserva.notas && (
                       <div>
                         <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
@@ -2387,7 +2356,7 @@ const PaginaDetalleReserva = () => {
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm text-gray-500">{t('reservas.nombreCompleto')}</div>
-                      <div className="font-semibold text-gray-900">{reserva.cliente.nombres} {reserva.cliente.apellidos}</div>
+                      <div className="font-semibold text-gray-900">{reserva.nombre_cliente || `${reserva.cliente.nombres} ${reserva.cliente.apellidos}`}</div>
                     </div>
                     {reserva.cliente.email && <div><div className="text-sm text-gray-500">{t('reservas.email')}</div><div className="text-gray-900">{reserva.cliente.email}</div></div>}
                     {reserva.cliente.telefono && <div><div className="text-sm text-gray-500">{t('reservas.telefono')}</div><div className="text-gray-900">{reserva.cliente.telefono}</div></div>}
@@ -2413,12 +2382,11 @@ const PaginaDetalleReserva = () => {
                   {t('reservas.fechasImportantes')}
                 </h3>
                 <div className="space-y-4">
-                  <div><div className="text-sm text-gray-500">{t('reservas.reservaCreada')}</div><div className="text-gray-900">{formatearFecha(reserva.fecha_creacion, 'corto')}</div></div>
+                  <div><div className="text-sm text-gray-500">{t('reservas.reservaCreada')}</div><div className="text-gray-900">{formatearFecha(reserva.fecha_reserva, 'corto')}</div></div>
                   <div><div className="text-sm text-gray-500">{t('reservas.ultimaActualizacion')}</div><div className="text-gray-900">{formatearFecha(reserva.fecha_actualizacion, 'corto')}</div></div>
                   {reserva.fecha_expiracion && <div><div className="text-sm text-gray-500">{t('reservas.fechaExpiracion')}</div><div className="text-amber-600">{formatearFecha(reserva.fecha_expiracion, 'corto')}</div></div>}
                 </div>
               </div>
-              {/* Acciones */}
               <div className="bg-white rounded-2xl shadow-2xl p-8 border border-blue-100 no-print">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">{t('reservas.acciones')}</h3>
                 <div className="space-y-4">
