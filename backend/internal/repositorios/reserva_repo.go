@@ -2,6 +2,7 @@ package repositorios
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sistema-toursseft/internal/entidades"
@@ -20,13 +21,14 @@ func NewReservaRepository(db *sql.DB) *ReservaRepository {
 	}
 }
 
+/*
 // GetByID obtiene una reserva por su ID
 func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
 	// Inicializar objeto de reserva
 	reserva := &entidades.Reserva{}
 
 	// Consulta para obtener datos básicos de la reserva
-	query := `SELECT r.id_reserva, r.id_vendedor, r.id_cliente, r.id_instancia, 
+	query := `SELECT r.id_reserva, r.id_vendedor, r.id_cliente, r.id_instancia,
               r.fecha_reserva, r.total_pagar, r.notas, r.estado, r.eliminado,
               c.nombres || ' ' || c.apellidos as nombre_cliente,
               COALESCE(u.nombres || ' ' || u.apellidos, 'Web') as nombre_vendedor,
@@ -89,7 +91,7 @@ func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
 	}
 
 	// Obtener los paquetes de pasajes
-	queryPaquetes := `SELECT ppd.id_paquete, pp.nombre as nombre_paquete, ppd.cantidad, 
+	queryPaquetes := `SELECT ppd.id_paquete, pp.nombre as nombre_paquete, ppd.cantidad,
                      pp.precio_total as precio_unitario, (ppd.cantidad * pp.precio_total) as subtotal,
                      pp.cantidad_total
                      FROM paquete_pasaje_detalle ppd
@@ -124,7 +126,7 @@ func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
 
 	// Obtener el método de pago (si existe) - CORREGIDO
 	queryMetodoPago := `
-		SELECT COALESCE(p.metodo_pago, 'No registrado') 
+		SELECT COALESCE(p.metodo_pago, 'No registrado')
 		FROM pago p
 		WHERE p.id_reserva = $1 AND p.eliminado = FALSE
 		ORDER BY p.fecha_pago DESC
@@ -138,6 +140,132 @@ func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
 	} else if err == nil {
 		// Si se encontró un método de pago, asignarlo
 		reserva.MetodoPago = metodoPago
+	}
+
+	return reserva, nil
+}*/
+
+// GetByID obtiene una reserva por su ID
+func (r *ReservaRepository) GetByID(id int) (*entidades.Reserva, error) {
+	// Inicializar objeto de reserva
+	reserva := &entidades.Reserva{}
+
+	// Consulta para obtener datos básicos de la reserva
+	query := `SELECT r.id_reserva, r.id_vendedor, r.id_cliente, r.id_instancia, 
+              r.fecha_reserva, r.total_pagar, r.notas, r.estado, r.eliminado,
+              c.nombres || ' ' || c.apellidos as nombre_cliente,
+              COALESCE(u.nombres || ' ' || u.apellidos, 'Web') as nombre_vendedor,
+              tt.nombre as nombre_tour,
+              to_char(it.fecha_especifica, 'DD/MM/YYYY') as fecha_tour,
+              to_char(it.hora_inicio, 'HH24:MI') as hora_inicio_tour,
+              to_char(it.hora_fin, 'HH24:MI') as hora_fin_tour,
+              r.fecha_expiracion
+              FROM reserva r
+              INNER JOIN cliente c ON r.id_cliente = c.id_cliente
+              LEFT JOIN usuario u ON r.id_vendedor = u.id_usuario
+              INNER JOIN instancia_tour it ON r.id_instancia = it.id_instancia
+              INNER JOIN tour_programado tp ON it.id_tour_programado = tp.id_tour_programado
+              INNER JOIN tipo_tour tt ON tp.id_tipo_tour = tt.id_tipo_tour
+              WHERE r.id_reserva = $1 AND r.eliminado = FALSE`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&reserva.ID, &reserva.IDVendedor, &reserva.IDCliente, &reserva.IDInstancia,
+		&reserva.FechaReserva, &reserva.TotalPagar, &reserva.Notas, &reserva.Estado, &reserva.Eliminado,
+		&reserva.NombreCliente, &reserva.NombreVendedor, &reserva.NombreTour,
+		&reserva.FechaTour, &reserva.HoraInicioTour, &reserva.HoraFinTour, &reserva.FechaExpiracion,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("reserva no encontrada")
+		}
+		return nil, err
+	}
+
+	// Obtener las cantidades de pasajes individuales
+	queryPasajes := `SELECT pc.id_tipo_pasaje, tp.nombre, pc.cantidad
+                    FROM pasajes_cantidad pc
+                    INNER JOIN tipo_pasaje tp ON pc.id_tipo_pasaje = tp.id_tipo_pasaje
+                    WHERE pc.id_reserva = $1 AND pc.eliminado = FALSE`
+
+	rowsPasajes, err := r.db.Query(queryPasajes, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsPasajes.Close()
+
+	reserva.CantidadPasajes = []entidades.PasajeCantidad{}
+
+	for rowsPasajes.Next() {
+		var pasajeCantidad entidades.PasajeCantidad
+		err := rowsPasajes.Scan(
+			&pasajeCantidad.IDTipoPasaje, &pasajeCantidad.NombreTipo, &pasajeCantidad.Cantidad,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reserva.CantidadPasajes = append(reserva.CantidadPasajes, pasajeCantidad)
+	}
+
+	if err = rowsPasajes.Err(); err != nil {
+		return nil, err
+	}
+
+	// Obtener los paquetes de pasajes
+	queryPaquetes := `SELECT ppd.id_paquete, pp.nombre as nombre_paquete, ppd.cantidad, 
+                     pp.precio_total as precio_unitario, (ppd.cantidad * pp.precio_total) as subtotal,
+                     pp.cantidad_total
+                     FROM paquete_pasaje_detalle ppd
+                     INNER JOIN paquete_pasajes pp ON ppd.id_paquete = pp.id_paquete
+                     WHERE ppd.id_reserva = $1 AND ppd.eliminado = FALSE`
+
+	rowsPaquetes, err := r.db.Query(queryPaquetes, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsPaquetes.Close()
+
+	reserva.Paquetes = []entidades.PaquetePasajeDetalle{}
+
+	for rowsPaquetes.Next() {
+		var paquete entidades.PaquetePasajeDetalle
+		err := rowsPaquetes.Scan(
+			&paquete.IDPaquete, &paquete.NombrePaquete, &paquete.Cantidad,
+			&paquete.PrecioUnitario, &paquete.Subtotal, &paquete.CantidadTotal,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reserva.Paquetes = append(reserva.Paquetes, paquete)
+	}
+
+	if err = rowsPaquetes.Err(); err != nil {
+		return nil, err
+	}
+
+	// Obtener el método de pago
+	queryMetodoPago := `
+		SELECT COALESCE(p.metodo_pago, 'No registrado') 
+		FROM pago p
+		WHERE p.id_reserva = $1 AND p.eliminado = FALSE
+		ORDER BY p.fecha_pago DESC
+		LIMIT 1
+	`
+	var metodoPago string
+	err = r.db.QueryRow(queryMetodoPago, id).Scan(&metodoPago)
+	if err != nil && err != sql.ErrNoRows {
+		fmt.Printf("Error al obtener método de pago para reserva %d: %v\n", id, err)
+	} else if err == nil {
+		reserva.MetodoPago = metodoPago
+	}
+
+	// ⬇️⬇️⬇️  IMPRIMIR EL JSON DE LA RESERVA  ⬇️⬇️⬇️
+	jsonReserva, err := json.MarshalIndent(reserva, "", "  ")
+	if err != nil {
+		fmt.Println("❌ Error al generar el JSON:", err)
+	} else {
+		fmt.Println("✅ JSON de la reserva:")
+		fmt.Println(string(jsonReserva))
 	}
 
 	return reserva, nil
