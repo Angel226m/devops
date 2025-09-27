@@ -1,4 +1,4 @@
-package controladores
+/*package controladores
 
 import (
 	"encoding/base64"
@@ -522,10 +522,10 @@ func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
 	       ctx.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	       fmt.Printf("WebhookMercadoPago: Body: %s\n", string(bodyBytes))
 	   }
-	*/
+*/
 
-	// Estrategia 1: Intentar obtener parámetros estándar
-	topic := ctx.Query("topic")
+// Estrategia 1: Intentar obtener parámetros estándar
+/*topic := ctx.Query("topic")
 	id := ctx.Query("id")
 
 	// Estrategia 2: Intentar obtener parámetros en formato alternativo
@@ -800,4 +800,943 @@ func (c *ReservaController) ProcessExpiredReservations(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, utils.SuccessResponse(fmt.Sprintf("Se procesaron %d reservas expiradas", count), gin.H{
 		"processed_count": count,
 	}))
+}
+*/
+
+package controladores
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sistema-toursseft/internal/entidades"
+	"sistema-toursseft/internal/servicios"
+	"sistema-toursseft/internal/utils"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+// ReservaController maneja los endpoints de reservas
+type ReservaController struct {
+	reservaService     *servicios.ReservaService
+	mercadoPagoService *servicios.MercadoPagoService
+}
+
+// NewReservaController crea una nueva instancia de ReservaController
+func NewReservaController(
+	reservaService *servicios.ReservaService,
+	mercadoPagoService *servicios.MercadoPagoService,
+) *ReservaController {
+	return &ReservaController{
+		reservaService:     reservaService,
+		mercadoPagoService: mercadoPagoService,
+	}
+}
+
+// Create crea una nueva reserva
+func (c *ReservaController) Create(ctx *gin.Context) {
+	fmt.Printf("Create: Iniciando creación de nueva reserva\n")
+	var reservaReq entidades.NuevaReservaRequest
+
+	// Parsear request
+	if err := ctx.ShouldBindJSON(&reservaReq); err != nil {
+		fmt.Printf("Create: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+	fmt.Printf("Create: Solicitud recibida: %+v\n", reservaReq)
+
+	// Validar datos
+	if err := utils.ValidateStruct(reservaReq); err != nil {
+		fmt.Printf("Create: Error de validación: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Si es una reserva de vendedor, obtener el ID del vendedor del contexto
+	if ctx.GetString("rol") == "VENDEDOR" {
+		vendedorID := ctx.GetInt("user_id")
+		reservaReq.IDVendedor = &vendedorID
+		fmt.Printf("Create: Reserva creada por vendedor ID=%d\n", vendedorID)
+	}
+
+	// Crear reserva
+	id, err := c.reservaService.Create(&reservaReq)
+	if err != nil {
+		fmt.Printf("Create: Error al crear reserva: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al crear reserva", err))
+		return
+	}
+	fmt.Printf("Create: Reserva creada con ID=%d\n", id)
+
+	// Obtener la reserva creada
+	reserva, err := c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("Create: Error al obtener reserva creada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva creada", err))
+		return
+	}
+
+	// Respuesta exitosa
+	response := utils.SuccessResponse("Reserva creada exitosamente", reserva)
+	fmt.Printf("Create: Enviando respuesta: %+v\n", response)
+	ctx.JSON(http.StatusCreated, response)
+}
+
+// GetByID obtiene una reserva por su ID
+func (c *ReservaController) GetByID(ctx *gin.Context) {
+	fmt.Printf("GetByID: Iniciando obtención de reserva\n")
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		fmt.Printf("GetByID: ID inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+	fmt.Printf("GetByID: Buscando reserva con ID=%d\n", id)
+
+	reserva, err := c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("GetByID: Reserva no encontrada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+
+	response := utils.SuccessResponse("Reserva obtenida", reserva)
+	fmt.Printf("GetByID: Enviando respuesta para ID=%d: %+v\n", id, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// Update actualiza una reserva existente
+func (c *ReservaController) Update(ctx *gin.Context) {
+	fmt.Printf("Update: Iniciando actualización de reserva\n")
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		fmt.Printf("Update: ID inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+	fmt.Printf("Update: Actualizando reserva con ID=%d\n", id)
+
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("Update: Reserva no encontrada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+
+	var reservaReq entidades.ActualizarReservaRequest
+	if err := ctx.ShouldBindJSON(&reservaReq); err != nil {
+		fmt.Printf("Update: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+	fmt.Printf("Update: Solicitud recibida: %+v\n", reservaReq)
+
+	if err := utils.ValidateStruct(reservaReq); err != nil {
+		fmt.Printf("Update: Error de validación: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Si es una reserva de vendedor, obtener el ID del vendedor del contexto
+	if ctx.GetString("rol") == "VENDEDOR" {
+		vendedorID := ctx.GetInt("user_id")
+		reservaReq.IDVendedor = &vendedorID
+		fmt.Printf("Update: Reserva actualizada por vendedor ID=%d\n", vendedorID)
+	}
+
+	err = c.reservaService.Update(id, &reservaReq)
+	if err != nil {
+		fmt.Printf("Update: Error al actualizar reserva ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar reserva", err))
+		return
+	}
+
+	// Obtener la reserva actualizada
+	reserva, err := c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("Update: Error al obtener reserva actualizada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+		return
+	}
+
+	response := utils.SuccessResponse("Reserva actualizada exitosamente", reserva)
+	fmt.Printf("Update: Enviando respuesta para ID=%d: %+v\n", id, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// List lista todas las reservas activas
+func (c *ReservaController) List(ctx *gin.Context) {
+	fmt.Printf("List: Iniciando listado de todas las reservas\n")
+	reservas, err := c.reservaService.List()
+	if err != nil {
+		fmt.Printf("List: Error al listar reservas: %v\n", err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("List: Se encontraron %d reservas\n", len(reservas))
+
+	response := utils.SuccessResponse("Reservas listadas exitosamente", reservas)
+	fmt.Printf("List: Enviando respuesta: %+v\n", response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// CambiarEstado cambia el estado de una reserva
+func (c *ReservaController) CambiarEstado(ctx *gin.Context) {
+	fmt.Printf("CambiarEstado: Iniciando cambio de estado de reserva\n")
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		fmt.Printf("CambiarEstado: ID inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+	fmt.Printf("CambiarEstado: Cambiando estado de reserva ID=%d\n", id)
+
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("CambiarEstado: Reserva no encontrada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+
+	var estadoReq entidades.CambiarEstadoReservaRequest
+	if err := ctx.ShouldBindJSON(&estadoReq); err != nil {
+		fmt.Printf("CambiarEstado: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+	fmt.Printf("CambiarEstado: Solicitud de cambio de estado: %+v\n", estadoReq)
+
+	if err := utils.ValidateStruct(estadoReq); err != nil {
+		fmt.Printf("CambiarEstado: Error de validación: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	err = c.reservaService.CambiarEstado(id, estadoReq.Estado)
+	if err != nil {
+		fmt.Printf("CambiarEstado: Error al cambiar estado de reserva ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al cambiar estado de la reserva", err))
+		return
+	}
+
+	// Obtener la reserva actualizada
+	reservaActualizada, err := c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("CambiarEstado: Error al obtener reserva actualizada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+		return
+	}
+
+	response := utils.SuccessResponse("Estado de la reserva actualizado exitosamente", reservaActualizada)
+	fmt.Printf("CambiarEstado: Enviando respuesta para ID=%d: %+v\n", id, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// Delete realiza una eliminación lógica de una reserva
+func (c *ReservaController) Delete(ctx *gin.Context) {
+	fmt.Printf("Delete: Iniciando eliminación de reserva\n")
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		fmt.Printf("Delete: ID inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+	fmt.Printf("Delete: Eliminando reserva con ID=%d\n", id)
+
+	// Verificar que la reserva existe
+	_, err = c.reservaService.GetByID(id)
+	if err != nil {
+		fmt.Printf("Delete: Reserva no encontrada ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+
+	err = c.reservaService.Delete(id)
+	if err != nil {
+		fmt.Printf("Delete: Error al eliminar reserva ID=%d: %v\n", id, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al eliminar reserva", err))
+		return
+	}
+
+	response := utils.SuccessResponse("Reserva eliminada exitosamente", nil)
+	fmt.Printf("Delete: Enviando respuesta para ID=%d: %+v\n", id, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ListByCliente lista todas las reservas de un cliente
+func (c *ReservaController) ListByCliente(ctx *gin.Context) {
+	fmt.Printf("ListByCliente: Iniciando listado de reservas del cliente\n")
+	idCliente, err := strconv.Atoi(ctx.Param("idCliente"))
+	if err != nil {
+		fmt.Printf("ListByCliente: ID de cliente inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de cliente inválido", err))
+		return
+	}
+	fmt.Printf("ListByCliente: Buscando reservas para cliente ID=%d\n", idCliente)
+
+	reservas, err := c.reservaService.ListByCliente(idCliente)
+	if err != nil {
+		fmt.Printf("ListByCliente: Error al listar reservas para cliente ID=%d: %v\n", idCliente, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar reservas del cliente", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("ListByCliente: Se encontraron %d reservas para cliente ID=%d\n", len(reservas), idCliente)
+
+	response := utils.SuccessResponse("Reservas del cliente listadas exitosamente", reservas)
+	fmt.Printf("ListByCliente: Enviando respuesta para cliente ID=%d: %+v\n", idCliente, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ListByInstancia lista todas las reservas para una instancia específica
+func (c *ReservaController) ListByInstancia(ctx *gin.Context) {
+	fmt.Printf("ListByInstancia: Iniciando listado de reservas por instancia\n")
+	idInstancia, err := strconv.Atoi(ctx.Param("idInstancia"))
+	if err != nil {
+		fmt.Printf("ListByInstancia: ID de instancia inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de instancia inválido", err))
+		return
+	}
+	fmt.Printf("ListByInstancia: Buscando reservas para instancia ID=%d\n", idInstancia)
+
+	reservas, err := c.reservaService.ListByInstancia(idInstancia)
+	if err != nil {
+		fmt.Printf("ListByInstancia: Error al listar reservas para instancia ID=%d: %v\n", idInstancia, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar reservas de la instancia", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("ListByInstancia: Se encontraron %d reservas para instancia ID=%d\n", len(reservas), idInstancia)
+
+	response := utils.SuccessResponse("Reservas de la instancia listadas exitosamente", reservas)
+	fmt.Printf("ListByInstancia: Enviando respuesta para instancia ID=%d: %+v\n", idInstancia, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ListByFecha lista todas las reservas para una fecha específica
+func (c *ReservaController) ListByFecha(ctx *gin.Context) {
+	fmt.Printf("ListByFecha: Iniciando listado de reservas por fecha\n")
+	fechaStr := ctx.Param("fecha")
+	fecha, err := time.Parse("2006-01-02", fechaStr)
+	if err != nil {
+		fmt.Printf("ListByFecha: Formato de fecha inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Formato de fecha inválido, debe ser YYYY-MM-DD", err))
+		return
+	}
+	fmt.Printf("ListByFecha: Buscando reservas para fecha=%s\n", fechaStr)
+
+	reservas, err := c.reservaService.ListByFecha(fecha)
+	if err != nil {
+		fmt.Printf("ListByFecha: Error al listar reservas para fecha=%s: %v\n", fechaStr, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas por fecha", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("ListByFecha: Se encontraron %d reservas para fecha=%s\n", len(reservas), fechaStr)
+
+	response := utils.SuccessResponse("Reservas por fecha listadas exitosamente", reservas)
+	fmt.Printf("ListByFecha: Enviando respuesta para fecha=%s: %+v\n", fechaStr, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ListByEstado lista todas las reservas por estado
+func (c *ReservaController) ListByEstado(ctx *gin.Context) {
+	fmt.Printf("ListByEstado: Iniciando listado de reservas por estado\n")
+	estado := ctx.Param("estado")
+	fmt.Printf("ListByEstado: Buscando reservas con estado=%s\n", estado)
+
+	reservas, err := c.reservaService.ListByEstado(estado)
+	if err != nil {
+		fmt.Printf("ListByEstado: Error al listar reservas para estado=%s: %v\n", estado, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al listar reservas por estado", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("ListByEstado: Se encontraron %d reservas para estado=%s\n", len(reservas), estado)
+
+	response := utils.SuccessResponse("Reservas por estado listadas exitosamente", reservas)
+	fmt.Printf("ListByEstado: Enviando respuesta para estado=%s: %+v\n", estado, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ListMyReservas lista todas las reservas del cliente autenticado
+func (c *ReservaController) ListMyReservas(ctx *gin.Context) {
+	fmt.Println("ListMyReservas: Iniciando obtención de reservas del cliente")
+	fmt.Printf("ListMyReservas: Contexto disponible: %v\n", ctx.Keys)
+
+	// Obtener ID del cliente utilizando múltiples estrategias
+	var clienteID int
+	var err error
+
+	// Estrategia 1: Obtener del contexto
+	clienteIDValue, exists := ctx.Get("userID")
+	if exists {
+		// Intentar conversión directa o desde float64
+		switch v := clienteIDValue.(type) {
+		case int:
+			clienteID = v
+			fmt.Printf("ListMyReservas: ID de cliente obtenido del contexto: %d\n", clienteID)
+		case float64:
+			clienteID = int(v)
+			fmt.Printf("ListMyReservas: ID de cliente obtenido del contexto (float64): %d\n", clienteID)
+		default:
+			fmt.Printf("ListMyReservas: Tipo inesperado en userID: %T\n", clienteIDValue)
+		}
+	}
+
+	// Estrategia 2: Si no se obtuvo del contexto, extraer del token
+	if clienteID <= 0 {
+		tokenString, cookieErr := ctx.Cookie("access_token")
+		if cookieErr == nil {
+			clienteID, err = extractClienteIDFromToken(tokenString)
+			if err != nil {
+				fmt.Printf("ListMyReservas: Error al extraer ID del token: %v\n", err)
+			} else {
+				fmt.Printf("ListMyReservas: ID de cliente extraído del token: %d\n", clienteID)
+			}
+		} else {
+			fmt.Printf("ListMyReservas: Error al obtener cookie access_token: %v\n", cookieErr)
+		}
+	}
+
+	// Verificar que tenemos un ID válido
+	if clienteID <= 0 {
+		fmt.Println("ListMyReservas: Cliente no autenticado o ID inválido")
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Cliente no autenticado o ID inválido", nil))
+		return
+	}
+
+	fmt.Printf("ListMyReservas: Usando ID de cliente: %d\n", clienteID)
+
+	// Obtener reservas del cliente
+	reservas, err := c.reservaService.ListByCliente(clienteID)
+	if err != nil {
+		fmt.Printf("ListMyReservas: Error al listar reservas para cliente ID=%d: %v\n", clienteID, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar reservas del cliente", err))
+		return
+	}
+
+	// Si no hay reservas, devolver array vacío
+	if reservas == nil {
+		reservas = []*entidades.Reserva{}
+	}
+	fmt.Printf("ListMyReservas: Se encontraron %d reservas para cliente ID=%d\n", len(reservas), clienteID)
+
+	response := utils.SuccessResponse("Mis reservas listadas exitosamente", reservas)
+	fmt.Printf("ListMyReservas: Enviando respuesta para cliente ID=%d: %+v\n", clienteID, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// extractClienteIDFromToken extrae el ID del cliente de un token JWT
+func extractClienteIDFromToken(tokenString string) (int, error) {
+	fmt.Printf("extractClienteIDFromToken: Iniciando extracción de ID del token\n")
+	// Dividir el token en sus partes (header.payload.signature)
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		fmt.Println("extractClienteIDFromToken: Formato de token inválido")
+		return 0, fmt.Errorf("formato de token inválido")
+	}
+
+	// Decodificar la parte del payload (claims)
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		fmt.Printf("extractClienteIDFromToken: Error al decodificar payload: %v\n", err)
+		return 0, fmt.Errorf("error al decodificar payload: %v", err)
+	}
+
+	// Parsear el JSON de los claims
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		fmt.Printf("extractClienteIDFromToken: Error al parsear claims: %v\n", err)
+		return 0, fmt.Errorf("error al parsear claims: %v", err)
+	}
+	fmt.Printf("extractClienteIDFromToken: Claims decodificados: %+v\n", claims)
+
+	// Intentar extraer cliente_id de diferentes formas posibles
+	if clienteIDFloat, ok := claims["cliente_id"].(float64); ok {
+		clienteID := int(clienteIDFloat)
+		fmt.Printf("extractClienteIDFromToken: ID de cliente encontrado (cliente_id): %d\n", clienteID)
+		return clienteID, nil
+	}
+
+	if subFloat, ok := claims["sub"].(float64); ok {
+		clienteID := int(subFloat)
+		fmt.Printf("extractClienteIDFromToken: ID de cliente encontrado (sub): %d\n", clienteID)
+		return clienteID, nil
+	}
+
+	if userIDFloat, ok := claims["user_id"].(float64); ok {
+		clienteID := int(userIDFloat)
+		fmt.Printf("extractClienteIDFromToken: ID de cliente encontrado (user_id): %d\n", clienteID)
+		return clienteID, nil
+	}
+
+	fmt.Println("extractClienteIDFromToken: Identificador de cliente no encontrado en el token")
+	return 0, fmt.Errorf("identificador de cliente no encontrado en el token")
+}
+
+// VerificarDisponibilidadInstancia verifica si hay suficiente cupo para una cantidad de pasajeros
+func (c *ReservaController) VerificarDisponibilidadInstancia(ctx *gin.Context) {
+	fmt.Printf("VerificarDisponibilidadInstancia: Iniciando verificación de disponibilidad\n")
+	idInstancia, err := strconv.Atoi(ctx.Param("idInstancia"))
+	if err != nil {
+		fmt.Printf("VerificarDisponibilidadInstancia: ID de instancia inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de instancia inválido", err))
+		return
+	}
+	cantidadStr := ctx.Query("cantidad")
+	if cantidadStr == "" {
+		fmt.Println("VerificarDisponibilidadInstancia: Debe especificar la cantidad de pasajeros")
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Debe especificar la cantidad de pasajeros", nil))
+		return
+	}
+	cantidad, err := strconv.Atoi(cantidadStr)
+	if err != nil {
+		fmt.Printf("VerificarDisponibilidadInstancia: Cantidad de pasajeros inválida: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Cantidad de pasajeros inválida", err))
+		return
+	}
+	fmt.Printf("VerificarDisponibilidadInstancia: Verificando para instancia ID=%d, cantidad=%d\n", idInstancia, cantidad)
+
+	disponible, err := c.reservaService.VerificarDisponibilidadInstancia(idInstancia, cantidad)
+	if err != nil {
+		fmt.Printf("VerificarDisponibilidadInstancia: Error al verificar disponibilidad: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al verificar disponibilidad", err))
+		return
+	}
+
+	response := utils.SuccessResponse("Verificación de disponibilidad exitosa", map[string]interface{}{
+		"disponible": disponible,
+	})
+	fmt.Printf("VerificarDisponibilidadInstancia: Enviando respuesta para instancia ID=%d: %+v\n", idInstancia, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// ReservarConMercadoPago crea una reserva y genera una preferencia de pago
+func (c *ReservaController) ReservarConMercadoPago(ctx *gin.Context) {
+	fmt.Printf("ReservarConMercadoPago: Iniciando creación de reserva con MercadoPago\n")
+	var request entidades.ReservaMercadoPagoRequest
+
+	// Parsear y validar la solicitud
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		fmt.Printf("ReservarConMercadoPago: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+	fmt.Printf("ReservarConMercadoPago: Solicitud recibida: %+v\n", request)
+
+	if err := utils.ValidateStruct(request); err != nil {
+		fmt.Printf("ReservarConMercadoPago: Error de validación: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Obtener URL base del frontend para redirecciones
+	frontendURL := ctx.GetHeader("Origin")
+	if frontendURL == "" {
+		frontendURL = "https://reservas.angelproyect.com"
+		fmt.Printf("ReservarConMercadoPago: Usando URL predeterminada: %s\n", frontendURL)
+	} else {
+		fmt.Printf("ReservarConMercadoPago: Usando URL del header Origin: %s\n", frontendURL)
+	}
+
+	// Crear reserva y generar preferencia de pago
+	response, err := c.reservaService.ReservarConMercadoPago(&request, c.mercadoPagoService, frontendURL)
+	if err != nil {
+		fmt.Printf("ReservarConMercadoPago: Error al crear reserva con MercadoPago: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al crear reserva con Mercado Pago", err))
+		return
+	}
+
+	fmt.Printf("ReservarConMercadoPago: Preferencia creada correctamente para reserva ID=%d, preferenceID=%s\n",
+		response.IDReserva, response.PreferenceID)
+
+	ctx.JSON(http.StatusCreated, utils.SuccessResponse("Reserva creada exitosamente", response))
+	fmt.Printf("ReservarConMercadoPago: Enviando respuesta para reserva ID=%d: %+v\n", response.IDReserva, response)
+}
+
+// ConfirmarPagoReserva confirma una reserva después de recibir el pago
+func (c *ReservaController) ConfirmarPagoReserva(ctx *gin.Context) {
+	fmt.Printf("ConfirmarPagoReserva: Iniciando confirmación de pago\n")
+	var request struct {
+		IDReserva     int     `json:"id_reserva" validate:"required"`
+		IDTransaccion string  `json:"id_transaccion" validate:"required"`
+		Monto         float64 `json:"monto" validate:"required,min=0"`
+	}
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		fmt.Printf("ConfirmarPagoReserva: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+	fmt.Printf("ConfirmarPagoReserva: Solicitud recibida: %+v\n", request)
+
+	if err := utils.ValidateStruct(request); err != nil {
+		fmt.Printf("ConfirmarPagoReserva: Error de validación: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	// Confirmar pago y actualizar reserva
+	err := c.reservaService.ConfirmarPagoReserva(request.IDReserva, request.IDTransaccion, request.Monto)
+	if err != nil {
+		fmt.Printf("ConfirmarPagoReserva: Error al confirmar pago para reserva ID=%d: %v\n", request.IDReserva, err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al confirmar pago de la reserva", err))
+		return
+	}
+
+	// Obtener la reserva actualizada
+	reserva, err := c.reservaService.GetByID(request.IDReserva)
+	if err != nil {
+		fmt.Printf("ConfirmarPagoReserva: Error al obtener reserva actualizada ID=%d: %v\n", request.IDReserva, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+		return
+	}
+
+	fmt.Printf("ConfirmarPagoReserva: Pago confirmado para reserva ID=%d, transacción=%s, monto=%.2f\n",
+		request.IDReserva, request.IDTransaccion, request.Monto)
+
+	response := utils.SuccessResponse("Pago confirmado exitosamente", reserva)
+	fmt.Printf("ConfirmarPagoReserva: Enviando respuesta para reserva ID=%d: %+v\n", request.IDReserva, response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// WebhookMercadoPago procesa las notificaciones de webhook de Mercado Pago
+func (c *ReservaController) WebhookMercadoPago(ctx *gin.Context) {
+	fmt.Printf("WebhookMercadoPago: URL recibida: %s\n", ctx.Request.URL.String())
+	fmt.Printf("WebhookMercadoPago: Método: %s\n", ctx.Request.Method)
+	fmt.Printf("WebhookMercadoPago: Headers: %v\n", ctx.Request.Header)
+
+	// Estrategia 1: Intentar obtener parámetros estándar
+	topic := ctx.Query("topic")
+	id := ctx.Query("id")
+
+	// Estrategia 2: Intentar obtener parámetros en formato alternativo
+	if topic == "" {
+		topic = ctx.Query("type")
+		fmt.Printf("WebhookMercadoPago: Usando topic alternativo: %s\n", topic)
+	}
+
+	if id == "" {
+		id = ctx.Query("data.id")
+		fmt.Printf("WebhookMercadoPago: Usando id alternativo: %s\n", id)
+	}
+
+	fmt.Printf("WebhookMercadoPago: Procesando con topic/type=%s, id/data.id=%s\n", topic, id)
+
+	// Validar que tenemos los parámetros necesarios
+	if topic == "" || id == "" {
+		fmt.Println("WebhookMercadoPago: Parámetros inválidos o faltantes")
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Parámetros inválidos: se requiere topic/type e id/data.id", nil))
+		return
+	}
+
+	// Procesar según el tipo de evento
+	switch topic {
+	case "payment":
+		// Obtener información detallada del pago
+		paymentInfo, err := c.mercadoPagoService.GetPaymentInfo(id)
+		if err != nil {
+			fmt.Printf("WebhookMercadoPago: Error al obtener información del pago: %v\n", err)
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener información del pago", err))
+			return
+		}
+
+		fmt.Printf("WebhookMercadoPago: Información del pago obtenida: status=%s, external_reference=%s, payment_method_id=%s\n",
+			paymentInfo.Status, paymentInfo.ExternalReference, paymentInfo.PaymentMethodId)
+
+		// Extraer ID de reserva del external_reference (formato "RESERVA-12345")
+		idReservaStr := ""
+		if paymentInfo.ExternalReference != "" {
+			idReservaStr = strings.TrimPrefix(paymentInfo.ExternalReference, "RESERVA-")
+			fmt.Printf("WebhookMercadoPago: ID de reserva extraído: %s\n", idReservaStr)
+		}
+
+		if idReservaStr == "" {
+			fmt.Println("WebhookMercadoPago: Referencia externa vacía o inválida")
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Referencia externa inválida", nil))
+			return
+		}
+
+		idReserva, err := strconv.Atoi(idReservaStr)
+		if err != nil {
+			fmt.Printf("WebhookMercadoPago: Error al convertir ID de reserva: %v\n", err)
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+			return
+		}
+
+		fmt.Printf("WebhookMercadoPago: Procesando reserva ID=%d con estado de pago=%s\n", idReserva, paymentInfo.Status)
+
+		// Procesar según el estado del pago
+		switch paymentInfo.Status {
+		case "approved":
+			// Confirmar la reserva si el pago está aprobado
+			err = c.reservaService.ConfirmarPagoReserva(idReserva, id, paymentInfo.TransactionAmount)
+			if err != nil {
+				fmt.Printf("WebhookMercadoPago: Error al confirmar reserva: %v\n", err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al confirmar reserva", err))
+				return
+			}
+			fmt.Printf("WebhookMercadoPago: Reserva %d confirmada exitosamente\n", idReserva)
+
+		case "rejected", "cancelled":
+			// Cancelar la reserva si el pago fue rechazado o cancelado
+			err = c.reservaService.UpdateEstado(idReserva, "CANCELADA")
+			if err != nil {
+				fmt.Printf("WebhookMercadoPago: Error al cancelar reserva: %v\n", err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al cancelar reserva", err))
+				return
+			}
+			fmt.Printf("WebhookMercadoPago: Reserva %d cancelada por pago rechazado\n", idReserva)
+
+		case "pending", "in_process":
+			// Actualizar fecha de expiración según el método de pago
+			err = c.reservaService.UpdateExpirationByPaymentMethod(idReserva, paymentInfo.PaymentMethodId)
+			if err != nil {
+				fmt.Printf("WebhookMercadoPago: Error al actualizar fecha de expiración: %v\n", err)
+				// No fallar el webhook por esto
+			}
+			fmt.Printf("WebhookMercadoPago: Fecha de expiración actualizada para reserva %d (método: %s)\n",
+				idReserva, paymentInfo.PaymentMethodId)
+		}
+
+	case "merchant_order":
+		fmt.Printf("WebhookMercadoPago: Recibida notificación de merchant_order ID=%s\n", id)
+	}
+
+	response := utils.SuccessResponse("Webhook procesado exitosamente", nil)
+	fmt.Printf("WebhookMercadoPago: Enviando respuesta: %+v\n", response)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// VerificarYConfirmarPago verifica el estado del pago y actualiza la reserva
+func (c *ReservaController) VerificarYConfirmarPago(ctx *gin.Context) {
+	fmt.Printf("VerificarYConfirmarPago: Iniciando verificación con id_reserva=%s, status=%s, payment_id=%s, preference_id=%s\n",
+		ctx.Query("id_reserva"), ctx.Query("status"), ctx.Query("payment_id"), ctx.Query("preference_id"))
+
+	// Obtener parámetros de la URL
+	idReservaStr := ctx.Query("id_reserva")
+	status := ctx.Query("status")
+	paymentID := ctx.Query("payment_id")
+	preferenceID := ctx.Query("preference_id")
+
+	// Validar parámetros mínimos necesarios
+	if idReservaStr == "" {
+		fmt.Println("VerificarYConfirmarPago: Se requiere el parámetro id_reserva")
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Se requiere el parámetro id_reserva", nil))
+		return
+	}
+
+	// Convertir ID de reserva a entero
+	idReserva, err := strconv.Atoi(idReservaStr)
+	if err != nil {
+		fmt.Printf("VerificarYConfirmarPago: ID de reserva inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+		return
+	}
+
+	// Intentar obtener la reserva
+	reserva, err := c.reservaService.GetByID(idReserva)
+	if err != nil {
+		fmt.Printf("VerificarYConfirmarPago: Reserva no encontrada ID=%d: %v\n", idReserva, err)
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Reserva no encontrada", err))
+		return
+	}
+	fmt.Printf("VerificarYConfirmarPago: Reserva ID=%d encontrada en estado=%s\n", idReserva, reserva.Estado)
+
+	// Si la reserva ya está confirmada, no hacer nada más
+	if reserva.Estado == "CONFIRMADA" {
+		response := utils.SuccessResponse("La reserva ya está confirmada", reserva)
+		fmt.Printf("VerificarYConfirmarPago: Enviando respuesta para reserva ya confirmada ID=%d: %+v\n", idReserva, response)
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// Si tenemos más información (paymentID o preferenceID), verificar con MercadoPago
+	var nuevoEstado string
+	var mensaje string
+
+	if paymentID != "" || preferenceID != "" || status != "" {
+		// Usar el servicio para verificar con MercadoPago
+		estadoResultante, err := c.reservaService.VerificarYConfirmarPago(
+			idReserva, status, paymentID, preferenceID, c.mercadoPagoService)
+
+		if err != nil {
+			fmt.Printf("VerificarYConfirmarPago: Error al verificar pago: %v\n", err)
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al verificar el pago", err))
+			return
+		}
+
+		fmt.Printf("VerificarYConfirmarPago: Estado resultante=%s para reserva ID=%d\n", estadoResultante, idReserva)
+		nuevoEstado = estadoResultante
+
+		// Obtener reserva actualizada después de la verificación
+		reservaActualizada, err := c.reservaService.GetByID(idReserva)
+		if err != nil {
+			fmt.Printf("VerificarYConfirmarPago: Error al obtener reserva actualizada ID=%d: %v\n", idReserva, err)
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+			return
+		}
+
+		// Preparar respuesta según el estado resultante
+		switch nuevoEstado {
+		case "CONFIRMADA":
+			mensaje = "Reserva confirmada exitosamente"
+		case "CANCELADA":
+			mensaje = "Reserva cancelada debido a pago rechazado"
+		case "RESERVADO":
+			if status == "pending" {
+				mensaje = "Pago pendiente, reserva sin cambios"
+			} else {
+				mensaje = "Estado de la reserva verificado"
+			}
+		default:
+			mensaje = "Estado de la reserva verificado"
+		}
+
+		response := utils.SuccessResponse(mensaje, gin.H{
+			"reserva":         reservaActualizada,
+			"estado_anterior": reserva.Estado,
+			"estado_nuevo":    nuevoEstado,
+		})
+		fmt.Printf("VerificarYConfirmarPago: Enviando respuesta para reserva ID=%d: %+v\n", idReserva, response)
+		ctx.JSON(http.StatusOK, response)
+
+	} else {
+		// Manejo simple basado solo en el parámetro status
+		switch status {
+		case "approved":
+			// Confirmar la reserva
+			err = c.reservaService.UpdateEstado(idReserva, "CONFIRMADA")
+			if err != nil {
+				fmt.Printf("VerificarYConfirmarPago: Error al confirmar reserva ID=%d: %v\n", idReserva, err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al confirmar la reserva", err))
+				return
+			}
+
+			// Obtener la reserva actualizada
+			reservaActualizada, err := c.reservaService.GetByID(idReserva)
+			if err != nil {
+				fmt.Printf("VerificarYConfirmarPago: Error al obtener reserva actualizada ID=%d: %v\n", idReserva, err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+				return
+			}
+
+			response := utils.SuccessResponse("Reserva confirmada exitosamente", reservaActualizada)
+			fmt.Printf("VerificarYConfirmarPago: Enviando respuesta para reserva confirmada ID=%d: %+v\n", idReserva, response)
+			ctx.JSON(http.StatusOK, response)
+
+		case "pending":
+			response := utils.SuccessResponse("Pago pendiente, reserva sin cambios", reserva)
+			fmt.Printf("VerificarYConfirmarPago: Enviando respuesta para pago pendiente ID=%d: %+v\n", idReserva, response)
+			ctx.JSON(http.StatusOK, response)
+
+		case "rejected", "failure", "cancelled":
+			// Cancelar la reserva si el pago fue rechazado
+			err = c.reservaService.UpdateEstado(idReserva, "CANCELADA")
+			if err != nil {
+				fmt.Printf("VerificarYConfirmarPago: Error al cancelar reserva ID=%d: %v\n", idReserva, err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al cancelar la reserva", err))
+				return
+			}
+
+			// Obtener la reserva actualizada
+			reservaActualizada, err := c.reservaService.GetByID(idReserva)
+			if err != nil {
+				fmt.Printf("VerificarYConfirmarPago: Error al obtener reserva actualizada ID=%d: %v\n", idReserva, err)
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al obtener la reserva actualizada", err))
+				return
+			}
+
+			response := utils.SuccessResponse("Reserva cancelada debido a pago rechazado", reservaActualizada)
+			fmt.Printf("VerificarYConfirmarPago: Enviando respuesta para reserva cancelada ID=%d: %+v\n", idReserva, response)
+			ctx.JSON(http.StatusOK, response)
+
+		default:
+			fmt.Println("VerificarYConfirmarPago: Estado de pago no válido o no proporcionado")
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Estado de pago no válido o no proporcionado", nil))
+		}
+	}
+}
+
+// VerifyReservationExpiration verifica si una reserva ha expirado y la cancela si es necesario
+func (c *ReservaController) VerifyReservationExpiration(ctx *gin.Context) {
+	fmt.Printf("VerifyReservationExpiration: Iniciando verificación de expiración para reserva\n")
+	idReservaStr := ctx.Param("id")
+	idReserva, err := strconv.Atoi(idReservaStr)
+	if err != nil {
+		fmt.Printf("VerifyReservationExpiration: ID de reserva inválido: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID de reserva inválido", err))
+		return
+	}
+	fmt.Printf("VerifyReservationExpiration: Verificando reserva ID=%d\n", idReserva)
+
+	response, err := c.reservaService.VerifyReservationExpiration(idReserva)
+	if err != nil {
+		fmt.Printf("VerifyReservationExpiration: Error al verificar expiración para reserva ID=%d: %v\n", idReserva, err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al verificar expiración de la reserva", err))
+		return
+	}
+
+	if response.Expirada {
+		fmt.Printf("VerifyReservationExpiration: Reserva ID=%d ha expirado y fue cancelada\n", idReserva)
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("La reserva ha expirado y ha sido cancelada", response))
+	} else {
+		fmt.Printf("VerifyReservationExpiration: Reserva ID=%d es válida\n", idReserva)
+		ctx.JSON(http.StatusOK, utils.SuccessResponse("La reserva es válida", response))
+	}
+	fmt.Printf("VerifyReservationExpiration: Enviando respuesta para reserva ID=%d: %+v\n", idReserva, response)
+}
+
+// ProcessExpiredReservations procesa manualmente todas las reservas expiradas
+func (c *ReservaController) ProcessExpiredReservations(ctx *gin.Context) {
+	fmt.Printf("ProcessExpiredReservations: Iniciando procesamiento de reservas expiradas\n")
+	// Verificar si el usuario tiene permiso (solo admin)
+	if ctx.GetString("rol") != "ADMIN" {
+		fmt.Println("ProcessExpiredReservations: No tiene permisos para realizar esta acción")
+		ctx.JSON(http.StatusForbidden, utils.ErrorResponse("No tiene permisos para realizar esta acción", nil))
+		return
+	}
+
+	count, err := c.reservaService.ProcessExpiredReservations()
+	if err != nil {
+		fmt.Printf("ProcessExpiredReservations: Error al procesar reservas expiradas: %v\n", err)
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al procesar reservas expiradas", err))
+		return
+	}
+
+	fmt.Printf("ProcessExpiredReservations: Se procesaron %d reservas expiradas\n", count)
+	response := utils.SuccessResponse(fmt.Sprintf("Se procesaron %d reservas expiradas", count), gin.H{
+		"processed_count": count,
+	})
+	fmt.Printf("ProcessExpiredReservations: Enviando respuesta: %+v\n", response)
+	ctx.JSON(http.StatusOK, response)
 }
