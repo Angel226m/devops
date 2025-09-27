@@ -1423,131 +1423,148 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   const haySeleccion = Object.values(seleccionPasajes).some((cant) => cant > 0) || Object.values(seleccionPaquetes).some((cant) => cant > 0);
 
   // 🚨 IR A PAGO - COMPLETAMENTE CORREGIDO
-  const irAPago = () => {
-    console.log('🎯 INICIANDO PROCESO DE PAGO - ANÁLISIS COMPLETO:');
-    console.log('👤 Selección Pasajes Individuales:', seleccionPasajes);
-    console.log('📦 Selección Paquetes:', seleccionPaquetes);
-    
-    if (!haySeleccion) {
-      mostrarAlertaTemp('Por favor selecciona al menos un pasaje o paquete', 'warning');
-      return;
-    }
-    if (!verificarCupoDisponible()) return;
+// 🚨 FUNCIÓN irAPago() - CORREGIDA AL 100%
+const irAPago = () => {
+  console.log('🎯 INICIANDO PROCESO DE PAGO - VERSIÓN CORREGIDA:');
+  console.log('👤 Selección Pasajes Individuales:', seleccionPasajes);
+  console.log('📦 Selección Paquetes:', seleccionPaquetes);
+  
+  if (!haySeleccion) {
+    mostrarAlertaTemp('Por favor selecciona al menos un pasaje o paquete', 'warning');
+    return;
+  }
+  if (!verificarCupoDisponible()) return;
 
-    const pasajesDesglosadosDePaquetes = desglosarPaquetesEnPasajes();
-    console.log('📊 Pasajes desglosados de paquetes:', pasajesDesglosadosDePaquetes);
-    
-    // 🔧 NUEVA LÓGICA: SEPARAR CLARAMENTE INDIVIDUALES DE PAQUETES
-    const cantidadesPasajes: {
-      idTipoPasaje: number;
-      cantidad: number;
-      precioUnitario: number;
-      nombreTipo: string;
-      origen: 'individual' | 'paquete';  // ✅ NUEVO CAMPO PARA IDENTIFICAR ORIGEN
-    }[] = [];
+  // ✅ PASO 1: PROCESAR SOLO PASAJES INDIVIDUALES (SIN TOCAR PAQUETES)
+  const cantidadesPasajesIndividuales: {
+    idTipoPasaje: number;
+    cantidad: number;
+    precioUnitario: number;
+    nombreTipo: string;
+  }[] = [];
 
-    // ✅ PASO 1: AGREGAR PASAJES INDIVIDUALES (SIN MEZCLAR)
-    Object.entries(seleccionPasajes).forEach(([id, cant]) => {
-      if (cant > 0) {
-        const tipoPasaje = tiposPasajeDelTour.find((t) => t.id_tipo_pasaje === Number(id));
-        if (tipoPasaje) {
-          cantidadesPasajes.push({
-            idTipoPasaje: Number(id),
-            cantidad: cant,
-            precioUnitario: tipoPasaje.costo,
-            nombreTipo: tipoPasaje.nombre,
-            origen: 'individual'  // ✅ MARCAR COMO INDIVIDUAL
-          });
-          console.log(`✅ INDIVIDUAL: ${tipoPasaje.nombre} = ${cant}`);
-        }
-      }
-    });
-
-    // ✅ PASO 2: AGREGAR PASAJES DE PAQUETES (SEPARADOS)
-    Object.entries(pasajesDesglosadosDePaquetes).forEach(([id, cant]) => {
+  Object.entries(seleccionPasajes).forEach(([id, cant]) => {
+    if (cant > 0) {
       const tipoPasaje = tiposPasajeDelTour.find((t) => t.id_tipo_pasaje === Number(id));
-      if (tipoPasaje && cant > 0) {
-        cantidadesPasajes.push({
+      if (tipoPasaje) {
+        cantidadesPasajesIndividuales.push({
           idTipoPasaje: Number(id),
           cantidad: cant,
           precioUnitario: tipoPasaje.costo,
-          nombreTipo: tipoPasaje.nombre,
-          origen: 'paquete'  // ✅ MARCAR COMO DE PAQUETE
+          nombreTipo: tipoPasaje.nombre
         });
-        console.log(`✅ PAQUETE: ${tipoPasaje.nombre} = ${cant}`);
+        console.log(`✅ INDIVIDUAL: ${tipoPasaje.nombre} = ${cant} pasajeros`);
       }
-    });
+    }
+  });
 
-    // ✅ PASO 3: PREPARAR PAQUETES SELECCIONADOS
-    const paquetesSeleccionados = Object.entries(seleccionPaquetes)
-      .filter(([_, cant]) => cant > 0)
-      .map(([id, cant]) => {
-        const paquete = paquetesPasajesDelTour.find((p) => p.id_paquete === Number(id));
-        return {
+  // ✅ PASO 2: PROCESAR SOLO PAQUETES (SIN MEZCLAR CON INDIVIDUALES)
+  const paquetesSeleccionados: {
+    idPaquetePasajes: number;
+    nombrePaquete: string;
+    cantidadPaquetes: number;
+    precioUnitario: number;
+    subtotal: number;
+    desglosePasajes: {
+      tipo: string;
+      cantidad: number;
+      idTipoPasaje?: number;
+    }[];
+  }[] = [];
+
+  Object.entries(seleccionPaquetes).forEach(([id, cant]) => {
+    if (cant > 0) {
+      const paquete = paquetesPasajesDelTour.find((p) => p.id_paquete === Number(id));
+      if (paquete) {
+        // Procesar desglose del paquete
+        const desgloseProcesado = (paquete.desglose_pasajes || []).map(desglose => {
+          // Encontrar el ID del tipo de pasaje correspondiente
+          let idTipoPasajeEncontrado = desglose.id_tipo_pasaje;
+          
+          if (!idTipoPasajeEncontrado) {
+            const tipoPasajeEncontrado = tiposPasajeDelTour.find(
+              (tp) =>
+                tp.nombre?.toLowerCase().includes(desglose.tipo?.toLowerCase()) ||
+                desglose.tipo?.toLowerCase().includes(tp.nombre?.toLowerCase())
+            );
+            idTipoPasajeEncontrado = tipoPasajeEncontrado?.id_tipo_pasaje;
+          }
+
+          return {
+            tipo: desglose.tipo,
+            cantidad: desglose.cantidad,
+            idTipoPasaje: idTipoPasajeEncontrado
+          };
+        });
+
+        paquetesSeleccionados.push({
           idPaquetePasajes: Number(id),
-          nombrePaquete: paquete?.nombre || 'Desconocido',
+          nombrePaquete: paquete.nombre,
           cantidadPaquetes: cant,
-          precio: paquete?.precio_total || 0,
-          seleccionado: true,
-          desglose: paquete?.desglose_pasajes || []  // ✅ INCLUIR DESGLOSE
-        };
-      });
+          precioUnitario: paquete.precio_total,
+          subtotal: paquete.precio_total * cant,
+          desglosePasajes: desgloseProcesado
+        });
 
-    const totalPasajeros = calcularTotalPasajeros();
-    const totalPrecio = calcularTotal();
+        console.log(`✅ PAQUETE: ${paquete.nombre} = ${cant} paquetes`);
+        console.log(`   Desglose:`, desgloseProcesado);
+      }
+    }
+  });
 
-    // ✅ DATOS DE RESERVA CON INFORMACIÓN SEPARADA
-    const datosReserva = {
-      tourId: tour.id,
-      tourNombre: tour.nombre,
-      fecha: fecha?.toISOString().split('T')[0] || '',
-      horario,
-      instanciaId: instanciaSeleccionada,
-      
-      // ✅ CANTIDADES DE PASAJES CON ORIGEN IDENTIFICADO
-      cantidadesPasajes: cantidadesPasajes.map((p) => ({
-        idTipoPasaje: p.idTipoPasaje,
-        cantidad: p.cantidad,
-        precioUnitario: p.precioUnitario,
-        origen: p.origen  // ✅ INCLUIR ORIGEN
-      })),
-      
-      // ✅ INFORMACIÓN DE PAQUETES COMPLETA
-      paquetes: paquetesSeleccionados.map((p) => ({
-        idPaquetePasajes: p.idPaquetePasajes,
-        precio: p.precio,
-        cantidadPaquetes: p.cantidadPaquetes,
-        seleccionado: true,
-        desglose: p.desglose
-      })),
-      
-      // ✅ SELECCIONES ORIGINALES PARA REFERENCIA
-      seleccionPasajesOriginales: seleccionPasajes,
-      seleccionPaquetesOriginales: seleccionPaquetes,
-      
-      totalPasajeros,
-      total: totalPrecio,
-      timestamp: new Date().toISOString(),
-      
-      // ✅ DEBUG MEJORADO
-      debug: {
-        pasajerosIndividualesOriginales: Object.values(seleccionPasajes).reduce((sum, cant) => sum + cant, 0),
-        pasajerosPaquetes: Object.entries(seleccionPaquetes).reduce((sum, [id, cant]) => {
-          const paq = paquetesPasajesDelTour.find((p) => p.id_paquete === Number(id));
-          return sum + (paq ? paq.cantidad_total * cant : 0);
-        }, 0),
-        pasajesDesglosadosDePaquetes,
-        cantidadesPasajesFinales: cantidadesPasajes,
-        paquetesSeleccionados,
-        separacionCorrecta: true  // ✅ FLAG PARA CONFIRMAR SEPARACIÓN
-      },
-    };
+  const totalPasajeros = calcularTotalPasajeros();
+  const totalPrecio = calcularTotal();
 
-    console.log('🎯 DATOS FINALES DE RESERVA:', datosReserva);
-
-    sessionStorage.setItem('datosReservaPendiente', JSON.stringify(datosReserva));
-    navigate('/proceso-pago', { state: datosReserva });
+  // ✅ DATOS FINALES SEPARADOS CORRECTAMENTE
+  const datosReserva = {
+    tourId: tour.id,
+    tourNombre: tour.nombre,
+    fecha: fecha?.toISOString().split('T')[0] || '',
+    horario,
+    instanciaId: instanciaSeleccionada,
+    
+    // ✅ SOLO PASAJES INDIVIDUALES (SIN MEZCLAR)
+    cantidadesPasajes: cantidadesPasajesIndividuales.map((p) => ({
+      idTipoPasaje: p.idTipoPasaje,
+      cantidad: p.cantidad,
+      precioUnitario: p.precioUnitario,
+      nombreTipo: p.nombreTipo
+    })),
+    
+    // ✅ SOLO PAQUETES (CON SU DESGLOSE INTERNO)
+    paquetes: paquetesSeleccionados.map((p) => ({
+      idPaquetePasajes: p.idPaquetePasajes,
+      nombrePaquete: p.nombrePaquete,
+      cantidadPaquetes: p.cantidadPaquetes,
+      precioUnitario: p.precioUnitario,
+      subtotal: p.subtotal,
+      desglosePasajes: p.desglosePasajes
+    })),
+    
+    totalPasajeros,
+    total: totalPrecio,
+    timestamp: new Date().toISOString(),
+    
+    debug: {
+      separacionCorrecta: true,
+      cantidadPasajesIndividualesEnviados: cantidadesPasajesIndividuales.length,
+      cantidadPaquetesEnviados: paquetesSeleccionados.length,
+      totalPasajerosCalculado: totalPasajeros,
+      totalPrecioCalculado: totalPrecio
+    }
   };
+
+  console.log('🎯 DATOS FINALES PARA BACKEND (CORREGIDOS):');
+  console.log('📊 Resumen:');
+  console.log(`   - Pasajes individuales: ${cantidadesPasajesIndividuales.length} tipos`);
+  console.log(`   - Paquetes: ${paquetesSeleccionados.length} paquetes`);
+  console.log(`   - Total pasajeros: ${totalPasajeros}`);
+  console.log(`   - Total precio: S/ ${totalPrecio.toFixed(2)}`);
+  console.log('📋 Estructura completa:', datosReserva);
+
+  sessionStorage.setItem('datosReservaPendiente', JSON.stringify(datosReserva));
+  navigate('/proceso-pago', { state: datosReserva });
+};
 
   // 🔧 RESUMEN SÚPER COMPACTO
   const ResumenDetallado = () => {
