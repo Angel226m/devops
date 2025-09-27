@@ -1003,7 +1003,6 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
 };
 
 export default FormularioReservacion;*/
-
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -1059,7 +1058,7 @@ const Cargador = () => (
   </div>
 );
 
-// 🔧 SELECTOR PAQUETE SÚPER LIMPIO Y COMPACTO
+// 🔧 SELECTOR PAQUETE CORREGIDO CON DEBUG
 const SelectorPaquete = ({
   paquete,
   cantidad,
@@ -1072,6 +1071,21 @@ const SelectorPaquete = ({
   tiposPasajeDelTour: any[];
 }) => {
   const { t } = useTranslation();
+
+  // 🔧 DEBUG: Verificar que el componente recibe los props correctos
+  console.log(`🔍 SelectorPaquete - Paquete ${paquete.id_paquete}: cantidad=${cantidad}`, { paquete, setCantidad });
+
+  const handleIncrement = () => {
+    const nuevaCantidad = Math.min(5, cantidad + 1);
+    console.log(`➕ Incrementando paquete ${paquete.id_paquete}: ${cantidad} -> ${nuevaCantidad}`);
+    setCantidad(nuevaCantidad);
+  };
+
+  const handleDecrement = () => {
+    const nuevaCantidad = Math.max(0, cantidad - 1);
+    console.log(`➖ Decrementando paquete ${paquete.id_paquete}: ${cantidad} -> ${nuevaCantidad}`);
+    setCantidad(nuevaCantidad);
+  };
 
   return (
     <motion.div
@@ -1130,14 +1144,15 @@ const SelectorPaquete = ({
         </div>
       )}
 
-      {/* Selector cantidad */}
+      {/* 🔧 SELECTOR CANTIDAD CON DEBUG */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-teal-800">Cantidad de paquetes:</span>
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            onClick={() => setCantidad(Math.max(0, cantidad - 1))}
-            className="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded font-bold"
+            onClick={handleDecrement}
+            className="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded font-bold transition-colors"
+            disabled={cantidad <= 0}
           >
             -
           </button>
@@ -1146,8 +1161,9 @@ const SelectorPaquete = ({
           </span>
           <button
             type="button"
-            onClick={() => setCantidad(Math.min(5, cantidad + 1))}
-            className="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded font-bold"
+            onClick={handleIncrement}
+            className="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded font-bold transition-colors"
+            disabled={cantidad >= 5}
           >
             +
           </button>
@@ -1262,14 +1278,29 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
     }
   }, [dispatch]);
 
+  // 🔧 INICIALIZACIÓN DE ESTADOS CORREGIDA
   useEffect(() => {
     if (tiposPasajeDelTour.length > 0 && !seleccionInicializada.current) {
+      console.log('🎯 Inicializando estados de selección...');
+      console.log('📋 Tipos de pasaje del tour:', tiposPasajeDelTour);
+      console.log('📦 Paquetes del tour:', paquetesPasajesDelTour);
+      
+      // Inicializar pasajes individuales (primer tipo con 1, resto con 0)
       const seleccionInicial: Record<number, number> = {};
-      tiposPasajeDelTour.forEach((tipo, index) => (seleccionInicial[tipo.id_tipo_pasaje] = index === 0 ? 1 : 0));
+      tiposPasajeDelTour.forEach((tipo, index) => {
+        seleccionInicial[tipo.id_tipo_pasaje] = index === 0 ? 1 : 0;
+      });
       setSeleccionPasajes(seleccionInicial);
+      console.log('✅ Estados de pasajes inicializados:', seleccionInicial);
+      
+      // Inicializar paquetes (todos en 0)
       const paquetesIniciales: Record<number, number> = {};
-      paquetesPasajesDelTour.forEach((paquete) => (paquetesIniciales[paquete.id_paquete] = 0));
+      paquetesPasajesDelTour.forEach((paquete) => {
+        paquetesIniciales[paquete.id_paquete] = 0;
+      });
       setSeleccionPaquetes(paquetesIniciales);
+      console.log('✅ Estados de paquetes inicializados:', paquetesIniciales);
+      
       seleccionInicializada.current = true;
     }
   }, [tiposPasajeDelTour, paquetesPasajesDelTour]);
@@ -1311,7 +1342,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
     return fecha;
   }, []);
 
-  // Handlers (mantener iguales)
+  // 🔧 HANDLERS CORREGIDOS CON DEBUG
   const handleFechaChange = (date: Date | null) => {
     if (!date) return;
     const ahora = new Date();
@@ -1334,14 +1365,26 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
   };
 
   const handleCantidadPasajeChange = (idTipoPasaje: number, cantidad: number) => {
-    setSeleccionPasajes((prev) => ({ ...prev, [idTipoPasaje]: cantidad }));
+    console.log(`🔄 Actualizando pasaje ${idTipoPasaje}: cantidad = ${cantidad}`);
+    setSeleccionPasajes((prev) => {
+      const nuevo = { ...prev, [idTipoPasaje]: cantidad };
+      console.log('👤 Estado pasajes actualizado:', nuevo);
+      return nuevo;
+    });
   };
 
   const handleCantidadPaqueteChange = (idPaquete: number, cantidad: number) => {
-    setSeleccionPaquetes((prev) => ({ ...prev, [idPaquete]: cantidad }));
+    console.log(`🔄 Actualizando paquete ${idPaquete}: cantidad = ${cantidad}`);
+    console.log('📦 Estado anterior de paquetes:', seleccionPaquetes);
+    
+    setSeleccionPaquetes((prev) => {
+      const nuevo = { ...prev, [idPaquete]: cantidad };
+      console.log('📦 Estado nuevo de paquetes:', nuevo);
+      return nuevo;
+    });
   };
 
-  // 🔧 DESGLOSE DE PAQUETES - CORREGIDO PARA NO SUMAR TODO JUNTO
+  // Resto de funciones igual...
   const desglosarPaquetesEnPasajes = (): Record<number, number> => {
     const pasajesDesglosados: Record<number, number> = {};
     
@@ -1388,7 +1431,6 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
     return pasajesDesglosados;
   };
 
-  // Cálculos (mantener iguales)
   const calcularTotalPasajeros = () => {
     const pasajerosIndividuales = Object.values(seleccionPasajes).reduce((total, cant) => total + cant, 0);
     const pasajerosPaquetes = Object.entries(seleccionPaquetes).reduce((total, [id, cant]) => {
@@ -1422,151 +1464,147 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
 
   const haySeleccion = Object.values(seleccionPasajes).some((cant) => cant > 0) || Object.values(seleccionPaquetes).some((cant) => cant > 0);
 
-  // 🚨 IR A PAGO - COMPLETAMENTE CORREGIDO
-// 🚨 FUNCIÓN irAPago() - CORREGIDA AL 100%
-const irAPago = () => {
-  console.log('🎯 INICIANDO PROCESO DE PAGO - VERSIÓN CORREGIDA:');
-  console.log('👤 Selección Pasajes Individuales:', seleccionPasajes);
-  console.log('📦 Selección Paquetes:', seleccionPaquetes);
-  
-  if (!haySeleccion) {
-    mostrarAlertaTemp('Por favor selecciona al menos un pasaje o paquete', 'warning');
-    return;
-  }
-  if (!verificarCupoDisponible()) return;
-
-  // ✅ PASO 1: PROCESAR SOLO PASAJES INDIVIDUALES (SIN TOCAR PAQUETES)
-  const cantidadesPasajesIndividuales: {
-    idTipoPasaje: number;
-    cantidad: number;
-    precioUnitario: number;
-    nombreTipo: string;
-  }[] = [];
-
-  Object.entries(seleccionPasajes).forEach(([id, cant]) => {
-    if (cant > 0) {
-      const tipoPasaje = tiposPasajeDelTour.find((t) => t.id_tipo_pasaje === Number(id));
-      if (tipoPasaje) {
-        cantidadesPasajesIndividuales.push({
-          idTipoPasaje: Number(id),
-          cantidad: cant,
-          precioUnitario: tipoPasaje.costo,
-          nombreTipo: tipoPasaje.nombre
-        });
-        console.log(`✅ INDIVIDUAL: ${tipoPasaje.nombre} = ${cant} pasajeros`);
-      }
+  // 🚨 FUNCIÓN irAPago() - VERSIÓN FINAL CORREGIDA
+  const irAPago = () => {
+    console.log('🎯 INICIANDO PROCESO DE PAGO - VERSIÓN FINAL:');
+    console.log('👤 Selección Pasajes Individuales:', seleccionPasajes);
+    console.log('📦 Selección Paquetes:', seleccionPaquetes);
+    
+    if (!haySeleccion) {
+      mostrarAlertaTemp('Por favor selecciona al menos un pasaje o paquete', 'warning');
+      return;
     }
-  });
+    if (!verificarCupoDisponible()) return;
 
-  // ✅ PASO 2: PROCESAR SOLO PAQUETES (SIN MEZCLAR CON INDIVIDUALES)
-  const paquetesSeleccionados: {
-    idPaquetePasajes: number;
-    nombrePaquete: string;
-    cantidadPaquetes: number;
-    precioUnitario: number;
-    subtotal: number;
-    desglosePasajes: {
-      tipo: string;
+    // ✅ PASO 1: PROCESAR SOLO PASAJES INDIVIDUALES
+    const cantidadesPasajesIndividuales: {
+      idTipoPasaje: number;
       cantidad: number;
-      idTipoPasaje?: number;
-    }[];
-  }[] = [];
+      precioUnitario: number;
+      nombreTipo: string;
+    }[] = [];
 
-  Object.entries(seleccionPaquetes).forEach(([id, cant]) => {
-    if (cant > 0) {
-      const paquete = paquetesPasajesDelTour.find((p) => p.id_paquete === Number(id));
-      if (paquete) {
-        // Procesar desglose del paquete
-        const desgloseProcesado = (paquete.desglose_pasajes || []).map(desglose => {
-          // Encontrar el ID del tipo de pasaje correspondiente
-          let idTipoPasajeEncontrado = desglose.id_tipo_pasaje;
-          
-          if (!idTipoPasajeEncontrado) {
-            const tipoPasajeEncontrado = tiposPasajeDelTour.find(
-              (tp) =>
-                tp.nombre?.toLowerCase().includes(desglose.tipo?.toLowerCase()) ||
-                desglose.tipo?.toLowerCase().includes(tp.nombre?.toLowerCase())
-            );
-            idTipoPasajeEncontrado = tipoPasajeEncontrado?.id_tipo_pasaje;
-          }
-
-          return {
-            tipo: desglose.tipo,
-            cantidad: desglose.cantidad,
-            idTipoPasaje: idTipoPasajeEncontrado
-          };
-        });
-
-        paquetesSeleccionados.push({
-          idPaquetePasajes: Number(id),
-          nombrePaquete: paquete.nombre,
-          cantidadPaquetes: cant,
-          precioUnitario: paquete.precio_total,
-          subtotal: paquete.precio_total * cant,
-          desglosePasajes: desgloseProcesado
-        });
-
-        console.log(`✅ PAQUETE: ${paquete.nombre} = ${cant} paquetes`);
-        console.log(`   Desglose:`, desgloseProcesado);
+    Object.entries(seleccionPasajes).forEach(([id, cant]) => {
+      if (cant > 0) {
+        const tipoPasaje = tiposPasajeDelTour.find((t) => t.id_tipo_pasaje === Number(id));
+        if (tipoPasaje) {
+          cantidadesPasajesIndividuales.push({
+            idTipoPasaje: Number(id),
+            cantidad: cant,
+            precioUnitario: tipoPasaje.costo,
+            nombreTipo: tipoPasaje.nombre
+          });
+          console.log(`✅ INDIVIDUAL: ${tipoPasaje.nombre} = ${cant} pasajeros`);
+        }
       }
-    }
-  });
+    });
 
-  const totalPasajeros = calcularTotalPasajeros();
-  const totalPrecio = calcularTotal();
+    // ✅ PASO 2: PROCESAR SOLO PAQUETES
+    const paquetesSeleccionados: {
+      idPaquetePasajes: number;
+      nombrePaquete: string;
+      cantidadPaquetes: number;
+      precioUnitario: number;
+      subtotal: number;
+      desglosePasajes: {
+        tipo: string;
+        cantidad: number;
+        idTipoPasaje?: number;
+      }[];
+    }[] = [];
 
-  // ✅ DATOS FINALES SEPARADOS CORRECTAMENTE
-  const datosReserva = {
-    tourId: tour.id,
-    tourNombre: tour.nombre,
-    fecha: fecha?.toISOString().split('T')[0] || '',
-    horario,
-    instanciaId: instanciaSeleccionada,
-    
-    // ✅ SOLO PASAJES INDIVIDUALES (SIN MEZCLAR)
-    cantidadesPasajes: cantidadesPasajesIndividuales.map((p) => ({
-      idTipoPasaje: p.idTipoPasaje,
-      cantidad: p.cantidad,
-      precioUnitario: p.precioUnitario,
-      nombreTipo: p.nombreTipo
-    })),
-    
-    // ✅ SOLO PAQUETES (CON SU DESGLOSE INTERNO)
-    paquetes: paquetesSeleccionados.map((p) => ({
-      idPaquetePasajes: p.idPaquetePasajes,
-      nombrePaquete: p.nombrePaquete,
-      cantidadPaquetes: p.cantidadPaquetes,
-      precioUnitario: p.precioUnitario,
-      subtotal: p.subtotal,
-      desglosePasajes: p.desglosePasajes
-    })),
-    
-    totalPasajeros,
-    total: totalPrecio,
-    timestamp: new Date().toISOString(),
-    
-    debug: {
-      separacionCorrecta: true,
-      cantidadPasajesIndividualesEnviados: cantidadesPasajesIndividuales.length,
-      cantidadPaquetesEnviados: paquetesSeleccionados.length,
-      totalPasajerosCalculado: totalPasajeros,
-      totalPrecioCalculado: totalPrecio
-    }
+    Object.entries(seleccionPaquetes).forEach(([id, cant]) => {
+      if (cant > 0) {
+        const paquete = paquetesPasajesDelTour.find((p) => p.id_paquete === Number(id));
+        if (paquete) {
+          const desgloseProcesado = (paquete.desglose_pasajes || []).map(desglose => {
+            let idTipoPasajeEncontrado = desglose.id_tipo_pasaje;
+            
+            if (!idTipoPasajeEncontrado) {
+              const tipoPasajeEncontrado = tiposPasajeDelTour.find(
+                (tp) =>
+                  tp.nombre?.toLowerCase().includes(desglose.tipo?.toLowerCase()) ||
+                  desglose.tipo?.toLowerCase().includes(tp.nombre?.toLowerCase())
+              );
+              idTipoPasajeEncontrado = tipoPasajeEncontrado?.id_tipo_pasaje;
+            }
+
+            return {
+              tipo: desglose.tipo,
+              cantidad: desglose.cantidad,
+              idTipoPasaje: idTipoPasajeEncontrado
+            };
+          });
+
+          paquetesSeleccionados.push({
+            idPaquetePasajes: Number(id),
+            nombrePaquete: paquete.nombre,
+            cantidadPaquetes: cant,
+            precioUnitario: paquete.precio_total,
+            subtotal: paquete.precio_total * cant,
+            desglosePasajes: desgloseProcesado
+          });
+
+          console.log(`✅ PAQUETE: ${paquete.nombre} = ${cant} paquetes`);
+          console.log(`   Desglose:`, desgloseProcesado);
+        }
+      }
+    });
+
+    const totalPasajeros = calcularTotalPasajeros();
+    const totalPrecio = calcularTotal();
+
+    const datosReserva = {
+      tourId: tour.id,
+      tourNombre: tour.nombre,
+      fecha: fecha?.toISOString().split('T')[0] || '',
+      horario,
+      instanciaId: instanciaSeleccionada,
+      
+      cantidadesPasajes: cantidadesPasajesIndividuales.map((p) => ({
+        idTipoPasaje: p.idTipoPasaje,
+        cantidad: p.cantidad,
+        precioUnitario: p.precioUnitario,
+        nombreTipo: p.nombreTipo
+      })),
+      
+      paquetes: paquetesSeleccionados.map((p) => ({
+        idPaquetePasajes: p.idPaquetePasajes,
+        nombrePaquete: p.nombrePaquete,
+        cantidadPaquetes: p.cantidadPaquetes,
+        precioUnitario: p.precioUnitario,
+        subtotal: p.subtotal,
+        desglosePasajes: p.desglosePasajes
+      })),
+      
+      totalPasajeros,
+      total: totalPrecio,
+      timestamp: new Date().toISOString(),
+      
+      debug: {
+        separacionCorrecta: true,
+        cantidadPasajesIndividualesEnviados: cantidadesPasajesIndividuales.length,
+        cantidadPaquetesEnviados: paquetesSeleccionados.length,
+        totalPasajerosCalculado: totalPasajeros,
+        totalPrecioCalculado: totalPrecio,
+        estadoSeleccionPasajes: seleccionPasajes,
+        estadoSeleccionPaquetes: seleccionPaquetes
+      }
+    };
+
+    console.log('🎯 DATOS FINALES PARA BACKEND:');
+    console.log('📊 Resumen:');
+    console.log(`   - Pasajes individuales: ${cantidadesPasajesIndividuales.length} tipos`);
+    console.log(`   - Paquetes: ${paquetesSeleccionados.length} paquetes`);
+    console.log(`   - Total pasajeros: ${totalPasajeros}`);
+    console.log(`   - Total precio: S/ ${totalPrecio.toFixed(2)}`);
+    console.log('📋 Estructura completa:', datosReserva);
+
+    sessionStorage.setItem('datosReservaPendiente', JSON.stringify(datosReserva));
+    navigate('/proceso-pago', { state: datosReserva });
   };
 
-  console.log('🎯 DATOS FINALES PARA BACKEND (CORREGIDOS):');
-  console.log('📊 Resumen:');
-  console.log(`   - Pasajes individuales: ${cantidadesPasajesIndividuales.length} tipos`);
-  console.log(`   - Paquetes: ${paquetesSeleccionados.length} paquetes`);
-  console.log(`   - Total pasajeros: ${totalPasajeros}`);
-  console.log(`   - Total precio: S/ ${totalPrecio.toFixed(2)}`);
-  console.log('📋 Estructura completa:', datosReserva);
-
-  sessionStorage.setItem('datosReservaPendiente', JSON.stringify(datosReserva));
-  navigate('/proceso-pago', { state: datosReserva });
-};
-
-  // 🔧 RESUMEN SÚPER COMPACTO
+  // Resumen detallado
   const ResumenDetallado = () => {
     const pasajerosIndividuales = Object.values(seleccionPasajes).reduce((total, cant) => total + cant, 0);
     const pasajerosPaquetes = Object.entries(seleccionPaquetes).reduce((total, [id, cant]) => {
@@ -1595,7 +1633,6 @@ const irAPago = () => {
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
-          {/* PASAJEROS */}
           <div className="bg-white p-3 rounded-lg border border-teal-100">
             <div className="font-medium text-teal-800 mb-2 text-sm flex items-center">
               <FaUsers className="w-3 h-3 mr-1" />
@@ -1617,7 +1654,6 @@ const irAPago = () => {
             </div>
           </div>
           
-          {/* PRECIOS */}
           <div className="bg-white p-3 rounded-lg border border-teal-100">
             <div className="font-medium text-teal-800 mb-2 text-sm flex items-center">
               <FaCreditCard className="w-3 h-3 mr-1" />
@@ -1682,7 +1718,7 @@ const irAPago = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* HEADER COMPACTO */}
+      {/* HEADER */}
       <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
         <h3 className="text-2xl font-bold flex items-center">
           <FaUsers className="h-6 w-6 mr-3" />
@@ -1696,18 +1732,14 @@ const irAPago = () => {
         )}
       </div>
 
-      {/* PASOS COMPACTOS */}
+      {/* PASOS */}
       <div className="bg-gradient-to-b from-teal-50 to-cyan-50 border-b border-teal-200 p-4">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <motion.div
             className={`flex flex-col items-center ${pasoActual >= 1 ? 'text-teal-700' : 'text-gray-400'}`}
             animate={{ scale: pasoActual === 1 ? 1.1 : 1 }}
           >
-            <div
-              className={`rounded-full h-10 w-10 flex items-center justify-center mb-1 ${
-                pasoActual >= 1 ? 'bg-teal-100 text-teal-600 border-2 border-teal-500' : 'bg-gray-200 text-gray-500'
-              }`}
-            >
+            <div className={`rounded-full h-10 w-10 flex items-center justify-center mb-1 ${pasoActual >= 1 ? 'bg-teal-100 text-teal-600 border-2 border-teal-500' : 'bg-gray-200 text-gray-500'}`}>
               <FaCalendarAlt className="h-5 w-5" />
             </div>
             <span className="text-xs font-semibold">{t('tour.fechaYHora')}</span>
@@ -1717,11 +1749,7 @@ const irAPago = () => {
             className={`flex flex-col items-center ${pasoActual >= 2 ? 'text-teal-700' : 'text-gray-400'}`}
             animate={{ scale: pasoActual === 2 ? 1.1 : 1 }}
           >
-            <div
-              className={`rounded-full h-10 w-10 flex items-center justify-center mb-1 ${
-                pasoActual >= 2 ? 'bg-teal-100 text-teal-600 border-2 border-teal-500' : 'bg-gray-200 text-gray-500'
-              }`}
-            >
+            <div className={`rounded-full h-10 w-10 flex items-center justify-center mb-1 ${pasoActual >= 2 ? 'bg-teal-100 text-teal-600 border-2 border-teal-500' : 'bg-gray-200 text-gray-500'}`}>
               <FaUsers className="h-5 w-5" />
             </div>
             <span className="text-xs font-semibold">{t('tour.pasajeros')}</span>
@@ -1729,7 +1757,7 @@ const irAPago = () => {
         </div>
       </div>
 
-      {/* CUERPO COMPACTO */}
+      {/* CUERPO */}
       <div className="p-6 bg-gradient-to-b from-white to-teal-50">
         <AnimatePresence>
           {alerta.mostrar && (
@@ -1737,7 +1765,7 @@ const irAPago = () => {
           )}
         </AnimatePresence>
 
-        {/* AVISO COMPACTO */}
+        {/* AVISO */}
         <motion.div
           className="mb-6 bg-teal-50 border-l-4 border-teal-500 rounded-lg p-4 text-teal-900 text-sm flex items-start"
           initial={{ opacity: 0, y: 10 }}
@@ -1863,7 +1891,7 @@ const irAPago = () => {
             </motion.div>
           )}
 
-          {/* PASO 2: PASAJEROS COMPACTO */}
+          {/* PASO 2: PASAJEROS */}
           {pasoActual === 2 && (
             <motion.div
               className="space-y-8"
@@ -1875,7 +1903,7 @@ const irAPago = () => {
                 🎯 {t('tour.seleccionaPasajes')}
               </h4>
               
-              {/* PAQUETES COMPACTOS */}
+              {/* PAQUETES */}
               {paquetesPasajesDelTour.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -1913,7 +1941,7 @@ const irAPago = () => {
                 </div>
               )}
               
-              {/* PASAJES INDIVIDUALES COMPACTOS */}
+              {/* PASAJES INDIVIDUALES */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -1954,10 +1982,10 @@ const irAPago = () => {
                 )}
               </div>
               
-              {/* RESUMEN COMPACTO */}
+              {/* RESUMEN */}
               <ResumenDetallado />
               
-              {/* BOTONES COMPACTOS */}
+              {/* BOTONES */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                 <motion.button
                   type="button"
@@ -2003,7 +2031,7 @@ const irAPago = () => {
           )}
         </div>
 
-        {/* TÉRMINOS COMPACTOS */}
+        {/* TÉRMINOS */}
         <motion.div
           className="mt-8 text-xs text-gray-500 bg-gray-50 p-4 rounded-lg border"
           initial={{ opacity: 0, y: 10 }}
@@ -2024,6 +2052,7 @@ const irAPago = () => {
         </motion.div>
       </div>
 
+      
      {/* FOOTER SÚPER COMPACTO */}
       <div className="bg-gradient-to-r from-teal-50 to-cyan-50 p-4 border-t border-teal-200">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-700 mb-3">
