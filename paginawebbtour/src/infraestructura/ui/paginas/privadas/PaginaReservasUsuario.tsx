@@ -612,95 +612,47 @@ const PaginaReservasUsuario = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     if (autenticado) {
-      dispatch(listarMisReservas()).unwrap().catch((err) => {
-        console.error("Error al cargar reservas:", err);
-      });
+      dispatch(listarMisReservas()).unwrap().catch((err) => console.error("Error al cargar reservas:", err));
     }
   }, [dispatch, autenticado]);
 
-  const formatearFecha = (fechaStr?: string, formato: 'completo' | 'corto' | 'relativo' = 'completo'): string => {
+  const formatearFecha = (fechaStr?: string, formato: 'corto' = 'corto'): string => {
     if (!fechaStr) return t('reservas.fechaNoDisponible');
-    try {
-      let fecha: Date;
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaStr)) {
-        const [dia, mes, anio] = fechaStr.split('/').map(Number);
-        fecha = new Date(anio, mes - 1, dia);
-      } else {
-        fecha = new Date(fechaStr);
-      }
-      if (isNaN(fecha.getTime())) return t('reservas.fechaInvalida');
-      const opciones: Intl.DateTimeFormatOptions = {};
-      switch (formato) {
-        case 'completo':
-          opciones.year = 'numeric';
-          opciones.month = 'long';
-          opciones.day = 'numeric';
-          opciones.weekday = 'long';
-          break;
-        case 'corto':
-          opciones.year = 'numeric';
-          opciones.month = 'short';
-          opciones.day = 'numeric';
-          break;
-        case 'relativo':
-          const ahora = new Date();
-          const diferencia = fecha.getTime() - ahora.getTime();
-          const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
-          if (dias === 0) return t('reservas.hoy');
-          if (dias === 1) return t('reservas.manana');
-          if (dias === -1) return t('reservas.ayer');
-          if (dias > 0 && dias <= 7) return t('reservas.enDias', { dias });
-          if (dias < 0 && dias >= -7) return t('reservas.haceDias', { dias: Math.abs(dias) });
-          opciones.year = 'numeric';
-          opciones.month = 'short';
-          opciones.day = 'numeric';
-          break;
-      }
-      return fecha.toLocaleDateString('es-PE', opciones);
-    } catch (error) {
-      console.error('Error al formatear fecha:', error, 'Fecha original:', fechaStr);
-      return t('reservas.fechaInvalida');
-    }
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return t('reservas.fechaInvalida');
+    return fecha.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const formatearHora = (horaStr?: string): string => {
-    if (!horaStr) return '';
-    try {
-      if (horaStr.includes(':')) {
-        const partes = horaStr.split(':');
-        return `${partes[0]}:${partes[1]}`;
-      }
-      return horaStr;
-    } catch (error) {
-      return horaStr || '';
-    }
-  };
+  const formatearHora = (horaStr?: string): string => horaStr?.split(':').slice(0, 2).join(':') || '';
 
   const getEstadoClase = (estado: EstadoReserva): string => ({
-    'CONFIRMADA': 'bg-emerald-50 text-emerald-800 border-emerald-100',
-    'CANCELADA': 'bg-rose-50 text-rose-800 border-rose-100',
-    'PENDIENTE': 'bg-amber-50 text-amber-800 border-amber-100',
-    'PROCESADO': 'bg-blue-50 text-blue-800 border-blue-100',
-    'ANULADO': 'bg-gray-50 text-gray-800 border-gray-100',
-    'RESERVADO': 'bg-indigo-50 text-indigo-800 border-indigo-100'
-  })[estado] || 'bg-indigo-50 text-indigo-800 border-indigo-100';
+    'CONFIRMADA': 'bg-emerald-50 text-emerald-700',
+    'CANCELADA': 'bg-rose-50 text-rose-700',
+    'PENDIENTE': 'bg-amber-50 text-amber-700',
+    'PROCESADO': 'bg-blue-50 text-blue-700',
+    'ANULADO': 'bg-gray-50 text-gray-700',
+    'RESERVADO': 'bg-indigo-50 text-indigo-700',
+  })[estado] || 'bg-indigo-50 text-indigo-700';
 
   const getEstadoIcono = (estado: EstadoReserva) => ({
-    'CONFIRMADA': <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    'CANCELADA': <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    'PENDIENTE': <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    'PROCESADO': <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
-    'ANULADO': <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" /></svg>,
-    'RESERVADO': <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-  })[estado] || <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+    'CONFIRMADA': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" /></svg>,
+    'CANCELADA': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+    'PENDIENTE': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l2 2" /></svg>,
+    'PROCESADO': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+    'ANULADO': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+    'RESERVADO': <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  })[estado];
 
   const getEstadoTexto = (estado: EstadoReserva): string => t(`reserva.estados.${estado.toLowerCase()}`);
 
-  const getNombreTour = (reserva: ReservaExtendida): string => 
-    reserva.nombre_tour || (reserva.instancia?.nombre_tour) || t('reservas.tourNoEspecificado');
+  const getNombreTour = (reserva: ReservaExtendida): string => reserva.nombre_tour || reserva.instancia?.nombre_tour || t('reservas.tourNoEspecificado');
 
   const getHorarioTour = (reserva: ReservaExtendida): string => {
-    const horaInicio = formatearHora(reserva.hora_inicio_tour || (reserva.instancia?.hora_inicio));
+    const horaInicio = formatearHora(reserva.hora_inicio_tour || reserva.instancia?.hora_inicio);
     const horaFin = formatearHora(reserva.hora_fin_tour);
     return horaInicio && horaFin ? `${horaInicio} - ${horaFin}` : horaInicio || t('reservas.horarioNoEspecificado');
   };
@@ -708,33 +660,19 @@ const PaginaReservasUsuario = () => {
   const getTotalPasajeros = (reserva: ReservaExtendida): { total: number; detalle: string } => {
     let total = 0;
     const detalles: string[] = [];
-
     if (reserva.cantidad_pasajes?.length) {
-      const totalPasajes = reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
-      total += totalPasajes;
-      const pasajesTexto = reserva.cantidad_pasajes.map(p => `${p.cantidad} ${p.nombre_tipo || 'Pasajero'}`).join(', ');
-      if (pasajesTexto) detalles.push(`Pasajes: ${pasajesTexto}`);
+      total += reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
+      detalles.push(`Pasajes: ${reserva.cantidad_pasajes.map(p => `${p.cantidad} ${p.nombre_tipo || 'Pasajero'}`).join(', ')}`);
     }
-
     if (reserva.paquetes?.length) {
-      const totalPaquetes = reserva.paquetes.reduce((sum, p) => sum + (p.cantidad_total || 0), 0);
-      total += totalPaquetes;
-      const paquetesTexto = reserva.paquetes.map(p => `${p.cantidad} ${p.nombre_paquete} (${p.cantidad_total} pers.)`).join(', ');
-      if (paquetesTexto) detalles.push(`Paquetes: ${paquetesTexto}`);
+      total += reserva.paquetes.reduce((sum, p) => sum + (p.cantidad_total || 0), 0);
+      detalles.push(`Paquetes: ${reserva.paquetes.map(p => `${p.cantidad} ${p.nombre_paquete}`).join(', ')}`);
     }
-
-    const tipo = reserva.cantidad_pasajes?.length && reserva.paquetes?.length ? 'Pasajes y Paquetes' : 
-                 reserva.cantidad_pasajes?.length ? 'Pasajes' : 
-                 reserva.paquetes?.length ? 'Paquetes' : '';
-    const detalle = detalles.length ? `${tipo} (${detalles.join('; ')})` : 'Sin pasajeros';
-    return { total, detalle };
+    const tipo = detalles.length ? (detalles.length > 1 ? 'Pasajes y Paquetes' : detalles[0].split(': ')[0]) : '';
+    return { total, detalle: detalles.length ? `${tipo} (${detalles.join('; ')})` : 'Sin pasajeros' };
   };
 
-  const getFechaTour = (reserva: ReservaExtendida): string => {
-    const fecha = reserva.fecha_tour || (reserva.instancia?.fecha_especifica) || '';
-    if (!fecha) console.warn(`No se encontró fecha válida para la reserva ${reserva.id_reserva}`);
-    return fecha;
-  };
+  const getFechaTour = (reserva: ReservaExtendida): string => reserva.fecha_tour || reserva.instancia?.fecha_especifica || '';
 
   const getFechaReserva = (reserva: ReservaExtendida): string => reserva.fecha_reserva || reserva.fecha_creacion || '';
 
@@ -751,29 +689,18 @@ const PaginaReservasUsuario = () => {
   if (!autenticado) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-600 to-blue-500"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-100 to-blue-100"
       >
-        <div className="text-center bg-white p-12 rounded-3xl shadow-2xl max-w-lg border border-indigo-100/20 backdrop-blur-lg">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-100"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </motion.div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4 font-sans tracking-tight">{t('reservas.noSesion')}</h2>
-          <p className="text-gray-600 mb-8 text-lg leading-relaxed">{t('reservas.iniciarSesionParaVerReservas')}</p>
-          <Link
-            to="/login"
-            className="inline-flex items-center px-8 py-3 rounded-xl shadow-lg text-lg font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="text-center p-6 bg-white rounded-xl shadow-md max-w-sm">
+          <svg className="h-12 w-12 mx-auto text-indigo-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">{t('reservas.noSesion')}</h2>
+          <p className="text-sm text-gray-600 mb-4">{t('reservas.iniciarSesionParaVerReservas')}</p>
+          <Link to="/login" className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
             </svg>
             {t('auth.iniciarSesion')}
@@ -787,150 +714,107 @@ const PaginaReservasUsuario = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-teal-50 py-16 px-4 sm:px-6 lg:px-8 font-sans"
+      className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8 font-sans"
     >
       <div className="max-w-7xl mx-auto">
-        {/* Encabezado */}
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
+          initial={{ y: -10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-3xl shadow-xl p-8 mb-8 border border-indigo-100/20 backdrop-blur-sm"
+          className="bg-white rounded-xl shadow p-4 mb-4 border border-indigo-100"
         >
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                className="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 p-4"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-              </motion.div>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 tracking-tight">{t('menu.misReservas')}</h1>
-                <p className="mt-2 text-lg text-gray-600 leading-relaxed">{t('reservas.gestionReservas')}</p>
-              </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              <h1 className="text-xl font-semibold text-gray-900">{t('menu.misReservas')}</h1>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full md:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { label: t('reserva.estados.confirmada'), value: estadisticas.confirmadas, color: 'emerald', icon: '✅' },
-                { label: t('reserva.estados.pendiente'), value: estadisticas.pendientes, color: 'amber', icon: '⏳' },
-                { label: t('reserva.estados.reservado'), value: estadisticas.reservadas, color: 'indigo', icon: '📅' },
-                { label: t('reservas.total'), value: estadisticas.total, color: 'blue', icon: '📋' }
+                { label: t('reserva.estados.confirmada'), value: estadisticas.confirmadas, color: 'emerald' },
+                { label: t('reserva.estados.pendiente'), value: estadisticas.pendientes, color: 'amber' },
+                { label: t('reserva.estados.reservado'), value: estadisticas.reservadas, color: 'indigo' },
+                { label: t('reservas.total'), value: estadisticas.total, color: 'blue' },
               ].map((stat, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className={`rounded-2xl p-4 bg-${stat.color}-50 border border-${stat.color}-100 text-center transition-all duration-300 hover:shadow-lg hover:bg-${stat.color}-100`}
+                  transition={{ delay: index * 0.1 }}
+                  className={`p-2 rounded-lg bg-${stat.color}-50 text-${stat.color}-700 text-xs font-medium text-center`}
                 >
-                  <div className={`text-3xl font-bold text-${stat.color}-800`}>{stat.value}</div>
-                  <div className={`text-sm text-${stat.color}-700 flex items-center justify-center gap-2 mt-1 font-medium`}>
-                    <span>{stat.icon}</span>
-                    {stat.label}
-                  </div>
+                  {stat.value} <span className="text-gray-600 text-[10px]">{stat.label}</span>
                 </motion.div>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* Alertas */}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
+          <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4">
             <Alerta mensaje={error} tipo="error" />
           </motion.div>
         )}
 
-        {/* Filtros */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-3xl shadow-xl p-6 mb-8 border border-indigo-100/20 backdrop-blur-sm"
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-white rounded-xl shadow p-4 mb-4 border border-indigo-100"
         >
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
-              <h2 className="text-2xl font-semibold text-gray-800 tracking-tight">{t('reservas.filtrarPorEstado')}</h2>
+              <h2 className="text-base font-medium text-gray-800">{t('reservas.filtrarPorEstado')}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { key: 'TODOS', icon: '📋', gradient: 'indigo-600 blue-600', bg: 'gray-50', text: 'gray-800' },
-                { key: 'CONFIRMADA', icon: '✅', gradient: 'emerald-600 emerald-500', bg: 'emerald-50', text: 'emerald-800' },
-                { key: 'RESERVADO', icon: '📅', gradient: 'indigo-600 indigo-500', bg: 'indigo-50', text: 'indigo-800' },
-                { key: 'PENDIENTE', icon: '⏳', gradient: 'amber-600 amber-500', bg: 'amber-50', text: 'amber-800' },
-                { key: 'CANCELADA', icon: '❌', gradient: 'rose-600 rose-500', bg: 'rose-50', text: 'rose-800' }
-              ].map(({ key, icon, gradient, bg, text }) => (
+            <div className="flex flex-wrap gap-2">
+              {['TODOS', 'CONFIRMADA', 'RESERVADO', 'PENDIENTE', 'CANCELADA'].map((estado) => (
                 <motion.button
-                  key={key}
-                  onClick={() => setFiltroEstado(key as EstadoReserva | 'TODOS')}
+                  key={estado}
+                  onClick={() => setFiltroEstado(estado as EstadoReserva | 'TODOS')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`px-6 py-3 rounded-xl text-base font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md ${
-                    filtroEstado === key 
-                      ? `bg-gradient-to-r from-${gradient.split(' ')[0]} to-${gradient.split(' ')[1]} text-white` 
-                      : `bg-${bg} text-${text} border border-${text.split('-')[0]}-100 hover:bg-${text.split('-')[0]}-100`
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    filtroEstado === estado
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                   }`}
-                  aria-pressed={filtroEstado === key}
+                  aria-pressed={filtroEstado === estado}
                 >
-                  <span className="text-lg">{icon}</span>
-                  {key === 'TODOS' ? t('reservas.todos') : t(`reserva.estados.${key.toLowerCase()}`)}
+                  {estado === 'TODOS' ? t('reservas.todos') : t(`reserva.estados.${estado.toLowerCase()}`)}
                 </motion.button>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* Lista de reservas */}
         <AnimatePresence>
           {cargando ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex justify-center items-center h-96 bg-white rounded-3xl shadow-xl border border-indigo-100/20 backdrop-blur-sm"
+              className="flex justify-center items-center h-48 bg-white rounded-xl shadow border border-indigo-100"
             >
-              <Cargador tamanio="lg" color="text-indigo-600" />
+              <Cargador tamanio="md" color="text-indigo-600" />
             </motion.div>
           ) : reservasFiltradas.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="bg-white rounded-3xl shadow-xl p-12 text-center border border-indigo-100/20 backdrop-blur-sm"
+              className="bg-white rounded-xl shadow p-6 text-center border border-indigo-100"
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-32 h-32 mx-auto mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-50 to-blue-50"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </motion.div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">
-                {filtroEstado === 'TODOS' 
-                  ? t('reservas.sinReservas') 
-                  : t('reservas.sinReservasEstado', { estado: getEstadoTexto(filtroEstado) })}
+              <svg className="h-16 w-16 mx-auto text-indigo-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {filtroEstado === 'TODOS' ? t('reservas.sinReservas') : t('reservas.sinReservasEstado', { estado: getEstadoTexto(filtroEstado) })}
               </h3>
-              <p className="text-gray-600 max-w-md mx-auto mb-8 text-lg leading-relaxed">{t('reservas.explorarTours')}</p>
-              <Link 
-                to="/tours" 
-                className="inline-flex items-center px-8 py-3 rounded-xl shadow-lg text-lg font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <p className="text-sm text-gray-600 mb-4">{t('reservas.explorarTours')}</p>
+              <Link to="/tours" className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {t('reservas.verTours')}
@@ -941,142 +825,81 @@ const PaginaReservasUsuario = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="bg-white rounded-3xl shadow-xl overflow-hidden border border-indigo-100/20 backdrop-blur-sm"
+              className="bg-white rounded-xl shadow overflow-hidden border border-indigo-100"
             >
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                    <tr>
-                      {[
-                        { key: 'tour', icon: '🏝️', label: t('reservas.tour') },
-                        { key: 'fecha', icon: '📅', label: t('reservas.fecha') },
-                        { key: 'pasajeros', icon: '👥', label: t('reservas.pasajeros') },
-                        { key: 'total', icon: '💰', label: t('reservas.total') },
-                        { key: 'estado', icon: '📊', label: t('reservas.estado') },
-                        { key: 'acciones', icon: '⚙️', label: t('reservas.acciones') }
-                      ].map(({ key, icon, label }) => (
-                        <th key={key} scope="col" className="px-8 py-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-indigo-50">
+                  <tr>
+                    {[
+                      { key: 'tour', label: t('reservas.tour') },
+                      { key: 'fecha', label: t('reservas.fecha') },
+                      { key: 'pasajeros', label: t('reservas.pasajeros') },
+                      { key: 'total', label: t('reservas.total') },
+                      { key: 'estado', label: t('reservas.estado') },
+                      { key: 'acciones', label: t('reservas.acciones') },
+                    ].map(({ key, label }) => (
+                      <th key={key} className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wide">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reservasFiltradas.map((reserva, index) => {
+                    const { total, detalle } = getTotalPasajeros(reserva);
+                    return (
+                      <motion.tr
+                        key={reserva.id_reserva}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="hover:bg-indigo-50 transition-colors duration-200"
+                      >
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg" aria-hidden="true">{icon}</span>
-                            <span>{label}</span>
+                            <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{getNombreTour(reserva)}</div>
+                              <div className="text-xs text-gray-500">{getHorarioTour(reserva)}</div>
+                              <div className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded inline-block mt-1">#{reserva.id_reserva}</div>
+                            </div>
                           </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {reservasFiltradas.map((reserva, index) => {
-                      const { total, detalle } = getTotalPasajeros(reserva);
-                      return (
-                        <motion.tr
-                          key={reserva.id_reserva}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                          className="hover:bg-indigo-50/50 transition-colors duration-300"
-                        >
-                          <td className="px-8 py-6">
-                            <div className="flex items-start gap-5">
-                              <motion.div whileHover={{ scale: 1.1 }} className="flex-shrink-0">
-                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center border border-indigo-200">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </div>
-                              </motion.div>
-                              <div>
-                                <div className="font-semibold text-gray-900 text-xl tracking-tight">{getNombreTour(reserva)}</div>
-                                <div className="text-sm text-gray-500 flex items-center gap-2 mt-2">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  {getHorarioTour(reserva)}
-                                </div>
-                                <div className="text-xs text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full mt-3 inline-flex items-center">
-                                  #{reserva.id_reserva}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6">
-                            <div className="space-y-2">
-                              <div className="text-base font-semibold text-gray-900 tracking-tight">
-                                {formatearFecha(getFechaTour(reserva), 'completo')}
-                              </div>
-                              <div className="text-sm text-gray-500 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                {t('reservas.reservadoEl')} {formatearFecha(getFechaReserva(reserva), 'corto')}
-                              </div>
-                              <div className="text-sm text-indigo-600 font-medium">
-                                {formatearFecha(getFechaTour(reserva), 'relativo')}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6">
-                            <div className="group relative inline-block">
-                              <motion.span
-                                whileHover={{ scale: 1.05 }}
-                                className="inline-flex items-center px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 border border-indigo-200 font-semibold text-base shadow-sm"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                {total}
-                              </motion.span>
-                              <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 0, y: 10 }}
-                                whileHover={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 bg-white rounded-xl shadow-2xl p-5 text-sm text-gray-700 z-50 border border-gray-100"
-                              >
-                                <p className="font-semibold mb-2 text-gray-900">Detalles de Pasajeros:</p>
-                                {detalle}
-                              </motion.div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6">
-                            <div className="text-center">
-                              <motion.span
-                                whileHover={{ scale: 1.05 }}
-                                className="inline-flex items-center px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 border border-emerald-200 font-bold text-base shadow-sm"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                S/ {reserva.total_pagar.toFixed(2)}
-                              </motion.span>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6">
-                            <motion.span
-                              whileHover={{ scale: 1.05 }}
-                              className={`px-5 py-2.5 inline-flex items-center text-base font-medium rounded-xl ${getEstadoClase(reserva.estado)} shadow-sm`}
-                            >
-                              {getEstadoIcono(reserva.estado)}
-                              <span className="ml-2">{getEstadoTexto(reserva.estado)}</span>
-                            </motion.span>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <Link
-                              to={`/reservas/${reserva.id_reserva}`}
-                              className="inline-flex items-center px-6 py-3 text-base font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              {t('reservas.verDetalles')}
-                            </Link>
-                          </td>
-                        </motion.tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{formatearFecha(getFechaTour(reserva))}</div>
+                          <div className="text-xs text-gray-500">{t('reservas.reservadoEl')} {formatearFecha(getFechaReserva(reserva))}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-indigo-700">{total}</div>
+                          <div className="text-xs text-gray-500">{detalle}</div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="text-sm font-medium text-emerald-700">S/ {reserva.total_pagar.toFixed(2)}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 inline-flex items-center text-xs font-medium rounded ${getEstadoClase(reserva.estado)}`}>
+                            {getEstadoIcono(reserva.estado)} <span className="ml-1">{getEstadoTexto(reserva.estado)}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            to={`/reservas/${reserva.id_reserva}`}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+                          >
+                            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {t('reservas.verDetalles')}
+                          </Link>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </motion.div>
           )}
         </AnimatePresence>
