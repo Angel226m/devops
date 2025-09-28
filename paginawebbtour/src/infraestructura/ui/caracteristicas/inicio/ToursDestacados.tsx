@@ -123,19 +123,16 @@ const ToursDestacados = () => {
 
 export default ToursDestacados; */
 
-
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-// Tipo para los tours (sin calificación)
+// Tipo para los tours
 interface Tour {
   id: number;
   nombre: string;
   descripcion: string;
-  precio: number;
-  duracion: number;
   imagen: string;
   ubicacion: string;
 }
@@ -159,30 +156,13 @@ const TarjetaTour = ({ tour }: { tour: Tour }) => {
           className="w-full h-48 object-cover"
           loading="lazy"
         />
-        <div className="absolute top-0 left-0 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-br-lg">
+        <div className="absolute top-0 left-0 bg-cyan-500 dark:bg-cyan-600 text-white text-xs font-semibold px-3 py-1 rounded-br-lg">
           {tour.ubicacion}
         </div>
       </div>
       <div className="p-5">
-        <h3 className="text-lg font-bold text-blue-900 truncate">{tour.nombre}</h3>
+        <h3 className="text-lg font-bold text-ocean-600 dark:text-ocean-300 truncate">{tour.nombre}</h3>
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">{tour.descripcion}</p>
-        <div className="mt-4 flex justify-between items-center">
-          <div>
-            <p className="text-sm font-medium text-gray-700">
-              {t('tours.duracion', 'Duración')}: {tour.duracion} min
-            </p>
-            <p className="text-lg font-bold text-blue-900">
-              S/ {tour.precio.toFixed(2)}
-            </p>
-          </div>
-          <Link
-            to={`/tours/${tour.id}`}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-300"
-            aria-label={`Explorar ${tour.nombre}`}
-          >
-            {t('tours.explorar', 'Explorar')}
-          </Link>
-        </div>
       </div>
     </motion.div>
   );
@@ -201,8 +181,6 @@ const ToursDestacados = () => {
           id: 1,
           nombre: 'Tour Islas Ballestas',
           descripcion: 'Explora la biodiversidad marina de las Islas Ballestas en un recorrido fascinante.',
-          precio: 85,
-          duracion: 120,
           imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS15JOc50DomJmq0AntFvwpy1qvFh6kg8ymgg&s',
           ubicacion: 'Pisco, Perú',
         },
@@ -210,8 +188,6 @@ const ToursDestacados = () => {
           id: 2,
           nombre: 'Avistamiento de Delfines',
           descripcion: 'Disfruta de la experiencia única de nadar con delfines en su hábitat natural.',
-          precio: 120,
-          duracion: 180,
           imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQogtw3YshZWPizQln-4TIYewkeNPRdQsLo7w&s',
           ubicacion: 'Pisco, Perú',
         },
@@ -219,8 +195,6 @@ const ToursDestacados = () => {
           id: 3,
           nombre: 'Avistamiento de Ballenas',
           descripcion: 'Navega por las aguas de Paracas mientras disfrutas de un espectacular avistamiento de ballenas.',
-          precio: 95,
-          duracion: 150,
           imagen: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYWyX23c4h3Q1Q29hkZ-_cFA6vqIRbcI096w&s',
           ubicacion: 'Paracas, Perú',
         },
@@ -242,7 +216,7 @@ const ToursDestacados = () => {
   };
 
   return (
-    <div className="bg-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="bg-ocean-50 dark:bg-ocean-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -250,10 +224,10 @@ const ToursDestacados = () => {
           transition={{ duration: 0.5 }}
           className="text-center mb-10"
         >
-          <h2 className="text-3xl font-bold text-blue-900">
+          <h2 className="text-3xl font-bold text-ocean-600 dark:text-ocean-300">
             {t('tours.destacados', 'Tours Destacados')}
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             {t('tours.descripcion', 'Descubre las mejores experiencias para tu próxima aventura')}
           </p>
         </motion.div>
@@ -262,11 +236,10 @@ const ToursDestacados = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="h-48 bg-blue-200 rounded-xl"></div>
+                <div className="h-48 bg-ocean-200 dark:bg-ocean-700 rounded-xl"></div>
                 <div className="mt-4 space-y-3">
-                  <div className="h-4 bg-blue-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-blue-200 rounded w-5/6"></div>
-                  <div className="h-4 bg-blue-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-ocean-200 dark:bg-ocean-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-ocean-200 dark:bg-ocean-700 rounded w-5/6"></div>
                 </div>
               </div>
             ))}
