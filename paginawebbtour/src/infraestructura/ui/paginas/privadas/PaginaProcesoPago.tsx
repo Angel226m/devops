@@ -4807,10 +4807,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
 };
 
 export default PaginaProcesoPago;*/
-
-
-
-import { useState, useEffect, useRef, useCallback } from 'react';
+ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -4872,13 +4869,13 @@ interface LogEntry {
   data?: any;
 }
 
-// 🔧 CONSTANTES ACTUALIZADAS
+// 🔧 CONSTANTES CONFIGURADAS CORRECTAMENTE
 const IS_PRODUCTION = false;
 const IS_SANDBOX = true;
 const CACHE_DURATION_MS = 15 * 60 * 1000;
 const ACTUAL_ENV = process.env.NODE_ENV;
 
-// 📊 Logger mejorado
+// 📊 Logger mejorado y profesional
 class PaymentLogger {
   private logs: LogEntry[] = [];
   private maxLogs = 100;
@@ -5003,7 +5000,34 @@ const PaginaProcesoPago = () => {
   const igv = subtotal * 0.18;
   const total = subtotal;
 
-  // 🚀 Inicialización mejorada
+  // ✅ FUNCIÓN PROFESIONAL PARA FORMATEAR FECHAS
+  const formatearFecha = (fechaStr: string) => {
+    if (!fechaStr) return 'Fecha no especificada';
+    
+    try {
+      // Dividir la fecha en componentes para evitar problemas de zona horaria
+      const [year, month, day] = fechaStr.split('-').map(Number);
+      
+      if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) {
+        return 'Fecha no válida';
+      }
+      
+      // Crear fecha específica sin conversión de zona horaria
+      const fecha = new Date(year, month - 1, day);
+      
+      return fecha.toLocaleDateString('es-PE', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      logger.error('DATE_FORMAT', 'Error al formatear fecha', { fechaStr, error });
+      return 'Fecha no válida';
+    }
+  };
+
+  // 🚀 Inicialización profesional
   useEffect(() => {
     logger.info('INIT', 'Inicializando componente de pago', {
       NODE_ENV: ACTUAL_ENV,
@@ -5011,16 +5035,18 @@ const PaginaProcesoPago = () => {
       IS_PRODUCTION,
       modoCheckout,
       datosReserva: {
-        ...datosReserva,
-        // No loggear datos sensibles
-        usuario: undefined
+        tourNombre: datosReserva.tourNombre,
+        fecha: datosReserva.fecha,
+        total: datosReserva.total,
+        totalPasajeros: datosReserva.totalPasajeros,
+        instanciaId: datosReserva.instanciaId
       }
     });
     
     window.scrollTo(0, 0);
   }, []);
 
-  // 📝 Validación mejorada del formulario
+  // 📝 Validación profesional del formulario
   const validarFormulario = useCallback(() => {
     const errores: {[key: string]: string} = {};
 
@@ -5304,7 +5330,7 @@ const PaginaProcesoPago = () => {
     }
   }, [logger]);
 
-  // 💳 Procesamiento de pago con Checkout API mejorado
+  // 💳 Procesamiento profesional de pago con Checkout API
   const procesarPagoConCheckoutAPI = useCallback(async () => {
     if (cargandoPago || procesandoPago) {
       logger.warn('CHECKOUT_API', 'Intento de procesamiento mientras ya está en curso');
@@ -5369,7 +5395,7 @@ const PaginaProcesoPago = () => {
         } else {
             logger.error('CHECKOUT_API', 'No se encontró ID de reserva válido', {
               reservaEnProceso,
-              datosReserva: { ...datosReserva, usuario: '[REDACTED]' }
+              datosReserva: { instanciaId: datosReserva.instanciaId }
             });
             throw new Error("No se encontró ID de reserva válido");
         }
@@ -5454,7 +5480,7 @@ const PaginaProcesoPago = () => {
       estado,
       paymentId,
       reservationId,
-      datosBase: { ...datosBase, tourNombre: '[REDACTED]' }
+      datosBase: { reservaId: datosBase.reservaId, total: datosBase.total }
     });
     
     limpiarDatosReservaEnProgreso();
@@ -5629,7 +5655,7 @@ const PaginaProcesoPago = () => {
     }
   }, [estadoPagoVerificado, intentosVerificacion, maxIntentosVerificacion, verificarYConfirmarReserva, navegarSegunEstadoPago, logger]);
 
-  // 🔧 CREAR PREFERENCIA CORREGIDA - VALIDAR PAQUETES Y PASAJES
+  // 🔧 CREAR PREFERENCIA PROFESIONAL - VALIDACIÓN MEJORADA
   const crearPreferenciaReal = useCallback(async () => {
     try {
       if (preferencia) {
@@ -5688,7 +5714,7 @@ const PaginaProcesoPago = () => {
           throw new Error("No se encontró ID de instancia");
         }
         
-        // ✅ PASO 1: PROCESAR SOLO PASAJES INDIVIDUALES
+        // ✅ PROCESAMIENTO PROFESIONAL DE PASAJES
         let pasajes: Pasaje[] = [];
         
         if (datosReserva.cantidadesPasajes && Array.isArray(datosReserva.cantidadesPasajes)) {
@@ -5726,7 +5752,7 @@ const PaginaProcesoPago = () => {
           });
         }
         
-        // ✅ PASO 2: PROCESAR SOLO PAQUETES
+        // ✅ PROCESAMIENTO PROFESIONAL DE PAQUETES
         let paquetes: Paquete[] = [];
         
         if (datosReserva.paquetes && Array.isArray(datosReserva.paquetes)) {
@@ -5760,7 +5786,7 @@ const PaginaProcesoPago = () => {
           });
         }
         
-        // 🔧 VALIDACIÓN CORREGIDA: Pasajes O Paquetes
+        // 🔧 VALIDACIÓN PROFESIONAL
         if (pasajes.length === 0 && paquetes.length === 0) {
           throw new Error("Debe seleccionar al menos un pasaje o paquete");
         }
@@ -5774,14 +5800,12 @@ const PaginaProcesoPago = () => {
         
         const sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         
-        // 🔧 DATOS PARA ENVIAR CORREGIDOS
+        // 🔧 DATOS PROFESIONALES PARA ENVÍO
         const datosParaEnviar = {
           id_instancia: Number(datosReserva.instanciaId),
           id_tour_programado: Number(datosReserva.instanciaId), 
           id_cliente: usuario?.id_cliente ? Number(usuario.id_cliente) : 0, 
-          // ✅ SOLO ENVIAR SI HAY PASAJES INDIVIDUALES
           cantidad_pasajes: pasajes,
-          // ✅ SOLO ENVIAR SI HAY PAQUETES
           paquetes: paquetes,
           monto: parseFloat((datosReserva.total || total).toFixed(2)),
           total_pagar: parseFloat((datosReserva.total || total).toFixed(2)),
@@ -5800,10 +5824,11 @@ const PaginaProcesoPago = () => {
           tieneApellido: !!datosParaEnviar.apellido,
           monto: datosParaEnviar.monto,
           cantidadPasajes: datosParaEnviar.cantidad_pasajes.length,
-          cantidadPaquetes: datosParaEnviar.paquetes.length, // ✅ AHORA SE INCLUYE
+          cantidadPaquetes: datosParaEnviar.paquetes.length,
           totalCalculado: datosReserva.totalPasajeros
         });
         
+        // 🔧 VALIDACIÓN OBLIGATORIA
         if (!datosParaEnviar.email) {
           throw new Error("El email es obligatorio");
         }
@@ -5826,10 +5851,13 @@ const PaginaProcesoPago = () => {
         try {
           logger.info('PREFERENCE_CREATION', 'Enviando solicitud de creación');
           logger.info('PREFERENCE_CREATION', '📤 DATOS ENVIADOS AL BACKEND:', {
-            ...datosParaEnviar,
-            email: '[REDACTED]',
-            nombre: '[REDACTED]',
-            apellido: '[REDACTED]'
+            id_instancia: datosParaEnviar.id_instancia,
+            cantidadPasajes: datosParaEnviar.cantidad_pasajes.length,
+            cantidadPaquetes: datosParaEnviar.paquetes.length,
+            monto: datosParaEnviar.monto,
+            tour_nombre: datosParaEnviar.tour_nombre,
+            tieneEmail: !!datosParaEnviar.email,
+            tieneNombre: !!datosParaEnviar.nombre
           });
           
           const response = await clienteAxios.post(endpoints.mercadoPago.reservar, datosParaEnviar);
@@ -5966,44 +5994,44 @@ const PaginaProcesoPago = () => {
     });
   }, [logger]);
 
-const inicializarMercadoPagoSDK = useCallback(async () => {
-  try {
-    logger.debug('SDK_INIT', 'Verificando prerrequisitos', {
-      tieneWindowMP: !!window.MercadoPago,
-      publicKey: publicKey ? `${publicKey.substring(0, 20)}...` : 'NO DISPONIBLE',
-      sdkCargado
-    });
+  const inicializarMercadoPagoSDK = useCallback(async () => {
+    try {
+      logger.debug('SDK_INIT', 'Verificando prerrequisitos', {
+        tieneWindowMP: !!window.MercadoPago,
+        publicKey: publicKey ? `${publicKey.substring(0, 20)}...` : 'NO DISPONIBLE',
+        sdkCargado
+      });
 
-    let claveAUsar = publicKey;
-    if (!claveAUsar) {
-      logger.debug('SDK_INIT', 'Obteniendo clave pública');
-      claveAUsar = await obtenerClavePublica();
+      let claveAUsar = publicKey;
       if (!claveAUsar) {
-        throw new Error('No se pudo obtener la clave pública');
+        logger.debug('SDK_INIT', 'Obteniendo clave pública');
+        claveAUsar = await obtenerClavePublica();
+        if (!claveAUsar) {
+          throw new Error('No se pudo obtener la clave pública');
+        }
       }
+
+      if (!window.MercadoPago) {
+        throw new Error('window.MercadoPago no está disponible');
+      }
+
+      logger.info('SDK_INIT', 'Inicializando MercadoPago SDK v2', {
+        clave: `${claveAUsar.substring(0, 20)}...`
+      });
+
+      const mercadoPago = new window.MercadoPago(claveAUsar, {
+        locale: 'es-PE'
+      });
+
+      setMp(mercadoPago);
+      logger.info('SDK_INIT', 'SDK inicializado correctamente');
+
+      await obtenerMetodosPago();
+    } catch (error) {
+      logger.error('SDK_INIT', 'Error al inicializar SDK', error);
+      setError('Error al inicializar el procesador de pagos. Por favor, recarga la página.');
     }
-
-    if (!window.MercadoPago) {
-      throw new Error('window.MercadoPago no está disponible');
-    }
-
-    logger.info('SDK_INIT', 'Inicializando MercadoPago SDK v2', {
-      clave: `${claveAUsar.substring(0, 20)}...`
-    });
-
-    const mercadoPago = new window.MercadoPago(claveAUsar, {
-      locale: 'es-PE'
-    });
-
-    setMp(mercadoPago);
-    logger.info('SDK_INIT', 'SDK inicializado correctamente');
-
-    await obtenerMetodosPago();
-  } catch (error) {
-    logger.error('SDK_INIT', 'Error al inicializar SDK', error);
-    setError('Error al inicializar el procesador de pagos. Por favor, recarga la página.');
-  }
-}, [publicKey, obtenerClavePublica, obtenerMetodosPago, sdkCargado, logger]);
+  }, [publicKey, obtenerClavePublica, obtenerMetodosPago, sdkCargado, logger]);
 
   const renderizarBotonMercadoPago = useCallback(() => {
     if (!preferencia) {
@@ -6195,7 +6223,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
           logger.info('DIRECT_PAYMENT', 'Nueva preferencia - Usando sandbox_init_point', { url });
         } else {
           url = nuevaPreferencia.init_point;
-          logger.warn('DIRECT_PAYMENT', 'Nueva preferencia - Usando init_point como fallback', { url });
+                   logger.warn('DIRECT_PAYMENT', 'Nueva preferencia - Usando init_point como fallback', { url });
         }
         
         if (url) {
@@ -6222,45 +6250,43 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
     }
   };
 
-  // 🔄 Efectos mejorados
- useEffect(() => {
-  const iniciarMercadoPago = async () => {
-    try {
-      if (preferencia) {
-        logger.info('INIT_EFFECT', 'Ya existe una preferencia, PERO INICIEMOS SDK');
-        // ✅ CORREGIDO: Inicializar SDK aunque exista preferencia
+  // 🔄 Efectos profesionales y optimizados
+  useEffect(() => {
+    const iniciarMercadoPago = async () => {
+      try {
+        if (preferencia) {
+          logger.info('INIT_EFFECT', 'Ya existe una preferencia, iniciando SDK');
+        }
+        
+        setCargandoMercadoPago(true);
+        
+        // Paso 1: Cargar SDK
+        await cargarMercadoPagoSDK();
+        
+        // Paso 2: Obtener clave pública
+        if (!publicKey) {
+          await obtenerClavePublica();
+        }
+        
+        // Paso 3: Inicializar SDK
+        await inicializarMercadoPagoSDK();
+        
+        // Paso 4: Crear preferencia si no existe
+        if (!preferencia) {
+          await iniciarProcesoPago();
+        }
+        
+      } catch (error) {
+        logger.error('INIT_EFFECT', 'Error al inicializar Mercado Pago', error);
+      } finally {
+        setCargandoMercadoPago(false);
       }
-      
-      setCargandoMercadoPago(true);
-      
-      // ✅ PASO 1: Cargar SDK primero
-      await cargarMercadoPagoSDK();
-      
-      // ✅ PASO 2: Obtener clave pública
-      if (!publicKey) {
-        await obtenerClavePublica();
-      }
-      
-      // ✅ PASO 3: Inicializar SDK con clave pública
-      await inicializarMercadoPagoSDK();
-      
-      // ✅ PASO 4: Crear preferencia si no existe
-      if (!preferencia) {
-        await iniciarProcesoPago();
-      }
-      
-    } catch (error) {
-      logger.error('INIT_EFFECT', 'Error al inicializar Mercado Pago', error);
-    } finally {
-      setCargandoMercadoPago(false);
-    }
-  };
-  
-  iniciarMercadoPago();
-}, [obtenerClavePublica, inicializarMercadoPagoSDK, iniciarProcesoPago, publicKey, preferencia, logger]);
+    };
+    
+    iniciarMercadoPago();
+  }, [obtenerClavePublica, inicializarMercadoPagoSDK, iniciarProcesoPago, publicKey, preferencia, logger]);
 
-
-    useEffect(() => {
+  useEffect(() => {
     if (preferencia && sdkCargado && publicKey && modoCheckout === 'pro') {
       const debouncedRender = debounce(() => {
         renderizarBotonMercadoPago();
@@ -6304,7 +6330,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
     }
   }, [preferencia, IS_SANDBOX, verificarPagoUnificado, navegarSegunEstadoPago, estadoPagoVerificado, pagoIniciado, datosReserva, logger]);
 
-   useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
     const paymentId = params.get('payment_id');
@@ -6368,27 +6394,6 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
     }
   }, [location.search, navegarSegunEstadoPago, datosReserva, verificarYConfirmarReserva, logger]);
   
-  const formatearFecha = (fechaStr: string) => {
-    if (!fechaStr) return '';
-    
-    try {
-      const fecha = new Date(fechaStr);
-      if (isNaN(fecha.getTime())) {
-        return 'Fecha no válida';
-      }
-      
-      return fecha.toLocaleDateString('es-PE', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-    } catch (error) {
-      logger.error('DATE_FORMAT', 'Error al formatear fecha', { fechaStr, error });
-      return 'Fecha no válida';
-    }
-  };
-  
   useEffect(() => {
     return () => {
       if (!estadoPagoVerificado) {
@@ -6398,7 +6403,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
     };
   }, [estadoPagoVerificado, logger]);
 
-  // 🎨 Componente de logs mejorado
+  // 🎨 Componente de logs profesional
   const LogViewer = () => {
     const logs = logger.getLogs();
     
@@ -6479,7 +6484,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
     );
   };
 
-  // 🎯 Indicador de estado mejorado
+  // 🎯 Indicador de estado profesional
   const EstadoIndicator = () => (
     <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-200 mb-4">
       <div className="flex items-center justify-between">
@@ -6529,7 +6534,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-white via-blue-50 to-cyan-50 min-h-screen">
       <div className="flex flex-col space-y-6">
-        {/* Header mejorado */}
+        {/* Header profesional */}
         <div className="bg-gradient-to-r from-blue-600 to-teal-500 text-white p-6 rounded-xl shadow-lg">
           <div className="flex justify-between items-start">
             <div>
@@ -6553,7 +6558,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
             </div>
           </div>
           
-          {/* Indicador de progreso mejorado */}
+          {/* Indicador de progreso profesional */}
           <div className="mt-4 pt-4 border-t border-white/20">
             <div className="flex items-center justify-between max-w-md">
               <div className="flex flex-col items-center">
@@ -6599,7 +6604,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Detalles de la reserva mejorados */}
+            {/* Detalles de la reserva profesionales */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-teal-500" viewBox="0 0 20 20" fill="currentColor">
@@ -6659,7 +6664,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
               </div>
             </div>
             
-            {/* Datos del cliente mejorados */}
+            {/* Datos del cliente profesionales */}
             {usuario && (
               <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-center mb-4 pb-2 border-b border-cyan-100">
@@ -6698,7 +6703,6 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Campos del usuario con validación visual */}
                   {Object.entries({
                     nombres: 'Nombre',
                     apellidos: 'Apellidos', 
@@ -6746,7 +6750,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
             )}
           </div>
           
-          {/* Panel de pago mejorado */}
+          {/* Panel de pago profesional */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-cyan-200 hover:shadow-md transition-shadow">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-cyan-100 flex items-center">
@@ -6757,7 +6761,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 Opciones de pago
               </h2>
               
-              {/* Indicador de modo test mejorado */}
+              {/* Indicador de modo test profesional */}
               {IS_SANDBOX && (
                 <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl">
                   <div className="flex items-center mb-2">
@@ -6777,7 +6781,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 </div>
               )}
               
-              {/* Error mejorado */}
+              {/* Error profesional */}
               {error && (
                 <div className="mt-4 mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg">
                   <div className="flex items-start">
@@ -6798,7 +6802,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 </div>
               )}
 
-              {/* Selector de modo mejorado */}
+              {/* Selector de modo profesional */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Método de pago</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -6830,7 +6834,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 </div>
               </div>
 
-              {/* Formulario de tarjeta mejorado */}
+              {/* Formulario de tarjeta profesional */}
               {modoCheckout === 'api' && (
                 <div className="space-y-4 mb-6">
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
@@ -7011,7 +7015,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
                 </div>
               )}
               
-              {/* Botones de pago mejorados */}
+              {/* Botones de pago profesionales */}
               <div>
                 {cargandoMercadoPago ? (
                   <div className="w-full py-8 flex flex-col justify-center items-center bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg border border-cyan-200">
@@ -7111,7 +7115,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
               </div>
             </div>
             
-            {/* Panel de seguridad mejorado */}
+            {/* Panel de seguridad profesional */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200">
               <div className="space-y-4">
                 <div className="flex items-center">
@@ -7174,9 +7178,9 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
           </div>
         </div>
         
-        {/* Footer con botones mejorado */}
+        {/* Footer profesional */}
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <button
+                 <button
             type="button"
             onClick={() => navigate(-1)}
             className="w-full sm:w-auto px-6 py-3 border-2 border-cyan-300 text-cyan-700 font-medium rounded-lg transition-all duration-200 hover:bg-cyan-50 hover:border-cyan-400 flex items-center justify-center shadow-sm hover:shadow-md"
@@ -7187,7 +7191,7 @@ const inicializarMercadoPagoSDK = useCallback(async () => {
             Volver atrás
           </button>
           
-           {/* Info de desarrollo */}
+          {/* Info de desarrollo profesional */}
           {ACTUAL_ENV === 'development' && (
             <div className="text-xs text-gray-500 text-center sm:text-right bg-gray-100 p-3 rounded-lg">
               <div className="grid grid-cols-2 gap-2 text-left">
