@@ -139,7 +139,7 @@ const RutasPublicas = () => {
         <Route path="mis-reservas" element={
           <div>
             <h1 style={{padding: '20px', color: 'red', fontSize: '24px'}}>
-              🔧 DEBUG: Renderizando PaginaReservasUsuario
+               
             </h1>
             <PaginaReservasUsuario />
           </div>
