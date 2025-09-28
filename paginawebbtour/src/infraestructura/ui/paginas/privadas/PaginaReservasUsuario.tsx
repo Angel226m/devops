@@ -365,7 +365,7 @@ const PaginaReservasUsuario = () => {
 };
 
 export default PaginaReservasUsuario;*/
-import { useEffect, useState, useMemo } from 'react';
+ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -420,11 +420,14 @@ interface ReservaExtendida {
 type EstadoReserva = 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO' | 'RESERVADO';
 
 const PaginaReservasUsuario = () => {
+  // ⭐ AGREGAMOS ESTADO LOCAL PARA FORZAR RENDER
+  const [renderKey, setRenderKey] = useState(0);
+
   useEffect(() => {
     console.log("🎯 PaginaReservasUsuario: Componente montado correctamente");
   }, []);
 
-  console.log("🎯 PaginaReservasUsuario: Renderizando componente");
+  console.log("🎯 PaginaReservasUsuario: Renderizando componente - render key:", renderKey);
   
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
@@ -435,6 +438,7 @@ const PaginaReservasUsuario = () => {
 
   // 🔍 DEBUG LOGS PRINCIPALES
   console.log("🔍 Debug PaginaReservasUsuario - Estado principal:", {
+    renderKey,
     reservasOriginales: reservasOriginales,
     reservasLength: reservasOriginales?.length,
     reservas: reservas,
@@ -456,6 +460,9 @@ const PaginaReservasUsuario = () => {
           console.log("✅ Número de reservas recibidas:", result?.length);
           console.log("✅ Tipo de datos recibidos:", typeof result, Array.isArray(result));
           console.log("✅ Primera reserva (si existe):", result?.[0]);
+          
+          // ⭐ FORZAR RE-RENDER
+          setRenderKey(prev => prev + 1);
         })
         .catch((err) => {
           console.error("❌ Error al cargar reservas:", err);
@@ -463,8 +470,22 @@ const PaginaReservasUsuario = () => {
     }
   }, [dispatch, autenticado]);
 
-  const formatearFecha = (fechaStr?: string, formato: 'corto' = 'corto'): string => {
+  const formatearFecha = (fechaStr?: string): string => {
     if (!fechaStr) return 'Fecha no disponible';
+    
+    // Si viene en formato DD/MM/YYYY, convertir
+    if (fechaStr.includes('/')) {
+      const [day, month, year] = fechaStr.split('/');
+      const fecha = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleDateString('es-PE', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+    }
+    
     const fecha = new Date(fechaStr);
     if (isNaN(fecha.getTime())) return 'Fecha inválida';
     return fecha.toLocaleDateString('es-PE', {
@@ -495,20 +516,15 @@ const PaginaReservasUsuario = () => {
   })[estado] || '📅';
 
   const getEstadoTexto = (estado: EstadoReserva): string => {
-    try {
-      const traducciones = {
-        'CONFIRMADA': 'Confirmada',
-        'CANCELADA': 'Cancelada',
-        'PENDIENTE': 'Pendiente',
-        'PROCESADO': 'Procesado',
-        'ANULADO': 'Anulado',
-        'RESERVADO': 'Reservado'
-      };
-      return traducciones[estado] || estado;
-    } catch (error) {
-      console.warn("⚠️ Error en traducción de estado:", estado, error);
-      return estado;
-    }
+    const traducciones = {
+      'CONFIRMADA': 'Confirmada',
+      'CANCELADA': 'Cancelada',
+      'PENDIENTE': 'Pendiente',
+      'PROCESADO': 'Procesado',
+      'ANULADO': 'Anulado',
+      'RESERVADO': 'Reservado'
+    };
+    return traducciones[estado] || estado;
   };
 
   const getNombreTour = (reserva: ReservaExtendida): string => 
@@ -526,16 +542,19 @@ const PaginaReservasUsuario = () => {
     
     if (reserva.cantidad_pasajes?.length) {
       total += reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
-      detalles.push(`Pasajes: ${reserva.cantidad_pasajes.map(p => `${p.cantidad} ${p.nombre_tipo || 'Pasajero'}`).join(', ')}`);
+      detalles.push(`${reserva.cantidad_pasajes.map(p => `${p.cantidad} ${p.nombre_tipo || 'Pasajero'}`).join(', ')}`);
     }
     
     if (reserva.paquetes?.length) {
-      total += reserva.paquetes.reduce((sum, p) => sum + (p.cantidad_total || 0), 0);
-      detalles.push(`Paquetes: ${reserva.paquetes.map(p => `${p.cantidad} ${p.nombre_paquete}`).join(', ')}`);
+      const totalPaquetes = reserva.paquetes.reduce((sum, p) => sum + (p.cantidad || 0), 0);
+      total += totalPaquetes;
+      detalles.push(`${reserva.paquetes.map(p => `${p.cantidad} ${p.nombre_paquete}`).join(', ')}`);
     }
     
-    const tipo = detalles.length ? (detalles.length > 1 ? 'Mixto' : detalles[0].split(': ')[0]) : '';
-    return { total, detalle: detalles.length ? `${tipo}` : 'Sin pasajeros' };
+    return { 
+      total, 
+      detalle: detalles.length ? detalles.join(', ') : 'Sin detalle' 
+    };
   };
 
   const getFechaTour = (reserva: ReservaExtendida): string => 
@@ -546,6 +565,7 @@ const PaginaReservasUsuario = () => {
 
   const reservasFiltradas = useMemo(() => {
     console.log("🔍 Calculando reservasFiltradas:", { 
+      renderKey,
       filtroEstado, 
       reservasLength: reservas?.length,
       tipoReservas: typeof reservas,
@@ -560,7 +580,7 @@ const PaginaReservasUsuario = () => {
     const filtradas = filtroEstado === 'TODOS' ? reservas : reservas.filter(r => r.estado === filtroEstado);
     console.log("✅ reservasFiltradas calculadas:", filtradas.length);
     return filtradas;
-  }, [reservas, filtroEstado]);
+  }, [reservas, filtroEstado, renderKey]); // ⭐ Agregamos renderKey como dependencia
 
   const estadisticas = useMemo(() => {
     if (!Array.isArray(reservas)) {
@@ -584,10 +604,11 @@ const PaginaReservasUsuario = () => {
     
     console.log("📊 Estadísticas calculadas:", stats);
     return stats;
-  }, [reservas]);
+  }, [reservas, renderKey]); // ⭐ Agregamos renderKey como dependencia
 
   // 🔍 LOG FINAL ANTES DEL RENDER
   console.log("🔍 Estado final antes del render:", {
+    renderKey,
     autenticado,
     cargando,
     error,
@@ -616,31 +637,34 @@ const PaginaReservasUsuario = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div key={renderKey} className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header con estadísticas */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-indigo-100">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="text-2xl">📋</div>
-              <h1 className="text-2xl font-bold text-gray-900">Mis Reservas</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Mis Reservas</h1>
+                <p className="text-sm text-gray-600">Gestiona todas tus reservas de tours</p>
+              </div>
             </div>
             
             {/* Estadísticas */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-emerald-50 text-center">
+              <div className="p-3 rounded-lg bg-emerald-50 text-center border border-emerald-100">
                 <div className="text-lg font-bold text-emerald-700">{estadisticas.confirmadas}</div>
                 <div className="text-xs text-emerald-600">Confirmadas</div>
               </div>
-              <div className="p-3 rounded-lg bg-yellow-50 text-center">
+              <div className="p-3 rounded-lg bg-yellow-50 text-center border border-yellow-100">
                 <div className="text-lg font-bold text-yellow-700">{estadisticas.pendientes}</div>
                 <div className="text-xs text-yellow-600">Pendientes</div>
               </div>
-              <div className="p-3 rounded-lg bg-purple-50 text-center">
+              <div className="p-3 rounded-lg bg-purple-50 text-center border border-purple-100">
                 <div className="text-lg font-bold text-purple-700">{estadisticas.reservadas}</div>
                 <div className="text-xs text-purple-600">Reservadas</div>
               </div>
-              <div className="p-3 rounded-lg bg-blue-50 text-center">
+              <div className="p-3 rounded-lg bg-blue-50 text-center border border-blue-100">
                 <div className="text-lg font-bold text-blue-700">{estadisticas.total}</div>
                 <div className="text-xs text-blue-600">Total</div>
               </div>
@@ -695,9 +719,10 @@ const PaginaReservasUsuario = () => {
         {cargando ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-            <div className="text-gray-600">Cargando reservas...</div>
+            <div className="text-gray-600">Cargando tus reservas...</div>
+            <div className="text-sm text-gray-500 mt-2">Esto puede tomar unos segundos</div>
           </div>
-        ) : reservasFiltradas.length === 0 ? (
+        ) : !Array.isArray(reservasFiltradas) || reservasFiltradas.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">😔</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -730,7 +755,7 @@ const PaginaReservasUsuario = () => {
                   {reservasFiltradas.map((reserva, index) => {
                     const { total, detalle } = getTotalPasajeros(reserva);
                     return (
-                      <tr key={reserva.id_reserva} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <tr key={`${reserva.id_reserva}-${renderKey}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="text-2xl mr-3">🌍</div>
@@ -776,31 +801,39 @@ const PaginaReservasUsuario = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Footer de la tabla */}
+            <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500 text-center">
+              Mostrando {reservasFiltradas.length} de {estadisticas.total} reservas
+            </div>
           </div>
         )}
 
-        {/* Debug info (colapsable) */}
-        <details className="mt-6">
-          <summary className="cursor-pointer bg-gray-100 p-3 rounded-lg text-sm font-medium">
-            🔍 Información de Debug (Click para expandir)
-          </summary>
-          <div className="mt-2 p-4 bg-gray-50 rounded-lg text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Estado:</h4>
-                <div>Autenticado: {autenticado ? '✅' : '❌'}</div>
-                <div>Cargando: {cargando ? '⏳' : '✅'}</div>
-                <div>Error: {error || '✅ Ninguno'}</div>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Datos:</h4>
-                <div>Reservas: {reservas?.length || 0}</div>
-                <div>Filtradas: {reservasFiltradas?.length || 0}</div>
-                <div>Filtro: {filtroEstado}</div>
+        {/* Debug info (solo visible en desarrollo) */}
+        {import.meta.env.DEV && (
+          <details className="mt-6">
+            <summary className="cursor-pointer bg-gray-100 p-3 rounded-lg text-sm font-medium">
+              🔍 Información de Debug (Click para expandir)
+            </summary>
+            <div className="mt-2 p-4 bg-gray-50 rounded-lg text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Estado:</h4>
+                  <div>Render Key: {renderKey}</div>
+                  <div>Autenticado: {autenticado ? '✅' : '❌'}</div>
+                  <div>Cargando: {cargando ? '⏳' : '✅'}</div>
+                  <div>Error: {error || '✅ Ninguno'}</div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Datos:</h4>
+                  <div>Reservas: {reservas?.length || 0}</div>
+                  <div>Filtradas: {reservasFiltradas?.length || 0}</div>
+                  <div>Filtro: {filtroEstado}</div>
+                </div>
               </div>
             </div>
-          </div>
-        </details>
+          </details>
+        )}
       </div>
     </div>
   );
