@@ -10,7 +10,11 @@ import { motion } from 'framer-motion';
 
 const PaginaPerfil = () => {
       window.scrollTo(0, 0);
+ useEffect(() => {
+    console.log("🎯 PaginaReservasUsuario: Componente montado correctamente");
+  }, []);
 
+  console.log("🎯 PaginaReservasUsuario: Renderizando componente");
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const { usuario, cargando, error } = useSelector((state: RootState) => state.autenticacion);

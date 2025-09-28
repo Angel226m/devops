@@ -602,6 +602,11 @@ interface ReservaExtendida {
 type EstadoReserva = 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO' | 'RESERVADO';
 
 const PaginaReservasUsuario = () => {
+   useEffect(() => {
+    console.log("🎯 PaginaReservasUsuario: Componente montado correctamente");
+  }, []);
+
+  console.log("🎯 PaginaReservasUsuario: Renderizando componente");
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const { reservas: reservasOriginales, cargando, error } = useSelector((state: RootState) => state.reserva);
