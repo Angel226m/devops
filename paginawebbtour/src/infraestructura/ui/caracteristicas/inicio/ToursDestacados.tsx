@@ -122,11 +122,9 @@ const ToursDestacados = () => {
 };
 
 export default ToursDestacados; */
-
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 // Tipo para los tours
 interface Tour {
@@ -146,23 +144,23 @@ const TarjetaTour = ({ tour }: { tour: Tour }) => {
         hidden: { opacity: 0, y: 20, scale: 0.95 },
         show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
       }}
-      className="bg-white rounded-xl shadow-md overflow-hidden transform hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+      className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-xl transition-all duration-300"
       aria-label={`Tour ${tour.nombre}`}
     >
       <div className="relative">
         <img
           src={tour.imagen}
           alt={tour.nombre}
-          className="w-full h-48 object-cover"
+          className="w-full h-52 object-cover"
           loading="lazy"
         />
-        <div className="absolute top-0 left-0 bg-cyan-500 dark:bg-cyan-600 text-white text-xs font-semibold px-3 py-1 rounded-br-lg">
+        <div className="absolute top-2 left-2 bg-cyan-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
           {tour.ubicacion}
         </div>
       </div>
-      <div className="p-5">
-        <h3 className="text-lg font-bold text-ocean-600 dark:text-ocean-300 truncate">{tour.nombre}</h3>
-        <p className="text-sm text-gray-600 mt-2 line-clamp-2">{tour.descripcion}</p>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-ocean-600 truncate">{tour.nombre}</h3>
+        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{tour.descripcion}</p>
       </div>
     </motion.div>
   );
@@ -216,30 +214,16 @@ const ToursDestacados = () => {
   };
 
   return (
-    <div className="bg-ocean-50 dark:bg-ocean-800 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="py-8 px-4 sm:px-6 lg:px-8 bg-transparent">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10"
-        >
-          <h2 className="text-3xl font-bold text-ocean-600 dark:text-ocean-300">
-            {t('tours.destacados', 'Tours Destacados')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {t('tours.descripcion', 'Descubre las mejores experiencias para tu próxima aventura')}
-          </p>
-        </motion.div>
-
         {cargando ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="h-48 bg-ocean-200 dark:bg-ocean-700 rounded-xl"></div>
-                <div className="mt-4 space-y-3">
-                  <div className="h-4 bg-ocean-200 dark:bg-ocean-700 rounded w-3/4"></div>
-                  <div className="h-4 bg-ocean-200 dark:bg-ocean-700 rounded w-5/6"></div>
+                <div className="h-52 bg-ocean-100 rounded-2xl"></div>
+                <div className="mt-3 space-y-2">
+                  <div className="h-4 bg-ocean-100 rounded w-3/4"></div>
+                  <div className="h-4 bg-ocean-100 rounded w-5/6"></div>
                 </div>
               </div>
             ))}
@@ -249,7 +233,7 @@ const ToursDestacados = () => {
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
           >
             {toursDestacados.map((tour) => (
               <TarjetaTour key={tour.id} tour={tour} />

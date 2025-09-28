@@ -545,7 +545,6 @@ const PaginaReservasUsuario = () => {
 
 export default PaginaReservasUsuario;*/
 
-
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -636,22 +635,13 @@ const PaginaReservasUsuario = () => {
   const formatearHora = (horaStr?: string): string => horaStr?.split(':').slice(0, 2).join(':') || 'N/A';
 
   const getEstadoClase = (estado: EstadoReserva): string => ({
-    'CONFIRMADA': 'bg-green-100 text-green-800 border-green-200',
-    'CANCELADA': 'bg-red-100 text-red-800 border-red-200',
-    'PENDIENTE': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'PROCESADO': 'bg-cyan-100 text-cyan-800 border-cyan-200',
-    'ANULADO': 'bg-gray-100 text-gray-800 border-gray-200',
-    'RESERVADO': 'bg-purple-100 text-purple-800 border-purple-200',
-  })[estado] || 'bg-gray-100 text-gray-800 border-gray-200';
-
-  const getEstadoIcono = (estado: EstadoReserva) => ({
-    'CONFIRMADA': '✅',
-    'CANCELADA': '❌',
-    'PENDIENTE': '⏳',
-    'PROCESADO': '✅',
-    'ANULADO': '❌',
-    'RESERVADO': '📅',
-  })[estado] || '📅';
+    'CONFIRMADA': 'bg-green-100 text-green-700 border-green-200',
+    'CANCELADA': 'bg-red-100 text-red-700 border-red-200',
+    'PENDIENTE': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    'PROCESADO': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+    'ANULADO': 'bg-gray-100 text-gray-700 border-gray-200',
+    'RESERVADO': 'bg-purple-100 text-purple-700 border-purple-200',
+  })[estado] || 'bg-gray-100 text-gray-700 border-gray-200';
 
   const getEstadoTexto = (estado: EstadoReserva): string => ({
     'CONFIRMADA': 'Confirmada',
@@ -720,15 +710,14 @@ const PaginaReservasUsuario = () => {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-ocean-50 to-cyan-100"
+        className="min-h-screen flex items-center justify-center p-4 bg-transparent"
       >
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-ocean-100">
-          <div className="text-5xl mb-4">🔒</div>
+        <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full text-center border border-ocean-100">
           <h2 className="text-2xl font-bold text-ocean-600 mb-3">Sesión requerida</h2>
-          <p className="text-gray-600 mb-6">Inicia sesión para ver tus reservas</p>
+          <p className="text-gray-500 mb-6">Inicia sesión para ver tus reservas</p>
           <Link 
             to="/ingresar" 
-            className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-all duration-300 shadow-md hover:shadow-lg"
+            className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-semibold rounded-full hover:bg-cyan-600 transition-all duration-300 shadow-md hover:shadow-lg"
           >
             Iniciar Sesión
           </Link>
@@ -743,7 +732,7 @@ const PaginaReservasUsuario = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="min-h-screen py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-ocean-50 to-cyan-100"
+      className="min-h-screen py-6 px-4 sm:px-6 lg:px-8 bg-transparent"
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -751,15 +740,12 @@ const PaginaReservasUsuario = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-3xl shadow-xl p-6 mb-6 border border-ocean-100"
+          className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-ocean-100"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="text-3xl">📋</div>
-              <div>
-                <h1 className="text-3xl font-bold text-ocean-600">Mis Reservas</h1>
-                <p className="text-gray-600 text-sm">Planifica tus aventuras con estilo</p>
-              </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-ocean-600">Mis Reservas</h1>
+              <p className="text-gray-500 text-sm mt-1">Planifica tus aventuras con estilo</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full sm:w-auto">
               {[
@@ -768,7 +754,7 @@ const PaginaReservasUsuario = () => {
                 { label: 'Reservadas', count: estadisticas.reservadas, color: 'bg-purple-100 border-purple-200 text-purple-700' },
                 { label: 'Total', count: estadisticas.total, color: 'bg-cyan-100 border-cyan-200 text-cyan-700' },
               ].map((stat) => (
-                <div key={stat.label} className={`p-4 rounded-lg ${stat.color} text-center border shadow-sm hover:shadow-md transition-all duration-300`}>
+                <div key={stat.label} className={`p-3 rounded-lg ${stat.color} text-center border shadow-sm hover:shadow-md transition-all duration-300`}>
                   <div className="text-lg font-bold">{stat.count}</div>
                   <div className="text-xs">{stat.label}</div>
                 </div>
@@ -782,21 +768,17 @@ const PaginaReservasUsuario = () => {
               <button
                 key={estado}
                 onClick={() => setFiltroEstado(estado as EstadoReserva | 'TODOS')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 relative group ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
                   filtroEstado === estado
                     ? 'bg-cyan-500 text-white shadow-lg'
                     : 'bg-ocean-100 text-ocean-600 hover:bg-ocean-200'
                 }`}
-                title={`Filtrar por ${estado}`}
               >
                 {estado} ({estado === 'TODOS' ? estadisticas.total : 
                  estado === 'CONFIRMADA' ? estadisticas.confirmadas :
                  estado === 'PENDIENTE' ? estadisticas.pendientes :
                  estado === 'CANCELADA' ? estadisticas.canceladas :
                  estado === 'RESERVADO' ? estadisticas.reservadas : 0})
-                <span className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs rounded-full px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  {estado}
-                </span>
               </button>
             ))}
           </div>
@@ -810,11 +792,10 @@ const PaginaReservasUsuario = () => {
             className="bg-red-50 border-red-200 text-red-700 border px-4 py-3 rounded-lg mb-6"
           >
             <div className="flex items-center gap-2">
-              <span>❌</span>
               <strong>Error:</strong> {error}
               <button 
                 onClick={() => dispatch(listarMisReservas())}
-                className="ml-auto bg-red-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-600 transition-all duration-300"
+                className="ml-auto bg-red-500 text-white px-4 py-2 rounded-full text-sm hover:bg-red-600 transition-all duration-300"
               >
                 Reintentar
               </button>
@@ -827,40 +808,38 @@ const PaginaReservasUsuario = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white rounded-3xl shadow-xl p-8"
+            className="bg-white rounded-2xl shadow-xl p-6"
           >
             <div className="space-y-4">
               <div className="animate-pulse flex space-x-4">
                 <div className="flex-1 space-y-6 py-1">
-                  <div className="h-4 bg-ocean-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-ocean-100 rounded w-3/4"></div>
                   <div className="space-y-3">
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="h-4 bg-ocean-200 rounded col-span-2"></div>
-                      <div className="h-4 bg-ocean-200 rounded col-span-1"></div>
+                      <div className="h-4 bg-ocean-100 rounded col-span-2"></div>
+                      <div className="h-4 bg-ocean-100 rounded col-span-1"></div>
                     </div>
-                    <div className="h-4 bg-ocean-200 rounded"></div>
+                    <div className="h-4 bg-ocean-100 rounded"></div>
                   </div>
                 </div>
               </div>
-              <div className="text-center text-gray-600">Cargando tus reservas...</div>
+              <div className="text-center text-gray-500">Cargando tus reservas...</div>
             </div>
           </motion.div>
         ) : !Array.isArray(reservasFiltradas) || reservasFiltradas.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl shadow-xl p-8 text-center border border-ocean-100"
+            className="bg-white rounded-2xl shadow-xl p-6 text-center border border-ocean-100"
           >
-            <div className="text-6xl mb-4">😔</div>
             <h3 className="text-xl font-semibold text-ocean-600 mb-3">
               {filtroEstado === 'TODOS' ? 'No tienes reservas aún' : `No tienes reservas ${getEstadoTexto(filtroEstado).toLowerCase()}`}
             </h3>
-            <p className="text-gray-600 mb-6">¡Explora nuestros tours y comienza tu aventura!</p>
+            <p className="text-gray-500 mb-6">¡Explora nuestros tours y comienza tu aventura!</p>
             <Link 
               to="/tours" 
-              className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="inline-flex items-center px-6 py-3 bg-cyan-500 text-white font-semibold rounded-full hover:bg-cyan-600 transition-all duration-300 shadow-md hover:shadow-lg"
             >
-              <span className="mr-2">🌍</span>
               Explorar Tours
             </Link>
           </motion.div>
@@ -868,19 +847,19 @@ const PaginaReservasUsuario = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white rounded-3xl shadow-xl overflow-hidden border border-ocean-100"
+            className="bg-white rounded-2xl shadow-xl overflow-hidden border border-ocean-100"
           >
             {/* Vista de tabla para pantallas grandes */}
             <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-ocean-100">
                 <thead className="bg-ocean-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Tour</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Fecha</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Pasajeros</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Estado</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Acciones</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Tour</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Pasajeros</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Estado</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-ocean-100">
@@ -894,40 +873,35 @@ const PaginaReservasUsuario = () => {
                         transition={{ delay: index * 0.1 }}
                         className={index % 2 === 0 ? 'bg-white' : 'bg-ocean-50'}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="text-2xl mr-3">🌍</div>
-                            <div>
-                              <div className="text-sm font-medium text-ocean-600">{getNombreTour(reserva)}</div>
-                              <div className="text-sm text-gray-600">{getHorarioTour(reserva)}</div>
-                              <div className="text-xs text-cyan-500 font-semibold">#{reserva.id_reserva}</div>
-                            </div>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-ocean-600">{getNombreTour(reserva)}</div>
+                            <div className="text-sm text-gray-500">{getHorarioTour(reserva)}</div>
+                            <div className="text-xs text-cyan-500 font-semibold">#{reserva.id_reserva}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm text-ocean-600">
                             <div className="font-medium">{formatearFecha(getFechaTour(reserva))}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm text-cyan-500 font-medium">{total} pasajeros</div>
-                          <div className="text-xs text-gray-600">{detalle}</div>
+                          <div className="text-xs text-gray-500">{detalle}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-bold text-green-600">S/ {reserva.total_pagar.toFixed(2)}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getEstadoClase(reserva.estado)}`}>
-                            <span className="mr-1">{getEstadoIcono(reserva.estado)}</span>
                             {getEstadoTexto(reserva.estado)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                           <Link
                             to={`/reservas/${reserva.id_reserva}`}
-                            className="inline-flex items-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-all duration-300 shadow-sm hover:shadow-md"
+                            className="inline-flex items-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-full hover:bg-cyan-600 transition-all duration-300 shadow-sm hover:shadow-md"
                           >
-                            <span className="mr-1">👁️</span>
                             Ver Detalle
                           </Link>
                         </td>
@@ -948,36 +922,31 @@ const PaginaReservasUsuario = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="relative rounded-xl p-4 shadow-md border border-ocean-100 bg-gradient-to-br from-white to-ocean-50 hover:shadow-lg transition-all duration-300"
+                    className="relative rounded-xl p-4 shadow-md border border-ocean-100 bg-white hover:shadow-lg transition-all duration-300 transform hover:scale-102"
                     onClick={() => setModalReserva(reserva)}
                   >
                     <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl">🌍</div>
-                        <div>
-                          <div className="text-sm font-medium text-ocean-600">{getNombreTour(reserva)}</div>
-                          <div className="text-xs text-gray-600">{getHorarioTour(reserva)}</div>
-                          <div className="text-xs text-cyan-500 font-semibold">#{reserva.id_reserva}</div>
-                        </div>
+                      <div>
+                        <div className="text-sm font-medium text-ocean-600">{getNombreTour(reserva)}</div>
+                        <div className="text-xs text-gray-500">{getHorarioTour(reserva)}</div>
+                        <div className="text-xs text-cyan-500 font-semibold">#{reserva.id_reserva}</div>
                       </div>
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getEstadoClase(reserva.estado)}`}>
-                        <span className="mr-1">{getEstadoIcono(reserva.estado)}</span>
                         {getEstadoTexto(reserva.estado)}
                       </span>
                     </div>
-                    <div className="mt-3 text-sm">
+                    <div className="mt-2 text-sm">
                       <div className="font-medium text-ocean-600">Fecha: {formatearFecha(getFechaTour(reserva))}</div>
                     </div>
                     <div className="mt-2 text-sm">
                       <div className="text-cyan-500 font-medium">{total} pasajeros</div>
-                      <div className="text-xs text-gray-600">{detalle}</div>
+                      <div className="text-xs text-gray-500">{detalle}</div>
                     </div>
                     <div className="mt-2 text-sm font-bold text-green-600">S/ {reserva.total_pagar.toFixed(2)}</div>
                     <Link
                       to={`/reservas/${reserva.id_reserva}`}
-                      className="mt-3 inline-flex items-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-lg hover:bg-cyan-600 transition-all duration-300 w-full justify-center shadow-sm hover:shadow-md"
+                      className="mt-3 inline-flex items-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-full hover:bg-cyan-600 transition-all duration-300 w-full justify-center shadow-sm hover:shadow-md"
                     >
-                      <span className="mr-1">👁️</span>
                       Ver Detalle
                     </Link>
                   </motion.div>
@@ -996,33 +965,32 @@ const PaginaReservasUsuario = () => {
                   onClick={() => setModalReserva(null)}
                 >
                   <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
+                    initial={{ scale: 0.85, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    className="bg-white rounded-2xl p-6 max-w-md w-full border border-ocean-100 shadow-xl"
+                    exit={{ scale: 0.85, opacity: 0 }}
+                    className="bg-white rounded-xl p-6 max-w-md w-full border border-ocean-100 shadow-xl"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <h3 className="text-lg font-bold text-ocean-600 mb-4">{getNombreTour(modalReserva)}</h3>
-                    <p className="text-sm text-gray-600">ID: #{modalReserva.id_reserva}</p>
-                    <p className="text-sm text-gray-600">Fecha: {formatearFecha(getFechaTour(modalReserva))}</p>
-                    <p className="text-sm text-gray-600">Horario: {getHorarioTour(modalReserva)}</p>
+                    <h3 className="text-lg font-bold text-ocean-600 mb-3">{getNombreTour(modalReserva)}</h3>
+                    <p className="text-sm text-gray-500">ID: #{modalReserva.id_reserva}</p>
+                    <p className="text-sm text-gray-500">Fecha: {formatearFecha(getFechaTour(modalReserva))}</p>
+                    <p className="text-sm text-gray-500">Horario: {getHorarioTour(modalReserva)}</p>
                     <p className="text-sm text-cyan-500 font-medium">{getTotalPasajeros(modalReserva).total} pasajeros</p>
-                    <p className="text-sm text-gray-600">{getTotalPasajeros(modalReserva).detalle}</p>
+                    <p className="text-sm text-gray-500">{getTotalPasajeros(modalReserva).detalle}</p>
                     <p className="text-sm font-bold text-green-600">S/ {modalReserva.total_pagar.toFixed(2)}</p>
                     <p className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getEstadoClase(modalReserva.estado)} mt-2`}>
-                      <span className="mr-1">{getEstadoIcono(modalReserva.estado)}</span>
                       {getEstadoTexto(modalReserva.estado)}
                     </p>
                     <div className="mt-4 flex justify-end gap-2">
                       <button
                         onClick={() => setModalReserva(null)}
-                        className="px-4 py-2 rounded-lg bg-ocean-100 text-ocean-600 hover:bg-ocean-200 transition-all duration-300"
+                        className="px-4 py-2 rounded-full bg-ocean-100 text-ocean-600 hover:bg-ocean-200 transition-all duration-300"
                       >
                         Cerrar
                       </button>
                       <Link
                         to={`/reservas/${modalReserva.id_reserva}`}
-                        className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-all duration-300"
+                        className="px-4 py-2 bg-cyan-500 text-white rounded-full hover:bg-cyan-600 transition-all duration-300"
                       >
                         Ver Detalle
                       </Link>
@@ -1043,16 +1011,16 @@ const PaginaReservasUsuario = () => {
         {import.meta.env.DEV && (
           <details className="mt-6">
             <summary className="cursor-pointer p-3 rounded-lg text-sm font-medium bg-ocean-100 text-ocean-600">
-              🔍 Información de Debug
+              Información de Debug
             </summary>
             <div className="mt-2 p-4 rounded-lg text-xs bg-ocean-50 text-ocean-600">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">Estado:</h4>
                   <div>Render Key: {renderKey}</div>
-                  <div>Autenticado: {autenticado ? '✅' : '❌'}</div>
-                  <div>Cargando: {cargando ? '⏳' : '✅'}</div>
-                  <div>Error: {error || '✅ Ninguno'}</div>
+                  <div>Autenticado: {autenticado ? 'Sí' : 'No'}</div>
+                  <div>Cargando: {cargando ? 'Sí' : 'No'}</div>
+                  <div>Error: {error || 'Ninguno'}</div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Datos:</h4>
