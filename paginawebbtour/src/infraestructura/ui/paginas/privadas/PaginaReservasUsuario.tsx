@@ -366,7 +366,6 @@ const PaginaReservasUsuario = () => {
 
 export default PaginaReservasUsuario;*/
 
-
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -422,32 +421,16 @@ interface ReservaExtendida {
 type EstadoReserva = 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO' | 'RESERVADO';
 
 const PaginaReservasUsuario = () => {
-  useEffect(() => {
-    console.log("🎯 PaginaReservasUsuario: Componente montado correctamente");
-  }, []);
-
-  console.log("🎯 PaginaReservasUsuario: Renderizando componente");
-  
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const { reservas: reservasOriginales, cargando, error } = useSelector((state: RootState) => state.reserva);
   const { autenticado } = useSelector((state: RootState) => state.autenticacion);
-  const reservas = reservasOriginales as ReservaExtendida[];
+  const reservas = reservasOriginales as ReservaExtendida[] | undefined;
   const [filtroEstado, setFiltroEstado] = useState<EstadoReserva | 'TODOS'>('TODOS');
 
-  // 🔍 DEBUG LOGS PRINCIPALES
-  console.log("🔍 Debug PaginaReservasUsuario - Estado principal:", {
-    reservasOriginales: reservasOriginales,
-    reservasLength: reservasOriginales?.length,
-    reservas: reservas,
-    reservasAsArray: Array.isArray(reservas),
-    cargando: cargando,
-    error: error,
-    autenticado: autenticado,
-    filtroEstado: filtroEstado
-  });
-
+  // Efecto para cargar reservas al montar el componente
   useEffect(() => {
+    console.log("🎯 PaginaReservasUsuario: Componente montado correctamente");
     window.scrollTo(0, 0);
     if (autenticado) {
       console.log("🚀 Despachando listarMisReservas...");
@@ -465,11 +448,11 @@ const PaginaReservasUsuario = () => {
     }
   }, [dispatch, autenticado]);
 
+  // Funciones de formato y utilidades
   const formatearFecha = (fechaStr?: string, formato: 'corto' = 'corto'): string => {
     if (!fechaStr) return t('reservas.fechaNoDisponible');
     const fecha = new Date(fechaStr);
-    if (isNaN(fecha.getTime())) return t('reservas.fechaInvalida');
-    return fecha.toLocaleDateString('es-PE', {
+    return isNaN(fecha.getTime()) ? t('reservas.fechaInvalida') : fecha.toLocaleDateString('es-PE', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -532,36 +515,24 @@ const PaginaReservasUsuario = () => {
 
   const getFechaReserva = (reserva: ReservaExtendida): string => reserva.fecha_reserva || reserva.fecha_creacion || '';
 
+  // Calcular reservas filtradas
   const reservasFiltradas = useMemo(() => {
-    console.log("🔍 Calculando reservasFiltradas:", { 
-      filtroEstado, 
-      reservasLength: reservas?.length,
-      tipoReservas: typeof reservas,
-      esArray: Array.isArray(reservas)
-    });
-    
+    console.log("🔍 Calculando reservasFiltradas:", { filtroEstado, reservasLength: reservas?.length, tipoReservas: typeof reservas, esArray: Array.isArray(reservas) });
     if (!Array.isArray(reservas)) {
       console.warn("⚠️ reservas no es un array:", reservas);
       return [];
     }
-    
     const filtradas = filtroEstado === 'TODOS' ? reservas : reservas.filter(r => r.estado === filtroEstado);
     console.log("✅ reservasFiltradas calculadas:", filtradas.length);
     return filtradas;
   }, [reservas, filtroEstado]);
 
+  // Calcular estadísticas
   const estadisticas = useMemo(() => {
     if (!Array.isArray(reservas)) {
       console.warn("⚠️ No se pueden calcular estadísticas, reservas no es array");
-      return {
-        total: 0,
-        confirmadas: 0,
-        pendientes: 0,
-        canceladas: 0,
-        reservadas: 0,
-      };
+      return { total: 0, confirmadas: 0, pendientes: 0, canceladas: 0, reservadas: 0 };
     }
-    
     const stats = {
       total: reservas.length,
       confirmadas: reservas.filter(r => r.estado === 'CONFIRMADA').length,
@@ -569,12 +540,11 @@ const PaginaReservasUsuario = () => {
       canceladas: reservas.filter(r => r.estado === 'CANCELADA').length,
       reservadas: reservas.filter(r => r.estado === 'RESERVADO').length,
     };
-    
     console.log("📊 Estadísticas calculadas:", stats);
     return stats;
   }, [reservas]);
 
-  // 🔍 LOG FINAL ANTES DEL RENDER
+  // Debug logs
   console.log("🔍 Estado final antes del render:", {
     autenticado,
     cargando,
@@ -585,146 +555,7 @@ const PaginaReservasUsuario = () => {
     esArrayReservasFiltradas: Array.isArray(reservasFiltradas)
   });
 
-  // ⭐ VERSION DEBUG SIMPLIFICADA - TEMPORAL (solo en desarrollo)
-  if (import.meta.env.DEV) {
-    return (
-      <div className="min-h-screen bg-gray-100 py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h1 className="text-2xl font-bold mb-4">DEBUG - Mis Reservas</h1>
-            
-            <div className="mb-4 p-4 bg-blue-50 rounded">
-              <h2 className="font-semibold mb-2">Estado de Debug:</h2>
-              <div className="text-sm space-y-1">
-                <div>Autenticado: {autenticado ? '✅ Sí' : '❌ No'}</div>
-                <div>Cargando: {cargando ? '⏳ Sí' : '✅ No'}</div>
-                <div>Error: {error ? `❌ ${error}` : '✅ Sin errores'}</div>
-                <div>Reservas originales: {reservasOriginales?.length || 0}</div>
-                <div>Reservas procesadas: {reservas?.length || 0}</div>
-                <div>Reservas filtradas: {reservasFiltradas?.length || 0}</div>
-                <div>Filtro estado: {filtroEstado}</div>
-                <div>Tipo reservas originales: {typeof reservasOriginales}</div>
-                <div>Es array reservas originales: {Array.isArray(reservasOriginales) ? '✅' : '❌'}</div>
-              </div>
-            </div>
-
-            {/* Botones de filtro para debug */}
-            <div className="mb-4 p-4 bg-yellow-50 rounded">
-              <h3 className="font-semibold mb-2">Filtros de Debug:</h3>
-              <div className="flex flex-wrap gap-2">
-                {['TODOS', 'CONFIRMADA', 'RESERVADO', 'PENDIENTE', 'CANCELADA'].map((estado) => (
-                  <button
-                    key={estado}
-                    onClick={() => {
-                      console.log("🔄 Cambiando filtro a:", estado);
-                      setFiltroEstado(estado as EstadoReserva | 'TODOS');
-                    }}
-                    className={`px-3 py-1 rounded text-sm ${
-                      filtroEstado === estado
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {estado} ({estado === 'TODOS' ? estadisticas.total : 
-                     estado === 'CONFIRMADA' ? estadisticas.confirmadas :
-                     estado === 'PENDIENTE' ? estadisticas.pendientes :
-                     estado === 'CANCELADA' ? estadisticas.canceladas :
-                     estado === 'RESERVADO' ? estadisticas.reservadas : 0})
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {cargando && (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <div>⏳ Cargando reservas...</div>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                <strong>Error:</strong> {error}
-                <button 
-                  onClick={() => {
-                    console.log("🔄 Reintentando cargar reservas...");
-                    dispatch(listarMisReservas());
-                  }}
-                  className="ml-2 bg-red-600 text-white px-2 py-1 rounded text-sm"
-                >
-                  Reintentar
-                </button>
-              </div>
-            )}
-
-            {!cargando && !error && (
-              <div>
-                <h3 className="font-semibold mb-2">
-                  Lista de Reservas Filtradas ({reservasFiltradas?.length || 0}):
-                </h3>
-                
-                {reservasFiltradas && reservasFiltradas.length > 0 ? (
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {reservasFiltradas.map((reserva, index) => (
-                      <div key={reserva.id_reserva || index} className="border p-3 rounded bg-gray-50">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div><strong>ID:</strong> {reserva.id_reserva}</div>
-                          <div><strong>Estado:</strong> <span className={`px-2 py-1 rounded text-xs ${getEstadoClase(reserva.estado)}`}>{reserva.estado}</span></div>
-                          <div><strong>Tour:</strong> {getNombreTour(reserva)}</div>
-                          <div><strong>Total:</strong> S/ {reserva.total_pagar?.toFixed(2) || '0.00'}</div>
-                          <div><strong>Fecha Tour:</strong> {formatearFecha(getFechaTour(reserva))}</div>
-                          <div><strong>Fecha Reserva:</strong> {formatearFecha(getFechaReserva(reserva))}</div>
-                        </div>
-                        
-                        <div className="mt-2 pt-2 border-t">
-                          <Link
-                            to={`/reservas/${reserva.id_reserva}`}
-                            className="inline-block bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
-                            onClick={() => console.log("🔗 Navegando a detalle de reserva:", reserva.id_reserva)}
-                          >
-                            Ver Detalle
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded">
-                    <div className="text-gray-500 mb-2">😔 No hay reservas para mostrar</div>
-                    <div className="text-sm text-gray-400">
-                      {filtroEstado === 'TODOS' ? 
-                        'No tienes reservas aún' : 
-                        `No tienes reservas con estado: ${filtroEstado}`
-                      }
-                    </div>
-                    <Link 
-                      to="/tours" 
-                      className="inline-block mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                    >
-                      Explorar Tours
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Debug de datos raw */}
-            <details className="mt-4">
-              <summary className="cursor-pointer font-semibold">🔍 Ver datos raw (Debug)</summary>
-              <div className="mt-2 p-3 bg-gray-100 rounded text-xs">
-                <div className="mb-2"><strong>reservasOriginales:</strong></div>
-                <pre className="whitespace-pre-wrap overflow-auto max-h-40">
-                  {JSON.stringify(reservasOriginales, null, 2)}
-                </pre>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // CÓDIGO ORIGINAL (solo se ejecutará en producción)
+  // Renderizado condicional
   if (!autenticado) {
     return (
       <motion.div
@@ -829,7 +660,7 @@ const PaginaReservasUsuario = () => {
         </motion.div>
 
         <AnimatePresence>
-          {cargando ? (
+          {cargando || !reservas ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
