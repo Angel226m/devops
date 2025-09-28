@@ -1,5 +1,5 @@
- /*
-
+ 
+/*
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -121,8 +121,9 @@ const ToursDestacados = () => {
   );
 };
 
-export default ToursDestacados;*/
- 
+export default ToursDestacados; */
+
+
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -148,7 +149,7 @@ const TarjetaTour = ({ tour }: { tour: Tour }) => {
         hidden: { opacity: 0, y: 20, scale: 0.95 },
         show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
       }}
-      className="bg-white rounded-2xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300"
+      className="bg-white rounded-xl shadow-md overflow-hidden transform hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
       aria-label={`Tour ${tour.nombre}`}
     >
       <div className="relative">
@@ -158,28 +159,28 @@ const TarjetaTour = ({ tour }: { tour: Tour }) => {
           className="w-full h-48 object-cover"
           loading="lazy"
         />
-        <div className="absolute top-0 left-0 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-br-lg">
+        <div className="absolute top-0 left-0 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-br-lg">
           {tour.ubicacion}
         </div>
       </div>
       <div className="p-5">
-        <h3 className="text-lg font-bold text-gray-800 truncate">{tour.nombre}</h3>
+        <h3 className="text-lg font-bold text-blue-900 truncate">{tour.nombre}</h3>
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">{tour.descripcion}</p>
-        <div className="mt-3 flex justify-between items-center">
+        <div className="mt-4 flex justify-between items-center">
           <div>
             <p className="text-sm font-medium text-gray-700">
-              Duración: {tour.duracion} min
+              {t('tours.duracion', 'Duración')}: {tour.duracion} min
             </p>
-            <p className="text-lg font-bold text-indigo-600">
+            <p className="text-lg font-bold text-blue-900">
               S/ {tour.precio.toFixed(2)}
             </p>
           </div>
           <Link
             to={`/tours/${tour.id}`}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all duration-300"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-300"
             aria-label={`Explorar ${tour.nombre}`}
           >
-            Explorar
+            {t('tours.explorar', 'Explorar')}
           </Link>
         </div>
       </div>
@@ -241,7 +242,7 @@ const ToursDestacados = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="bg-blue-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -249,7 +250,7 @@ const ToursDestacados = () => {
           transition={{ duration: 0.5 }}
           className="text-center mb-10"
         >
-          <h2 className="text-3xl font-bold text-gray-800">
+          <h2 className="text-3xl font-bold text-blue-900">
             {t('tours.destacados', 'Tours Destacados')}
           </h2>
           <p className="text-gray-600 mt-2">
@@ -261,7 +262,7 @@ const ToursDestacados = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="h-48 bg-blue-200 rounded-2xl"></div>
+                <div className="h-48 bg-blue-200 rounded-xl"></div>
                 <div className="mt-4 space-y-3">
                   <div className="h-4 bg-blue-200 rounded w-3/4"></div>
                   <div className="h-4 bg-blue-200 rounded w-5/6"></div>
@@ -288,4 +289,3 @@ const ToursDestacados = () => {
 };
 
 export default ToursDestacados;
- 
