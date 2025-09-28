@@ -112,7 +112,6 @@ class AuthService {
 
 export const authService = new AuthService();*/
 
-
 import { clienteAxios } from "../api/clienteAxios";
 import { clientePublico } from "../api/clientePublico";
 import { store } from "../store";
@@ -126,19 +125,30 @@ class AuthService {
   // Verificar si hay una sesión activa
   async verificarSesion(): Promise<boolean> {
     try {
-      console.log("Verificando sesión de usuario...");
+      console.log("🔍 AuthService: Iniciando verificación de sesión...");
       
-      // Primero intentamos refrescar el token usando la cookie refresh_token
-      console.log("Intentando refrescar token desde cookie...");
       try {
+        console.log("🔄 AuthService: Intentando refrescar token desde cookie...");
+        
         // Usamos clientePublico para la solicitud de refresh porque no necesita autenticación
         const refreshResponse = await clientePublico.post(endpoints.cliente.refrescarToken);
         
+        console.log("📡 AuthService: Respuesta del servidor:", {
+          status: refreshResponse.status,
+          data: refreshResponse.data
+        });
+        
         if (refreshResponse.data && refreshResponse.data.success) {
-          console.log("Token refrescado exitosamente desde cookie");
+          console.log("✅ AuthService: Token refrescado exitosamente desde cookie");
           
           // Obtenemos los datos del usuario y tokens del response
           const { usuario, token, refresh_token } = refreshResponse.data.data;
+          
+          console.log("👤 AuthService: Datos del usuario obtenidos:", {
+            usuarioId: usuario?.id,
+            tieneToken: !!token,
+            tieneRefreshToken: !!refresh_token
+          });
           
           // Actualizamos el estado de Redux
           store.dispatch(establecerUsuario(usuario));
@@ -152,29 +162,30 @@ class AuthService {
             store.dispatch(establecerRefreshToken(refresh_token));
           }
           
-          // ⭐ Finalizar la carga de autenticación
-          store.dispatch(finalizarCargaAutenticacion());
-          
+          console.log("✅ AuthService: Estado Redux actualizado correctamente");
           return true;
+        } else {
+          console.log("❌ AuthService: Respuesta del servidor no exitosa:", refreshResponse.data);
+          return false;
         }
-      } catch (refreshError) {
-        console.warn("No se pudo refrescar el token desde cookie:", refreshError);
+      } catch (refreshError: any) {
+        console.warn("⚠️ AuthService: Error al refrescar token:", {
+          message: refreshError.message,
+          status: refreshError.response?.status,
+          data: refreshError.response?.data
+        });
+        return false;
       }
-      
-      // Si llegamos aquí, el refresh falló, lo que significa que no hay sesión activa
-      console.log("No hay sesión activa (no se pudo refrescar el token)");
-      
-      // ⭐ Finalizar la carga de autenticación incluso si no hay sesión
-      store.dispatch(finalizarCargaAutenticacion());
-      
+    } catch (error: any) {
+      console.error("❌ AuthService: Error general en verificación de sesión:", {
+        message: error.message,
+        stack: error.stack
+      });
       return false;
-    } catch (error) {
-      console.error("Error al verificar sesión:", error);
-      
-      // ⭐ Finalizar la carga de autenticación incluso con error
+    } finally {
+      // ⭐ IMPORTANTE: Siempre finalizar la carga de autenticación
+      console.log("🏁 AuthService: Finalizando carga de autenticación");
       store.dispatch(finalizarCargaAutenticacion());
-      
-      return false;
     }
   }
   
@@ -189,12 +200,12 @@ class AuthService {
     
     this._intervalId = setInterval(async () => {
       try {
-        console.log("Renovando token automáticamente...");
+        console.log("🔄 AuthService: Renovando token automáticamente...");
         // Intentar renovar el token
         const response = await clientePublico.post(endpoints.cliente.refrescarToken);
         
         if (response.data && response.data.success) {
-          console.log("Token renovado automáticamente con éxito");
+          console.log("✅ AuthService: Token renovado automáticamente con éxito");
           
           // Obtenemos los datos del usuario y tokens del response
           const { usuario, token, refresh_token } = response.data.data;
@@ -211,10 +222,13 @@ class AuthService {
             store.dispatch(establecerRefreshToken(refresh_token));
           }
         } else {
-          console.warn("Respuesta inesperada al renovar token:", response.data);
+          console.warn("⚠️ AuthService: Respuesta inesperada al renovar token:", response.data);
         }
-      } catch (error) {
-        console.error("Error al renovar token automáticamente:", error);
+      } catch (error: any) {
+        console.error("❌ AuthService: Error al renovar token automáticamente:", {
+          message: error.message,
+          status: error.response?.status
+        });
         // Si falla la renovación, limpiar el intervalo
         if (this._intervalId) {
           clearInterval(this._intervalId);
@@ -223,7 +237,7 @@ class AuthService {
       }
     }, INTERVALO_RENOVACION);
     
-    console.log("Renovación automática de token configurada");
+    console.log("⏰ AuthService: Renovación automática de token configurada");
   }
   
   // Detener la renovación automática
@@ -231,7 +245,7 @@ class AuthService {
     if (this._intervalId) {
       clearInterval(this._intervalId);
       this._intervalId = undefined;
-      console.log("Renovación automática de token detenida");
+      console.log("⏹️ AuthService: Renovación automática de token detenida");
     }
   }
 }

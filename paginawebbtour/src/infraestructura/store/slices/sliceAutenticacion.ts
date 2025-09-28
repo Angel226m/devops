@@ -293,21 +293,25 @@ const initialState: EstadoAutenticacion = {
 const repoCliente = new RepoClienteHttp();
 
 // ⭐ NUEVA acción para verificar sesión
+// ⭐ NUEVO: Acción para verificar sesión con mejor manejo de errores
 export const verificarSesion = createAsyncThunk(
   "autenticacion/verificarSesion",
-  async (_, { rejectWithValue }) => {
+  async (_, { dispatch, rejectWithValue }) => {
     try {
+      console.log("🔄 Redux: Iniciando verificación de sesión...");
+      
       // Importamos el AuthService dentro de la función para evitar dependencias circulares
       const { authService } = await import("../../servicios/AuthService");
       const sesionActiva = await authService.verificarSesion();
       
-      if (!sesionActiva) {
-        return rejectWithValue('No hay sesión activa');
-      }
+      console.log("📊 Redux: Resultado de verificación de sesión:", sesionActiva);
       
-      return sesionActiva;
-    } catch (error) {
-      return rejectWithValue('Error al verificar sesión');
+      // Siempre retornamos el resultado, sin rechazar
+      return { sesionActiva };
+    } catch (error: any) {
+      console.error("❌ Redux: Error en verificación de sesión:", error);
+      // En lugar de rechazar, retornamos que no hay sesión activa
+      return { sesionActiva: false };
     }
   }
 );
@@ -429,16 +433,19 @@ const autenticacionSlice = createSlice({
     builder
       // ⭐ NUEVO: Verificar sesión
       .addCase(verificarSesion.pending, (state) => {
-        state.cargandoAutenticacion = true;
-      })
-      .addCase(verificarSesion.fulfilled, (state) => {
-        state.cargandoAutenticacion = false;
-        // La autenticación ya se maneja en el AuthService
-      })
-      .addCase(verificarSesion.rejected, (state) => {
-        state.cargandoAutenticacion = false;
-        // No hay sesión activa, pero no es un error
-      })
+  console.log("⏳ Redux: Verificando sesión...");
+  state.cargandoAutenticacion = true;
+})
+.addCase(verificarSesion.fulfilled, (state, action) => {
+  console.log("✅ Redux: Verificación de sesión completada:", action.payload);
+  state.cargandoAutenticacion = false;
+  // El AuthService ya maneja la actualización del estado de autenticación
+})
+.addCase(verificarSesion.rejected, (state, action) => {
+  console.log("❌ Redux: Verificación de sesión falló:", action.error);
+  state.cargandoAutenticacion = false;
+  // No hay sesión activa, pero no es un error crítico
+})
       
       // Registrar cliente
       .addCase(registrarCliente.pending, (state) => {
