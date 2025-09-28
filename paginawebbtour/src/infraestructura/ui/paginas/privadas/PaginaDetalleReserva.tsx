@@ -746,15 +746,58 @@ const PaginaDetalleReserva = () => {
     };
   }, [id, dispatch, autenticado, navigate]);
 
+  // ✅ FUNCIÓN PROFESIONAL PARA FORMATEAR FECHAS - CORREGIDA
   const formatearFecha = (fechaStr?: string, formato: 'completo' | 'corto' | 'relativo' = 'completo'): string => {
     if (!fechaStr) return t('reservas.fechaNoDisponible', 'N/A');
+    
     try {
-      const fecha = new Date(fechaStr.includes('/') ? fechaStr.split('/').reverse().join('-') : fechaStr);
-      if (isNaN(fecha.getTime())) return t('reservas.fechaInvalida', 'Fecha inválida');
-      return formato === 'relativo'
-        ? formatDistanceToNow(fecha, { addSuffix: true, locale: es })
-        : format(fecha, formato === 'completo' ? 'd MMMM yyyy' : 'd MMM yyyy', { locale: es });
-    } catch {
+      let fecha: Date;
+      
+      // Si la fecha viene en formato DD/MM/YYYY
+      if (fechaStr.includes('/')) {
+        const [day, month, year] = fechaStr.split('/');
+        if (year && month && day) {
+          // Crear fecha específica sin problemas de zona horaria
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else {
+          return t('reservas.fechaInvalida', 'Fecha inválida');
+        }
+      } 
+      // Si la fecha viene en formato ISO (YYYY-MM-DD) o similar
+      else if (fechaStr.includes('-')) {
+        const [year, month, day] = fechaStr.split('T')[0].split('-').map(Number);
+        if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          // Crear fecha específica evitando problemas de zona horaria
+          fecha = new Date(year, month - 1, day);
+        } else {
+          return t('reservas.fechaInvalida', 'Fecha inválida');
+        }
+      } 
+      // Fallback para otros formatos
+      else {
+        fecha = new Date(fechaStr);
+      }
+      
+      // Verificar si la fecha es válida
+      if (isNaN(fecha.getTime())) {
+        console.warn('📅 Fecha inválida:', fechaStr);
+        return t('reservas.fechaInvalida', 'Fecha inválida');
+      }
+      
+      // Formatear según el tipo solicitado
+      switch (formato) {
+        case 'relativo':
+          return formatDistanceToNow(fecha, { addSuffix: true, locale: es });
+        case 'completo':
+          return format(fecha, 'EEEE, d \'de\' MMMM \'de\' yyyy', { locale: es });
+        case 'corto':
+          return format(fecha, 'd MMM yyyy', { locale: es });
+        default:
+          return format(fecha, 'd MMMM yyyy', { locale: es });
+      }
+      
+    } catch (error) {
+      console.error('📅 Error al formatear fecha:', fechaStr, error);
       return t('reservas.fechaInvalida', 'Fecha inválida');
     }
   };
@@ -1058,7 +1101,7 @@ Sede: ${reserva.sede?.nombre || 'N/A'}
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-lg font-semibold text-emerald-600">S/ {reserva.total_pagar.toFixed(2)}</span>
-                <span className={`px-4 py-1 rounded-full text-sm font-medium ${getEstadoClase(reserva.estado)}`}>{getEstadoTexto(reserva.estado)}</span>
+                <span className={`px-4 py-1 rounded-full text-sm font-medium border ${getEstadoClase(reserva.estado)}`}>{getEstadoTexto(reserva.estado)}</span>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1438,7 +1481,7 @@ Sede: ${reserva.sede?.nombre || 'N/A'}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-full shadow-lg"
+                className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
               >
                 {t('reservas.copiado', '¡Detalles copiados al portapapeles!')}
               </motion.div>
