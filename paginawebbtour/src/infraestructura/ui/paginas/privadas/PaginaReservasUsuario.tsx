@@ -547,8 +547,7 @@ const PaginaReservasUsuario = () => {
   );
 };
 
-export default PaginaReservasUsuario;*/ 
-import { useEffect, useState, useMemo } from 'react';
+export default PaginaReservasUsuario;*/ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -686,12 +685,12 @@ const PaginaReservasUsuario = () => {
 
   const getEstadoClase = (estado: EstadoReserva): string => {
     const clases = {
-      'CONFIRMADA': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      'CANCELADA': 'bg-rose-100 text-rose-800 border-rose-200',
-      'PENDIENTE': 'bg-amber-100 text-amber-800 border-amber-200',
-      'PROCESADO': 'bg-blue-100 text-blue-800 border-blue-200',
-      'ANULADO': 'bg-gray-100 text-gray-800 border-gray-200',
-      'RESERVADO': 'bg-sky-100 text-sky-800 border-sky-200'
+      'CONFIRMADA': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      'CANCELADA': 'bg-rose-50 text-rose-700 border-rose-100',
+      'PENDIENTE': 'bg-amber-50 text-amber-700 border-amber-100',
+      'PROCESADO': 'bg-blue-50 text-blue-700 border-blue-100',
+      'ANULADO': 'bg-gray-50 text-gray-700 border-gray-100',
+      'RESERVADO': 'bg-sky-50 text-sky-700 border-sky-100'
     };
     return clases[estado] || clases['RESERVADO'];
   };
@@ -699,32 +698,32 @@ const PaginaReservasUsuario = () => {
   const getEstadoIcono = (estado: EstadoReserva) => {
     const iconos = {
       'CONFIRMADA': (
-        <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       'CANCELADA': (
-        <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       'PENDIENTE': (
-        <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       'PROCESADO': (
-        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       ),
       'ANULADO': (
-        <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
         </svg>
       ),
       'RESERVADO': (
-        <svg className="h-5 w-5 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-4 w-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       )
@@ -757,7 +756,6 @@ const PaginaReservasUsuario = () => {
     let total = 0;
     const detalles: string[] = [];
 
-    // Pasajes individuales
     if (reserva.cantidad_pasajes && reserva.cantidad_pasajes.length > 0) {
       const totalPasajes = reserva.cantidad_pasajes.reduce((sum, p) => sum + p.cantidad, 0);
       total += totalPasajes;
@@ -767,17 +765,15 @@ const PaginaReservasUsuario = () => {
       if (pasajesTexto) detalles.push(`Pasajes: ${pasajesTexto}`);
     }
 
-    // Paquetes
     if (reserva.paquetes && reserva.paquetes.length > 0) {
       const totalPaquetes = reserva.paquetes.reduce((sum, p) => sum + (p.cantidad_total || 0), 0);
       total += totalPaquetes;
       const paquetesTexto = reserva.paquetes
-        .map(p => `${p.cantidad} ${p.nombre_paquete} (${p.cantidad_total} personas)`)
+        .map(p => `${p.cantidad} ${p.nombre_paquete} (${p.cantidad_total} pers.)`)
         .join(', ');
       if (paquetesTexto) detalles.push(`Paquetes: ${paquetesTexto}`);
     }
 
-    // Determinar tipo
     let tipo = '';
     if (reserva.cantidad_pasajes?.length && reserva.paquetes?.length) {
       tipo = 'Pasajes y Paquetes';
@@ -824,20 +820,20 @@ const PaginaReservasUsuario = () => {
 
   if (!autenticado) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-sky-100 to-cyan-100">
-        <div className="text-center bg-white/90 p-10 rounded-3xl shadow-2xl max-w-lg border border-blue-200 backdrop-blur-md">
-          <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 border border-blue-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50">
+        <div className="text-center bg-white p-12 rounded-3xl shadow-2xl max-w-md border border-indigo-100 backdrop-blur-lg bg-white/95">
+          <div className="w-24 h-24 mx-auto mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('reservas.noSesion')}</h2>
-          <p className="text-gray-600 mb-8 text-lg">{t('reservas.iniciarSesionParaVerReservas')}</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">{t('reservas.noSesion')}</h2>
+          <p className="text-gray-600 mb-8 text-lg leading-relaxed">{t('reservas.iniciarSesionParaVerReservas')}</p>
           <Link
             to="/login"
-            className="inline-flex items-center px-8 py-4 rounded-2xl shadow-lg text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105"
+            className="inline-flex items-center px-8 py-4 rounded-2xl shadow-md text-lg font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
             </svg>
             {t('auth.iniciarSesion')}
@@ -848,234 +844,226 @@ const PaginaReservasUsuario = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 min-h-screen py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Encabezado */}
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 mb-8 border border-blue-100">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-4 shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{t('menu.misReservas')}</h1>
-                  <p className="text-lg text-gray-600 mt-2">{t('reservas.gestionReservas')}</p>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Encabezado */}
+        <div className="bg-white rounded-3xl shadow-xl p-8 mb-8 border border-indigo-100/50 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { label: t('reserva.estados.confirmada'), value: estadisticas.confirmadas, color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: '✅' },
-                  { label: t('reserva.estados.pendiente'), value: estadisticas.pendientes, color: 'bg-amber-100 text-amber-700 border-amber-200', icon: '⏳' },
-                  { label: t('reserva.estados.reservado'), value: estadisticas.reservadas, color: 'bg-sky-100 text-sky-700 border-sky-200', icon: '📅' },
-                  { label: t('reservas.total'), value: estadisticas.total, color: 'bg-blue-100 text-blue-700 border-blue-200', icon: '📋' }
-                ].map(stat => (
-                  <div key={stat.label} className={`rounded-2xl p-4 ${stat.color} border shadow-sm text-center transform hover:scale-105 transition-all duration-200`}>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <div className="text-sm flex items-center justify-center gap-1">
-                      <span>{stat.icon}</span>
-                      <span>{stat.label}</span>
-                    </div>
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900 tracking-tight">{t('menu.misReservas')}</h1>
+                <p className="mt-2 text-lg text-gray-600 leading-relaxed">{t('reservas.gestionReservas')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full md:w-auto">
+              {[
+                { label: t('reserva.estados.confirmada'), value: estadisticas.confirmadas, color: 'emerald', icon: '✅' },
+                { label: t('reserva.estados.pendiente'), value: estadisticas.pendientes, color: 'amber', icon: '⏳' },
+                { label: t('reserva.estados.reservado'), value: estadisticas.reservadas, color: 'sky', icon: '📅' },
+                { label: t('reservas.total'), value: estadisticas.total, color: 'blue', icon: '📋' }
+              ].map((stat, index) => (
+                <div key={index} className={`rounded-2xl p-4 bg-${stat.color}-50 border border-${stat.color}-100 text-center transition-all duration-300 hover:shadow-md`}>
+                  <div className="text-3xl font-bold text-${stat.color}-700">{stat.value}</div>
+                  <div className="text-sm text-${stat.color}-600 flex items-center justify-center gap-1 mt-1">
+                    <span>{stat.icon}</span>
+                    {stat.label}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Alertas */}
-          {error && (
-            <div className="mb-8">
-              <Alerta mensaje={error} tipo="error" />
-            </div>
-          )}
-
-          {/* Filtros */}
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-6 mb-8 border border-blue-100">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                <h2 className="text-2xl font-semibold text-gray-800">{t('reservas.filtrarPorEstado')}</h2>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { key: 'TODOS', icon: '📋', gradient: 'from-blue-600 to-cyan-600', bg: 'bg-gray-100', text: 'text-gray-800' },
-                  { key: 'CONFIRMADA', icon: '✅', gradient: 'from-emerald-600 to-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-800' },
-                  { key: 'RESERVADO', icon: '📅', gradient: 'from-sky-600 to-sky-500', bg: 'bg-sky-50', text: 'text-sky-800' },
-                  { key: 'PENDIENTE', icon: '⏳', gradient: 'from-amber-600 to-amber-500', bg: 'bg-amber-50', text: 'text-amber-800' },
-                  { key: 'CANCELADA', icon: '❌', gradient: 'from-rose-600 to-rose-500', bg: 'bg-rose-50', text: 'text-rose-800' }
-                ].map(({ key, icon, gradient, bg, text }) => (
-                  <button
-                    key={key}
-                    onClick={() => setFiltroEstado(key as EstadoReserva | 'TODOS')}
-                    className={`px-6 py-3 rounded-2xl text-base font-semibold transition-all duration-300 flex items-center transform hover:scale-105 shadow-sm ${
-                      filtroEstado === key 
-                        ? `bg-gradient-to-r ${gradient} text-white shadow-md` 
-                        : `${bg} ${text} hover:shadow-md border border-current/20`
-                    }`}
-                  >
-                    <span className="mr-2 text-lg">{icon}</span>
-                    {key === 'TODOS' ? t('reservas.todos') : t(`reserva.estados.${key.toLowerCase()}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Lista de reservas */}
-          {cargando ? (
-            <div className="flex justify-center items-center h-64 bg-white/90 backdrop-blur-md rounded-3xl shadow-xl border border-blue-100">
-              <Cargador tamanio="lg" color="text-blue-600" />
-            </div>
-          ) : reservasFiltradas.length === 0 ? (
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-12 text-center border border-blue-100">
-              <div className="w-32 h-32 mx-auto mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 border border-blue-300">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                {filtroEstado === 'TODOS' 
-                  ? t('reservas.sinReservas') 
-                  : t('reservas.sinReservasEstado', { estado: getEstadoTexto(filtroEstado) })}
-              </h3>
-              <p className="text-gray-600 max-w-md mx-auto mb-8 text-lg">{t('reservas.explorarTours')}</p>
-              <Link 
-                to="/tours" 
-                className="inline-flex items-center px-8 py-4 rounded-2xl shadow-lg text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {t('reservas.verTours')}
-              </Link>
-            </div>
-          ) : (
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border border-blue-100">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gradient-to-r from-blue-100 to-cyan-100">
-                    <tr>
-                      {[
-                        { key: 'tour', icon: '🏝️' },
-                        { key: 'fecha', icon: '📅' },
-                        { key: 'pasajeros', icon: '👥' },
-                        { key: 'total', icon: '💰' },
-                        { key: 'estado', icon: '📊' },
-                        { key: 'acciones', icon: '⚙️' }
-                      ].map(({ key, icon }) => (
-                        <th key={key} scope="col" className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
-                          <div className="flex items-center gap-2">
-                            <span>{icon}</span>
-                            <span>{t(`reservas.${key}`)}</span>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {reservasFiltradas.map(reserva => {
-                      const { total, detalle } = getTotalPasajeros(reserva);
-                      return (
-                        <tr key={reserva.id_reserva} className="hover:bg-blue-50 transition-colors duration-300">
-                          {/* Tour */}
-                          <td className="px-6 py-6">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-shrink-0">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center border border-blue-200">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </div>
-                              </div>
-                              <div>
-                                <div className="font-semibold text-gray-900 text-lg">{getNombreTour(reserva)}</div>
-                                <div className="text-sm text-gray-600 flex items-center gap-2 mt-2">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  {getHorarioTour(reserva)}
-                                </div>
-                                <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg mt-2 inline-block">
-                                  #{reserva.id_reserva}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          {/* Fecha */}
-                          <td className="px-6 py-6">
-                            <div className="space-y-2">
-                              <div className="text-sm font-semibold text-gray-900">
-                                {formatearFecha(getFechaTour(reserva), 'completo')}
-                              </div>
-                              <div className="text-xs text-gray-500 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                {t('reservas.reservadoEl')} {formatearFecha(getFechaReserva(reserva), 'corto')}
-                              </div>
-                              <div className="text-xs text-blue-600">
-                                {formatearFecha(getFechaTour(reserva), 'relativo')}
-                              </div>
-                            </div>
-                          </td>
-                          {/* Pasajeros */}
-                          <td className="px-6 py-6">
-                            <div className="relative group">
-                              <span className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-200 font-semibold text-base">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                {total}
-                              </span>
-                              <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg py-2 px-4 mt-2 w-64 z-10 shadow-lg">
-                                {detalle}
-                              </div>
-                            </div>
-                          </td>
-                          {/* Total */}
-                          <td className="px-6 py-6">
-                            <div className="text-center">
-                              <span className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 border border-emerald-200 font-bold text-base">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                S/ {reserva.total_pagar.toFixed(2)}
-                              </span>
-                            </div>
-                          </td>
-                          {/* Estado */}
-                          <td className="px-6 py-6">
-                            <span className={`px-4 py-2 inline-flex items-center text-sm font-semibold rounded-xl ${getEstadoClase(reserva.estado)} shadow-sm`}>
-                              {getEstadoIcono(reserva.estado)}
-                              <span className="ml-2">{getEstadoTexto(reserva.estado)}</span>
-                            </span>
-                          </td>
-                          {/* Acciones */}
-                          <td className="px-6 py-6 text-right">
-                            <Link
-                              to={`/reservas/${reserva.id_reserva}`}
-                              className="inline-flex items-center px-5 py-3 text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl transition-all duration-300 border border-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md transform hover:scale-105"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542-7c4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              {t('reservas.verDetalles')}
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Filtros */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 mb-8 border border-indigo-100/50 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <h2 className="text-2xl font-semibold text-gray-800 tracking-tight">{t('reservas.filtrarPorEstado')}</h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { key: 'TODOS', icon: '📋', gradient: 'indigo-600 blue-600', bg: 'gray-50', text: 'gray-700' },
+                { key: 'CONFIRMADA', icon: '✅', gradient: 'emerald-600 emerald-500', bg: 'emerald-50', text: 'emerald-700' },
+                { key: 'RESERVADO', icon: '📅', gradient: 'sky-600 sky-500', bg: 'sky-50', text: 'sky-700' },
+                { key: 'PENDIENTE', icon: '⏳', gradient: 'amber-600 amber-500', bg: 'amber-50', text: 'amber-700' },
+                { key: 'CANCELADA', icon: '❌', gradient: 'rose-600 rose-500', bg: 'rose-50', text: 'rose-700' }
+              ].map(({ key, icon, gradient, bg, text }) => (
+                <button
+                  key={key}
+                  onClick={() => setFiltroEstado(key as EstadoReserva | 'TODOS')}
+                  className={`px-6 py-3 rounded-2xl text-base font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md transform hover:scale-105 ${
+                    filtroEstado === key 
+                      ? `bg-gradient-to-r from-${gradient.split(' ')[0]} to-${gradient.split(' ')[1]} text-white` 
+                      : `bg-${bg} text-${text} border border-${text.split('-')[0]}-100`
+                  }`}
+                >
+                  <span className="text-xl">{icon}</span>
+                  {key === 'TODOS' ? t('reservas.todos') : t(`reserva.estados.${key.toLowerCase()}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de reservas */}
+        {cargando ? (
+          <div className="flex justify-center items-center h-96 bg-white rounded-3xl shadow-xl border border-indigo-100/50 backdrop-blur-sm">
+            <Cargador tamanio="lg" color="text-indigo-600" />
+          </div>
+        ) : reservasFiltradas.length === 0 ? (
+          <div className="bg-white rounded-3xl shadow-xl p-12 text-center border border-indigo-100/50 backdrop-blur-sm">
+            <div className="w-32 h-32 mx-auto mb-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">
+              {filtroEstado === 'TODOS' 
+                ? t('reservas.sinReservas') 
+                : t('reservas.sinReservasEstado', { estado: getEstadoTexto(filtroEstado) })}
+            </h3>
+            <p className="text-gray-600 max-w-md mx-auto mb-8 text-lg leading-relaxed">{t('reservas.explorarTours')}</p>
+            <Link 
+              to="/tours" 
+              className="inline-flex items-center px-8 py-4 rounded-2xl shadow-md text-lg font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t('reservas.verTours')}
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-indigo-100/50 backdrop-blur-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gradient-to-r from-indigo-50 to-blue-50">
+                  <tr>
+                    {[
+                      { key: 'tour', icon: '🏝️' },
+                      { key: 'fecha', icon: '📅' },
+                      { key: 'pasajeros', icon: '👥' },
+                      { key: 'total', icon: '💰' },
+                      { key: 'estado', icon: '📊' },
+                      { key: 'acciones', icon: '⚙️' }
+                    ].map(({ key, icon }) => (
+                      <th key={key} scope="col" className="px-8 py-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{icon}</span>
+                          {t(`reservas.${key}`)}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reservasFiltradas.map(reserva => {
+                    const { total, detalle } = getTotalPasajeros(reserva);
+                    return (
+                      <tr key={reserva.id_reserva} className="hover:bg-indigo-50/50 transition-colors duration-300">
+                        {/* Tour */}
+                        <td className="px-8 py-6">
+                          <div className="flex items-start gap-5">
+                            <div className="flex-shrink-0">
+                              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center border border-indigo-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900 text-xl tracking-tight">{getNombreTour(reserva)}</div>
+                              <div className="text-sm text-gray-500 flex items-center gap-2 mt-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {getHorarioTour(reserva)}
+                              </div>
+                              <div className="text-xs text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full mt-3 inline-flex items-center">
+                                # {reserva.id_reserva}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        {/* Fecha */}
+                        <td className="px-8 py-6">
+                          <div className="space-y-2">
+                            <div className="text-base font-semibold text-gray-900 tracking-tight">
+                              {formatearFecha(getFechaTour(reserva), 'completo')}
+                            </div>
+                            <div className="text-sm text-gray-500 flex items-center gap-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {t('reservas.reservadoEl')} {formatearFecha(getFechaReserva(reserva), 'corto')}
+                            </div>
+                            <div className="text-sm text-indigo-600 font-medium">
+                              {formatearFecha(getFechaTour(reserva), 'relativo')}
+                            </div>
+                          </div>
+                        </td>
+                        {/* Pasajeros */}
+                        <td className="px-8 py-6">
+                          <div className="group relative inline-block">
+                            <span className="inline-flex items-center px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 border border-indigo-100 font-semibold text-base shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              {total}
+                            </span>
+                            <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-72 bg-white rounded-xl shadow-2xl p-4 text-sm text-gray-700 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-gray-100 pointer-events-none">
+                              <p className="font-semibold mb-2 text-gray-900">Detalles de Pasajeros:</p>
+                              {detalle}
+                            </div>
+                          </div>
+                        </td>
+                        {/* Total */}
+                        <td className="px-8 py-6">
+                          <div className="text-center">
+                            <span className="inline-flex items-center px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-100 font-bold text-base shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              S/ {reserva.total_pagar.toFixed(2)}
+                            </span>
+                          </div>
+                        </td>
+                        {/* Estado */}
+                        <td className="px-8 py-6">
+                          <span className={`px-5 py-2.5 inline-flex items-center text-base font-medium rounded-xl ${getEstadoClase(reserva.estado)} shadow-sm`}>
+                            {getEstadoIcono(reserva.estado)}
+                            <span className="ml-2">{getEstadoTexto(reserva.estado)}</span>
+                          </span>
+                        </td>
+                        {/* Acciones */}
+                        <td className="px-8 py-6 text-right">
+                          <Link
+                            to={`/reservas/${reserva.id_reserva}`}
+                            className="inline-flex items-center px-6 py-3 text-base font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {t('reservas.verDetalles')}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
