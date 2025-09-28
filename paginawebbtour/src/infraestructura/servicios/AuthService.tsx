@@ -111,7 +111,6 @@ class AuthService {
 }
 
 export const authService = new AuthService();*/
-
 import { clienteAxios } from "../api/clienteAxios";
 import { clientePublico } from "../api/clientePublico";
 import { store } from "../store";
@@ -141,26 +140,27 @@ class AuthService {
         if (refreshResponse.data && refreshResponse.data.success) {
           console.log("✅ AuthService: Token refrescado exitosamente desde cookie");
           
-          // Obtenemos los datos del usuario y tokens del response
-          const { usuario, token, refresh_token } = refreshResponse.data.data;
+          // ⭐ CAMBIO IMPORTANTE: Los tokens están en cookies HTTP, no en la respuesta JSON
+          // Solo extraemos los datos del usuario de la respuesta
+          const responseData = refreshResponse.data.data;
+          const usuario = responseData.usuario;
+          const sede = responseData.sede;
           
           console.log("👤 AuthService: Datos del usuario obtenidos:", {
             usuarioId: usuario?.id,
-            tieneToken: !!token,
-            tieneRefreshToken: !!refresh_token
+            usuarioNombre: usuario?.nombres,
+            usuarioCorreo: usuario?.correo,
+            sede: sede?.nombre || 'Sin sede'
           });
           
-          // Actualizamos el estado de Redux
+          // Actualizamos el estado de Redux solo con el usuario
           store.dispatch(establecerUsuario(usuario));
           
-          // Guardamos los tokens en el estado si están disponibles
-          if (token) {
-            store.dispatch(establecerToken(token));
-          }
-          
-          if (refresh_token) {
-            store.dispatch(establecerRefreshToken(refresh_token));
-          }
+          // ⭐ NO necesitamos manejar tokens manualmente porque son cookies HTTP
+          // El navegador los maneja automáticamente en futuras peticiones
+          // Pero podemos limpiar los tokens del estado si existen
+          store.dispatch(establecerToken(null));
+          store.dispatch(establecerRefreshToken(null));
           
           console.log("✅ AuthService: Estado Redux actualizado correctamente");
           return true;
@@ -207,20 +207,17 @@ class AuthService {
         if (response.data && response.data.success) {
           console.log("✅ AuthService: Token renovado automáticamente con éxito");
           
-          // Obtenemos los datos del usuario y tokens del response
-          const { usuario, token, refresh_token } = response.data.data;
+          // ⭐ CAMBIO: Solo actualizar datos del usuario, no tokens
+          const responseData = response.data.data;
+          const usuario = responseData.usuario;
           
-          // Actualizamos el estado de Redux
+          // Actualizamos el estado de Redux solo con el usuario
           store.dispatch(establecerUsuario(usuario));
           
-          // Guardamos los tokens en el estado si están disponibles
-          if (token) {
-            store.dispatch(establecerToken(token));
-          }
-          
-          if (refresh_token) {
-            store.dispatch(establecerRefreshToken(refresh_token));
-          }
+          console.log("👤 AuthService: Usuario actualizado en renovación automática:", {
+            usuarioId: usuario?.id,
+            usuarioNombre: usuario?.nombres
+          });
         } else {
           console.warn("⚠️ AuthService: Respuesta inesperada al renovar token:", response.data);
         }
