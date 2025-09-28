@@ -1111,7 +1111,6 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
 };
 
 export default FormularioReservacion;*/
-
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -1153,26 +1152,40 @@ interface FormularioReservacionProps {
   };
 }
 
-// Función para formatear la fecha en la zona horaria local (Perú, UTC-5)
+// ✅ FUNCIÓN CORREGIDA para formatear la fecha en la zona horaria local (Perú, UTC-5)
 const formatearFechaLocal = (date: Date | null): string => {
   if (!date) return '';
-  // Forzar la fecha a la zona horaria local de Perú (UTC-5)
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  
+  // Crear una nueva fecha ajustada para evitar problemas de zona horaria
+  const fechaAjustada = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  
+  const year = fechaAjustada.getFullYear();
+  const month = String(fechaAjustada.getMonth() + 1).padStart(2, '0');
+  const day = String(fechaAjustada.getDate()).padStart(2, '0');
+  
+  const fechaFormateada = `${year}-${month}-${day}`;
+  console.log(`📅 formatearFechaLocal: ${date.toLocaleDateString('es-PE')} -> ${fechaFormateada}`);
+  
+  return fechaFormateada;
 };
 
-// Función para mostrar la fecha en formato legible
+// ✅ FUNCIÓN CORREGIDA para mostrar la fecha en formato legible
 const formatearFechaDisplay = (fechaStr: string) => {
   if (!fechaStr) return '';
-  const fecha = new Date(fechaStr);
-  return fecha.toLocaleDateString('es-PE', {
+  
+  // Crear fecha específica evitando problemas de zona horaria
+  const [year, month, day] = fechaStr.split('-').map(Number);
+  const fecha = new Date(year, month - 1, day);
+  
+  const fechaDisplay = fecha.toLocaleDateString('es-PE', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+  
+  console.log(`📅 formatearFechaDisplay: ${fechaStr} -> ${fechaDisplay}`);
+  return fechaDisplay;
 };
 
 // Componente Cargador
@@ -1189,7 +1202,7 @@ const Cargador = () => (
   </div>
 );
 
-// SelectorPaquete (sin cambios, mantenido por consistencia)
+// SelectorPaquete
 const SelectorPaquete = ({
   paquete,
   cantidad,
@@ -1292,7 +1305,7 @@ const SelectorPaquete = ({
   );
 };
 
-// Alerta (sin cambios, mantenido por consistencia)
+// Alerta
 const Alerta = ({ tipo, mensaje, onCerrar }: { tipo: string; mensaje: string; onCerrar?: () => void }) => {
   return (
     <motion.div
@@ -1461,14 +1474,18 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
     return fecha;
   }, []);
 
+  // ✅ FUNCIÓN CORREGIDA para manejar el cambio de fecha
   const handleFechaChange = (date: Date | null) => {
     if (!date) return;
+    
     const ahora = new Date();
     const diferenciaDias = Math.floor((date.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+    
     if (diferenciaDias < 1) {
       mostrarAlertaTemp(t('tour.reserva24Horas'), 'warning');
       return;
     }
+    
     console.log(`📅 Fecha seleccionada: ${date.toLocaleDateString('es-PE')} (${formatearFechaLocal(date)})`);
     setFecha(date);
     setHorario('');
@@ -1580,8 +1597,9 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
 
   const haySeleccion = Object.values(seleccionPasajes).some((cant) => cant > 0) || Object.values(seleccionPaquetes).some((cant) => cant > 0);
 
+  // ✅ FUNCIÓN CORREGIDA para ir al proceso de pago
   const irAPago = () => {
-    console.log('🎯 INICIANDO PROCESO DE PAGO - VERSIÓN FINAL:');
+    console.log('🎯 INICIANDO PROCESO DE PAGO - VERSIÓN FINAL CORREGIDA:');
     console.log('👤 Selección Pasajes Individuales:', seleccionPasajes);
     console.log('📦 Selección Paquetes:', seleccionPaquetes);
     console.log('📅 Fecha seleccionada:', fecha ? formatearFechaLocal(fecha) : 'No seleccionada');
@@ -1667,11 +1685,14 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
 
     const totalPasajeros = calcularTotalPasajeros();
     const totalPrecio = calcularTotal();
+    
+    // ✅ USAR LA FUNCIÓN CORREGIDA para formatear la fecha
+    const fechaFormateada = fecha ? formatearFechaLocal(fecha) : '';
 
     const datosReserva = {
       tourId: tour.id,
       tourNombre: tour.nombre,
-      fecha: fecha ? formatearFechaLocal(fecha) : '',
+      fecha: fechaFormateada, // ✅ Fecha correctamente formateada
       horario,
       instanciaId: instanciaSeleccionada,
       cantidadesPasajes: cantidadesPasajesIndividuales.map((p) => ({
@@ -1698,11 +1719,13 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         totalPasajerosCalculado: totalPasajeros,
         totalPrecioCalculado: totalPrecio,
         estadoSeleccionPasajes: seleccionPasajes,
-        estadoSeleccionPaquetes: seleccionPaquetes
+        estadoSeleccionPaquetes: seleccionPaquetes,
+        fechaOriginal: fecha?.toISOString(),
+        fechaFormateada: fechaFormateada
       }
     };
 
-    console.log('🎯 DATOS FINALES PARA BACKEND:');
+    console.log('🎯 DATOS FINALES PARA BACKEND (CORREGIDOS):');
     console.log('📊 Resumen:');
     console.log(`   - Fecha enviada: ${datosReserva.fecha}`);
     console.log(`   - Pasajes individuales: ${cantidadesPasajesIndividuales.length} tipos`);
@@ -1715,7 +1738,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
     navigate('/proceso-pago', { state: datosReserva });
   };
 
-  // ResumenDetallado (sin cambios, mantenido por consistencia)
+  // ResumenDetallado
   const ResumenDetallado = () => {
     const pasajerosIndividuales = Object.values(seleccionPasajes).reduce((total, cant) => total + cant, 0);
     const pasajerosPaquetes = Object.entries(seleccionPaquetes).reduce((total, [id, cant]) => {
@@ -2128,7 +2151,7 @@ const FormularioReservacion = ({ tour }: FormularioReservacionProps) => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-700 mb-3">
           <div className="flex items-center justify-center sm:justify-start">
             <div className="bg-teal-100 p-2 rounded-full mr-2">
-              <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
             </div>
