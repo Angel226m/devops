@@ -544,7 +544,6 @@ const PaginaReservasUsuario = () => {
 };
 
 export default PaginaReservasUsuario;*/
-
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -619,17 +618,112 @@ const PaginaReservasUsuario = () => {
     }
   }, [dispatch, autenticado]);
 
+  // ✅ FUNCIÓN PROFESIONAL PARA FORMATEAR FECHAS - CORREGIDA
   const formatearFecha = (fechaStr?: string): string => {
     if (!fechaStr) return 'N/A';
-    if (fechaStr.includes('/')) {
-      const [day, month, year] = fechaStr.split('/');
-      const fecha = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-      if (!isNaN(fecha.getTime())) {
-        return fecha.toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' });
+    
+    try {
+      // Si la fecha viene en formato DD/MM/YYYY
+      if (fechaStr.includes('/')) {
+        const [day, month, year] = fechaStr.split('/');
+        if (year && month && day) {
+          // Crear fecha específica sin problemas de zona horaria
+          const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(fecha.getTime())) {
+            return fecha.toLocaleDateString('es-PE', { 
+              weekday: 'long',
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+          }
+        }
       }
+      
+      // Si la fecha viene en formato ISO (YYYY-MM-DD) o similar
+      if (fechaStr.includes('-')) {
+        const [year, month, day] = fechaStr.split('T')[0].split('-').map(Number);
+        if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          // Crear fecha específica evitando problemas de zona horaria
+          const fecha = new Date(year, month - 1, day);
+          return fecha.toLocaleDateString('es-PE', { 
+            weekday: 'long',
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+        }
+      }
+      
+      // Intento de fallback con Date constructor
+      const fecha = new Date(fechaStr);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleDateString('es-PE', { 
+          weekday: 'long',
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
+      
+      console.warn('📅 Formato de fecha no reconocido:', fechaStr);
+      return 'Fecha inválida';
+      
+    } catch (error) {
+      console.error('📅 Error al formatear fecha:', fechaStr, error);
+      return 'Fecha inválida';
     }
-    const fecha = new Date(fechaStr);
-    return isNaN(fecha.getTime()) ? 'Fecha inválida' : fecha.toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  // ✅ FUNCIÓN PROFESIONAL PARA FORMATEAR FECHAS CORTAS
+  const formatearFechaCorta = (fechaStr?: string): string => {
+    if (!fechaStr) return 'N/A';
+    
+    try {
+      // Si la fecha viene en formato DD/MM/YYYY
+      if (fechaStr.includes('/')) {
+        const [day, month, year] = fechaStr.split('/');
+        if (year && month && day) {
+          const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(fecha.getTime())) {
+            return fecha.toLocaleDateString('es-PE', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            });
+          }
+        }
+      }
+      
+      // Si la fecha viene en formato ISO (YYYY-MM-DD) o similar
+      if (fechaStr.includes('-')) {
+        const [year, month, day] = fechaStr.split('T')[0].split('-').map(Number);
+        if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          const fecha = new Date(year, month - 1, day);
+          return fecha.toLocaleDateString('es-PE', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+        }
+      }
+      
+      // Fallback
+      const fecha = new Date(fechaStr);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleDateString('es-PE', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      }
+      
+      return 'Fecha inválida';
+      
+    } catch (error) {
+      console.error('📅 Error al formatear fecha corta:', fechaStr, error);
+      return 'Fecha inválida';
+    }
   };
 
   const formatearHora = (horaStr?: string): string => horaStr?.split(':').slice(0, 2).join(':') || 'N/A';
@@ -745,7 +839,7 @@ const PaginaReservasUsuario = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-ocean-600">Mis Reservas</h1>
-              <p className="text-gray-500 text-sm mt-1">Planifica tus aventuras con estilo</p>
+              <p className="text-gray-500 text-sm mt-1">Gestiona tus aventuras y experiencias</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full sm:w-auto">
               {[
@@ -855,14 +949,14 @@ const PaginaReservasUsuario = () => {
                 <thead className="bg-ocean-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Tour</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Fecha del Tour</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Pasajeros</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Total</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Estado</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-ocean-600 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-ocean-100">
+                <tbody className="bg-white divide-y divide-ocean-100">
                   {reservasFiltradas.map((reserva, index) => {
                     const { total, detalle } = getTotalPasajeros(reserva);
                     return (
@@ -882,12 +976,13 @@ const PaginaReservasUsuario = () => {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm text-ocean-600">
-                            <div className="font-medium">{formatearFecha(getFechaTour(reserva))}</div>
+                            <div className="font-medium">{formatearFechaCorta(getFechaTour(reserva))}</div>
+                            <div className="text-xs text-gray-500">Reservado: {formatearFechaCorta(getFechaReserva(reserva))}</div>
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm text-cyan-500 font-medium">{total} pasajeros</div>
-                          <div className="text-xs text-gray-500">{detalle}</div>
+                          <div className="text-xs text-gray-500 max-w-xs truncate" title={detalle}>{detalle}</div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-bold text-green-600">S/ {reserva.total_pagar.toFixed(2)}</div>
@@ -925,8 +1020,8 @@ const PaginaReservasUsuario = () => {
                     className="relative rounded-xl p-4 shadow-md border border-ocean-100 bg-white hover:shadow-lg transition-all duration-300 transform hover:scale-102"
                     onClick={() => setModalReserva(reserva)}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
                         <div className="text-sm font-medium text-ocean-600">{getNombreTour(reserva)}</div>
                         <div className="text-xs text-gray-500">{getHorarioTour(reserva)}</div>
                         <div className="text-xs text-cyan-500 font-semibold">#{reserva.id_reserva}</div>
@@ -935,26 +1030,36 @@ const PaginaReservasUsuario = () => {
                         {getEstadoTexto(reserva.estado)}
                       </span>
                     </div>
-                    <div className="mt-2 text-sm">
-                      <div className="font-medium text-ocean-600">Fecha: {formatearFecha(getFechaTour(reserva))}</div>
-                    </div>
-                    <div className="mt-2 text-sm">
-                      <div className="text-cyan-500 font-medium">{total} pasajeros</div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Fecha del tour:</span>
+                        <span className="font-medium text-ocean-600">{formatearFechaCorta(getFechaTour(reserva))}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Pasajeros:</span>
+                        <span className="text-cyan-500 font-medium">{total} personas</span>
+                      </div>
                       <div className="text-xs text-gray-500">{detalle}</div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Total:</span>
+                        <span className="text-lg font-bold text-green-600">S/ {reserva.total_pagar.toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="mt-2 text-sm font-bold text-green-600">S/ {reserva.total_pagar.toFixed(2)}</div>
+                    
                     <Link
                       to={`/reservas/${reserva.id_reserva}`}
-                      className="mt-3 inline-flex items-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-full hover:bg-cyan-600 transition-all duration-300 w-full justify-center shadow-sm hover:shadow-md"
+                      className="block w-full text-center px-4 py-2 bg-cyan-500 text-white text-sm font-medium rounded-full hover:bg-cyan-600 transition-all duration-300 shadow-sm hover:shadow-md"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      Ver Detalle
+                      Ver Detalle Completo
                     </Link>
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* Modal de vista previa */}
+            {/* Modal de vista previa mejorado */}
             <AnimatePresence>
               {modalReserva && (
                 <motion.div
@@ -971,17 +1076,40 @@ const PaginaReservasUsuario = () => {
                     className="bg-white rounded-xl p-6 max-w-md w-full border border-ocean-100 shadow-xl"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <h3 className="text-lg font-bold text-ocean-600 mb-3">{getNombreTour(modalReserva)}</h3>
-                    <p className="text-sm text-gray-500">ID: #{modalReserva.id_reserva}</p>
-                    <p className="text-sm text-gray-500">Fecha: {formatearFecha(getFechaTour(modalReserva))}</p>
-                    <p className="text-sm text-gray-500">Horario: {getHorarioTour(modalReserva)}</p>
-                    <p className="text-sm text-cyan-500 font-medium">{getTotalPasajeros(modalReserva).total} pasajeros</p>
-                    <p className="text-sm text-gray-500">{getTotalPasajeros(modalReserva).detalle}</p>
-                    <p className="text-sm font-bold text-green-600">S/ {modalReserva.total_pagar.toFixed(2)}</p>
-                    <p className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getEstadoClase(modalReserva.estado)} mt-2`}>
-                      {getEstadoTexto(modalReserva.estado)}
-                    </p>
-                    <div className="mt-4 flex justify-end gap-2">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-bold text-ocean-600 flex-1 pr-4">{getNombreTour(modalReserva)}</h3>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getEstadoClase(modalReserva.estado)}`}>
+                        {getEstadoTexto(modalReserva.estado)}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3 mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">ID de Reserva:</span>
+                        <span className="text-sm font-medium text-cyan-500">#{modalReserva.id_reserva}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Fecha del Tour:</span>
+                        <span className="text-sm font-medium text-ocean-600">{formatearFecha(getFechaTour(modalReserva))}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Horario:</span>
+                        <span className="text-sm font-medium text-gray-700">{getHorarioTour(modalReserva)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Pasajeros:</span>
+                        <span className="text-sm font-medium text-cyan-500">{getTotalPasajeros(modalReserva).total} personas</span>
+                      </div>
+                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                        {getTotalPasajeros(modalReserva).detalle}
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="text-sm text-gray-600">Total Pagado:</span>
+                        <span className="text-lg font-bold text-green-600">S/ {modalReserva.total_pagar.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setModalReserva(null)}
                         className="px-4 py-2 rounded-full bg-ocean-100 text-ocean-600 hover:bg-ocean-200 transition-all duration-300"
@@ -992,7 +1120,7 @@ const PaginaReservasUsuario = () => {
                         to={`/reservas/${modalReserva.id_reserva}`}
                         className="px-4 py-2 bg-cyan-500 text-white rounded-full hover:bg-cyan-600 transition-all duration-300"
                       >
-                        Ver Detalle
+                        Ver Detalle Completo
                       </Link>
                     </div>
                   </motion.div>
@@ -1007,7 +1135,7 @@ const PaginaReservasUsuario = () => {
           </motion.div>
         )}
 
-        {/* Debug info */}
+        {/* Debug info - Solo en desarrollo */}
         {import.meta.env.DEV && (
           <details className="mt-6">
             <summary className="cursor-pointer p-3 rounded-lg text-sm font-medium bg-ocean-100 text-ocean-600">
