@@ -955,7 +955,6 @@ func (r *ReservaRepository) List() ([]*entidades.Reserva, error) {
 	defer rows.Close()
 
 	reservas := []*entidades.Reserva{}
-	fmt.Println("=== LISTADO DE RESERVAS ===")
 
 	// Iterar por cada reserva encontrada
 	for rows.Next() {
@@ -1041,8 +1040,7 @@ func (r *ReservaRepository) List() ([]*entidades.Reserva, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	fmt.Printf("\nTotal de reservas encontradas: %d\n", len(reservas))
-	fmt.Println("=== FIN DEL LISTADO ===")
+
 	return reservas, nil
 }
 
