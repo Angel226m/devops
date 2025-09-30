@@ -1,4 +1,4 @@
-import { useState } from 'react';
+/*import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -142,6 +142,159 @@ const PaginaRecuperacion = () => {
                 <p className="text-sm text-gray-600">
                   {t('recuperacion.recordaste')}{' '}
                   <Link to="/ingresar" className="font-medium text-blue-600 hover:text-blue-500">
+                    {t('recuperacion.volverLogin')}
+                  </Link>
+                </p>
+              </div>
+            </>
+          )}
+        </motion.div>
+      </div>
+    </Seccion>
+  );
+};
+
+export default PaginaRecuperacion;*/
+
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import Seccion from '../../componentes/layout/Seccion';
+import Boton from '../../componentes/comunes/Boton';
+import Entrada from '../../componentes/comunes/Entrada';
+import Alerta from '../../componentes/comunes/Alerta';
+import axios from 'axios';
+
+const getBaseURL = () => {
+  if (import.meta.env.PROD) {
+    return 'https://reservas.angelproyect.com/api/v1';
+  }
+  return '/api/v1';
+};
+
+const PaginaRecuperacion = () => {
+  window.scrollTo(0, 0);
+
+  const { t } = useTranslation();
+  const [correo, setCorreo] = useState('');
+  const [enviado, setEnviado] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!correo.trim()) {
+      setError(t('recuperacion.correoRequerido'));
+      return;
+    }
+    
+    if (!/\S+@\S+\.\S+/.test(correo)) {
+      setError(t('recuperacion.correoInvalido'));
+      return;
+    }
+    
+    setCargando(true);
+    setError('');
+    
+    try {
+      await axios.post(`${getBaseURL()}/clientes/recuperar-contrasena`, {
+        correo: correo
+      });
+      setEnviado(true);
+    } catch (err) {
+      console.error('Error al solicitar recuperación:', err);
+      setError(t('recuperacion.errorEnvio'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <Seccion className="py-16 bg-gradient-to-b from-blue-50 via-sky-50 to-cyan-50 min-h-screen">
+      <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-blue-100"
+        >
+          {enviado ? (
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-100 mb-8 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4 leading-tight">
+                {t('recuperacion.correoEnviado')}
+              </h2>
+              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                {t('recuperacion.instrucciones')}
+              </p>
+              <div className="flex flex-col space-y-4">
+                <Boton 
+                  texto={t('recuperacion.volverInicio')}
+                  variante="primary"
+                  tamano="lg"
+                  ancho="full"
+                  ruta="/inicio"
+                  className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEnviado(false)}
+                  className="text-blue-600 hover:text-blue-500 text-sm font-medium underline hover:no-underline transition-colors duration-200"
+                >
+                  {t('recuperacion.intentarOtroCorreo')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4 leading-tight">
+                {t('recuperacion.titulo')}
+              </h2>
+              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                {t('recuperacion.descripcion')}
+              </p>
+              
+              {error && (
+                <Alerta 
+                  tipo="error" 
+                  mensaje={error} 
+                  className="mb-6"
+                  onCerrar={() => setError('')}
+                />
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Entrada
+                  label={t('recuperacion.correo')}
+                  type="email"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  required
+                  className="w-full"
+                />
+                
+                <Boton
+                  type="submit"
+                  texto={t('recuperacion.enviarInstrucciones')}
+                  variante="primary"
+                  tamano="lg"
+                  ancho="full"
+                  cargando={cargando}
+                  className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                />
+              </form>
+              
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  {t('recuperacion.recordaste')}{' '}
+                  <Link to="/ingresar" className="font-medium text-blue-600 hover:text-blue-500 underline hover:no-underline transition-colors duration-200">
                     {t('recuperacion.volverLogin')}
                   </Link>
                 </p>

@@ -1,4 +1,4 @@
- import { useState, useEffect } from 'react';
+ /*import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Seccion from '../../componentes/layout/Seccion';
@@ -82,7 +82,7 @@ const PaginaSedes = () => {
 
   return (
     <div>
-      {/* Cabecera */}
+      {/* Cabecera *//*}
       <div className="relative h-64 md:h-80 bg-blue-900 overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
@@ -109,7 +109,7 @@ const PaginaSedes = () => {
         </div>
       </div>
       
-      {/* Contenido principal */}
+      {/* Contenido principal *//*}
       <Seccion className="py-16 bg-gradient-to-b from-sky-50 to-white">
         <div className="max-w-5xl mx-auto">
           <div className="space-y-16">
@@ -195,7 +195,7 @@ const PaginaSedes = () => {
         </div>
       </Seccion>
       
-      {/* Sección de Contacto */}
+      {/* Sección de Contacto *//*}
       <Seccion className="py-16 bg-gradient-to-b from-blue-50 to-teal-50">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -218,6 +218,248 @@ const PaginaSedes = () => {
             className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-full text-lg font-semibold transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
           >
             {t('sedes.contactoBoton')}
+          </Link>
+        </div>
+      </Seccion>
+    </div>
+  );
+};
+
+export default PaginaSedes;*/import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import Seccion from '../../componentes/layout/Seccion';
+import Cargador from '../../componentes/comunes/Cargador';
+import { Link } from 'react-router-dom';
+
+interface Sede {
+  id: number;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  correo: string;
+  distrito: string;
+  provincia: string;
+  pais: string;
+  imagen: string;
+  descripcion: string;
+}
+
+const PaginaSedes = () => {
+  const [sedes, setSedes] = useState<Sede[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Simulación de carga de datos desde una API (reemplazar con fetch real)
+  useEffect(() => {
+    window.scrollTo(0, 0); // Desplazar al inicio al cargar
+    const cargarSedes = async () => {
+      try {
+        // Simulación de API (reemplazar con llamada real a backend)
+        const respuesta = await new Promise<Sede[]>((resolve) => {
+          setTimeout(() => {
+            resolve([
+              {
+                id: 1,
+                nombre: "Sede Principal - Pisco",
+                direccion: "Av. San Martín 123, Pisco",
+                telefono: "+51 956 789 123",
+                correo: "pisco@oceantours.com",
+                distrito: "Pisco",
+                provincia: "Pisco",
+                pais: "Perú",
+                imagen: "https://images.unsplash.com/photo-1596397249129-c7524aba3e53",
+                descripcion: "Nuestra sede principal ubicada en el corazón de Pisco, a pocos minutos del terminal portuario general San Martín. Cuenta con amplio estacionamiento, cafetería y todas las comodidades para iniciar tu aventura marina."
+              },
+              {
+                id: 2,
+                nombre: "Sede Paracas",
+                direccion: "Malecón Paracas 456, Paracas",
+                telefono: "+51 945 678 912",
+                correo: "paracas@oceantours.com",
+                distrito: "Paracas",
+                provincia: "Pisco",
+                pais: "Perú",
+                imagen: "https://images.unsplash.com/photo-1596397454750-43b7c6c2e05f",
+                descripcion: "Ubicada cerca al puerto de Paracas, nuestra sede ofrece tours directos a la Reserva Nacional de Paracas y experiencias de avistamiento de fauna marina. Disfruta de nuestro lounge con vista al mar mientras esperas tu aventura."
+              },
+              {
+                id: 3,
+                nombre: "Sede San Andrés",
+                direccion: "Calle Los Pescadores 789, San Andrés",
+                telefono: "+51 934 567 891",
+                correo: "sanandres@oceantours.com",
+                distrito: "San Andrés",
+                provincia: "Pisco",
+                pais: "Perú",
+                imagen: "https://images.unsplash.com/photo-1581888517319-2693814b5fe4",
+                descripcion: "Nuestra sede en el tradicional distrito pesquero de San Andrés, especializada en tours de pesca deportiva y experiencias gastronómicas marinas. Aprende de los mejores pescadores locales y disfruta del auténtico sabor del mar."
+              }
+            ]);
+          }, 1500); // Simulación de 1.5 segundos de carga
+        });
+        setSedes(respuesta);
+      } catch (err) {
+        setError("Error al cargar las sedes. Por favor, intenta de nuevo más tarde.");
+        console.error("Error al cargar sedes:", err);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargarSedes();
+  }, []);
+
+  if (cargando) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <Cargador tamanio="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center p-6 bg-white rounded-lg shadow">
+          <p className="text-red-600 text-lg">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Cabecera */}
+      <div className="relative h-64 md:h-80 bg-teal-900 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1601232257562-9c79c45bda7e')",
+            opacity: 0.6
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-800/60 to-teal-900/80" />
+        <div className="relative h-full flex items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center text-white px-4"
+          >
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">Nuestras Sedes</h1>
+            <p className="text-lg max-w-2xl mx-auto drop-shadow">
+              Descubre las ubicaciones de Ocean Tours y comienza tu aventura marina desde cualquier punto.
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Contenido principal */}
+      <Seccion className="py-12 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="space-y-12">
+            {sedes.map((sede, index) => (
+              <motion.div
+                key={sede.id}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 items-center bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow duration-300`}
+              >
+                <div className="w-full md:w-1/2 rounded-lg overflow-hidden">
+                  <img
+                    src={sede.imagen}
+                    alt={sede.nombre}
+                    className="w-full h-48 md:h-60 object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy" // Mejora de carga
+                  />
+                </div>
+                <div className="w-full md:w-1/2">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">
+                      {sede.nombre}
+                    </h2>
+                    <p className="text-gray-600 mb-4 text-sm md:text-base">
+                      {sede.descripcion}
+                    </p>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-start">
+                        <svg className="h-5 w-5 text-teal-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-gray-700">{sede.direccion}</span>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="h-5 w-5 text-teal-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <span className="text-gray-700">{sede.telefono}</span>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="h-5 w-5 text-teal-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-gray-700">{sede.correo}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Link
+                        to={`/tours?sede=${sede.id}`}
+                        className="px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm transition-colors duration-200"
+                      >
+                        Ver Tours
+                      </Link>
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(sede.direccion)}, ${sede.distrito}, ${sede.pais}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 border border-teal-600 text-teal-600 hover:bg-teal-50 rounded text-sm transition-colors duration-200"
+                      >
+                        Ver Mapa
+                      </a>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </Seccion>
+
+      {/* Sección de Contacto */}
+      <Seccion className="py-12 bg-teal-50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center max-w-2xl mx-auto px-4"
+        >
+          <h2 className="text-2xl md:text-3xl font-bold text-teal-800 mb-4">
+            Contáctanos
+          </h2>
+          <p className="text-gray-600 mb-6">
+            ¿Tienes preguntas o necesitas más información? Estamos aquí para ayudarte a planificar tu próxima aventura.
+          </p>
+        </motion.div>
+        <div className="flex justify-center">
+          <Link
+            to="/contacto"
+            className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-base font-medium transition-all duration-200 shadow hover:shadow-md"
+          >
+            Contacto
           </Link>
         </div>
       </Seccion>
