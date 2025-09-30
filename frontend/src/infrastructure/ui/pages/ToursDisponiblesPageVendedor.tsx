@@ -758,8 +758,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaStar, FaTimes, FaExclamationTriangle, FaBan } from 'react-icons/fa';
-import { format, parse, isValid, differenceInMinutes, addDays, parseISO, addHours, isBefore, isAfter } from 'date-fns';
+import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaStar, FaTimes, FaExclamationTriangle, FaBan, FaCheckCircle } from 'react-icons/fa';
+import { format, parse, isValid, differenceInMinutes, addDays, parseISO, addHours, isBefore, isAfter, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import axios from '../../../infrastructure/api/axiosClient';
 import { endpoints } from '../../../infrastructure/api/endpoints';
@@ -799,6 +799,8 @@ interface InstanciaTour {
   hora_fin_str?: string;
   fecha_especifica_str?: string;
   tour_programado?: TourProgramado;
+  estado_disponibilidad?: 'DISPONIBLE' | 'ADVERTENCIA' | 'BLOQUEADO';
+  minutos_para_inicio?: number;
 }
 
 interface TourProgramado {
@@ -878,14 +880,6 @@ interface FiltrosInstanciaTour {
   id_tipo_tour?: number;
 }
 
-type EstadoReserva = 'DISPONIBLE' | 'ADVERTENCIA' | 'BLOQUEADO';
-
-interface EstadoTour {
-  estado: EstadoReserva;
-  mensaje: string;
-  puedeReservar: boolean;
-}
-
 const isStringWithValidity = (obj: any): obj is StringWithValidity => {
   return (
     obj !== null &&
@@ -904,10 +898,20 @@ const MisReservasPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<InstanciaTour | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [tourToConfirm, setTourToConfirm] = useState<InstanciaTour | null>(null);
+
+  // Obtener la fecha y hora actual de Perú (UTC-5)
+  const getCurrentDateTimePeru = () => {
+    const now = new Date();
+    // Ajustar a hora de Perú (UTC-5)
+    const peruTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    return peruTime;
+  };
 
   const getCurrentDate = () => {
-    const now = new Date();
-    return format(now, 'yyyy-MM-dd');
+    const peruTime = getCurrentDateTimePeru();
+    return format(peruTime, 'yyyy-MM-dd');
   };
 
   const currentDate = getCurrentDate();
@@ -967,11 +971,118 @@ const MisReservasPage: React.FC = () => {
     return defaultValue;
   };
 
-  // Generar próximos 7 días
+  // Función mejorada para formatear hora en formato peruano (12 horas)
+  const formatearHoraPeru = (hora: string, fecha?: string): string => {
+    if (!hora) return '-';
+    try {
+      let dateToFormat: Date;
+      
+      if (hora.includes('T')) {
+        dateToFormat = new Date(hora);
+      } else {
+        // Si tenemos la fecha, la combinamos con la hora
+        if (fecha) {
+          const fechaBase = parse(fecha, 'yyyy-MM-dd', new Date());
+          const [hours, minutes, seconds] = hora.split(':').map(Number);
+          dateToFormat = new Date(fechaBase);
+          dateToFormat.setHours(hours, minutes, seconds || 0);
+        } else {
+          dateToFormat = parse(hora, 'HH:mm:ss', new Date());
+        }
+      }
+      
+      if (isValid(dateToFormat)) {
+        // Formato peruano: 02:30 PM
+        return format(dateToFormat, 'hh:mm a', { locale: es }).toUpperCase();
+      }
+    } catch (error) {
+      console.error(`Error al formatear hora: ${hora}`, error);
+    }
+    return hora;
+  };
+
+  // Función para calcular el estado de disponibilidad del tour
+  const calcularEstadoDisponibilidad = (instancia: InstanciaTour): {
+    estado: 'DISPONIBLE' | 'ADVERTENCIA' | 'BLOQUEADO';
+    minutos: number;
+    mensaje: string;
+  } => {
+    try {
+      const ahora = getCurrentDateTimePeru();
+      const fechaTour = parse(instancia.fecha_especifica, 'yyyy-MM-dd', new Date());
+      
+      // Si el tour NO es de hoy, está disponible
+      if (!isSameDay(fechaTour, ahora)) {
+        return {
+          estado: 'DISPONIBLE',
+          minutos: 0,
+          mensaje: 'Disponible para reservar'
+        };
+      }
+
+      // Si es de hoy, verificamos la hora
+      let horaTour: Date;
+      if (instancia.hora_inicio.includes('T')) {
+        horaTour = new Date(instancia.hora_inicio);
+      } else {
+        const [hours, minutes, seconds] = instancia.hora_inicio.split(':').map(Number);
+        horaTour = new Date(fechaTour);
+        horaTour.setHours(hours, minutes, seconds || 0);
+      }
+
+      const minutosParaInicio = differenceInMinutes(horaTour, ahora);
+      const horaBloqueo = addHours(horaTour, 3); // 3 horas después del inicio
+
+      // Si ya pasaron 3 horas del inicio, está BLOQUEADO
+      if (isAfter(ahora, horaBloqueo)) {
+        return {
+          estado: 'BLOQUEADO',
+          minutos: minutosParaInicio,
+          mensaje: 'Tour no disponible - Ya pasaron 3 horas desde el inicio'
+        };
+      }
+
+      // Si ya pasó la hora de inicio pero aún no las 3 horas, ADVERTENCIA
+      if (isBefore(ahora, horaBloqueo) && minutosParaInicio < 0) {
+        const minutosRestantes = differenceInMinutes(horaBloqueo, ahora);
+        return {
+          estado: 'ADVERTENCIA',
+          minutos: minutosParaInicio,
+          mensaje: `⚠️ El tour ya inició. Quedan ${minutosRestantes} minutos para verificar disponibilidad antes de que se bloquee.`
+        };
+      }
+
+      // Si falta menos de 30 minutos para el inicio, ADVERTENCIA
+      if (minutosParaInicio <= 30 && minutosParaInicio > 0) {
+        return {
+          estado: 'ADVERTENCIA',
+          minutos: minutosParaInicio,
+          mensaje: `⚠️ Faltan ${minutosParaInicio} minutos para el inicio. Verifica disponibilidad antes de reservar.`
+        };
+      }
+
+      // En cualquier otro caso, está DISPONIBLE
+      return {
+        estado: 'DISPONIBLE',
+        minutos: minutosParaInicio,
+        mensaje: 'Disponible para reservar'
+      };
+
+    } catch (error) {
+      console.error('Error al calcular estado de disponibilidad:', error);
+      return {
+        estado: 'DISPONIBLE',
+        minutos: 0,
+        mensaje: 'Disponible para reservar'
+      };
+    }
+  };
+
+  // Generar las próximas 7 fechas
   useEffect(() => {
     const dates = [];
     try {
-      const baseDate = new Date();
+      const baseDate = getCurrentDateTimePeru();
       for (let i = 0; i < 7; i++) {
         const date = addDays(baseDate, i);
         dates.push(format(date, 'yyyy-MM-dd'));
@@ -1016,74 +1127,6 @@ const MisReservasPage: React.FC = () => {
       console.error('Error al procesar datos de objeto:', error);
     }
     return null;
-  };
-
-  // FUNCIÓN PARA CALCULAR EL ESTADO DEL TOUR BASADO EN LA HORA
-  const calcularEstadoTour = (instancia: InstanciaTour): EstadoTour => {
-    try {
-      const ahora = new Date();
-      
-      // Combinar fecha y hora de inicio
-      let fechaHoraInicio: Date;
-      
-      if (instancia.hora_inicio.includes('T')) {
-        fechaHoraInicio = new Date(instancia.hora_inicio);
-      } else {
-        const fechaStr = instancia.fecha_especifica;
-        const horaStr = instancia.hora_inicio;
-        fechaHoraInicio = parse(`${fechaStr} ${horaStr}`, 'yyyy-MM-dd HH:mm:ss', new Date());
-      }
-
-      if (!isValid(fechaHoraInicio)) {
-        return {
-          estado: 'DISPONIBLE',
-          mensaje: '',
-          puedeReservar: true
-        };
-      }
-
-      // Calcular 3 horas después de la hora de inicio
-      const treHorasDespues = addHours(fechaHoraInicio, 3);
-
-      // CASO 1: Antes de la hora de salida - DISPONIBLE
-      if (isBefore(ahora, fechaHoraInicio)) {
-        return {
-          estado: 'DISPONIBLE',
-          mensaje: '',
-          puedeReservar: true
-        };
-      }
-
-      // CASO 2: Entre la hora de salida y 3 horas después - ADVERTENCIA
-      if (isAfter(ahora, fechaHoraInicio) && isBefore(ahora, treHorasDespues)) {
-        const minutosTranscurridos = differenceInMinutes(ahora, fechaHoraInicio);
-        const horasRestantes = Math.ceil((180 - minutosTranscurridos) / 60);
-        
-        return {
-          estado: 'ADVERTENCIA',
-          mensaje: `⚠️ Tour ya partió. Verificar disponibilidad antes de venir (${horasRestantes}h restantes)`,
-          puedeReservar: true
-        };
-      }
-
-      // CASO 3: Más de 3 horas después - BLOQUEADO
-      if (isAfter(ahora, treHorasDespues)) {
-        return {
-          estado: 'BLOQUEADO',
-          mensaje: '🚫 Tour no disponible (pasaron más de 3 horas)',
-          puedeReservar: false
-        };
-      }
-
-    } catch (error) {
-      console.error('Error al calcular estado del tour:', error);
-    }
-
-    return {
-      estado: 'DISPONIBLE',
-      mensaje: '',
-      puedeReservar: true
-    };
   };
 
   const fetchData = useCallback(async () => {
@@ -1149,6 +1192,12 @@ const MisReservasPage: React.FC = () => {
                     } catch (err) { console.error(`Error al cargar tipo de tour ${tipoTourId}:`, err); }
                   }
                 }
+
+                // Calcular el estado de disponibilidad
+                const estadoDisp = calcularEstadoDisponibilidad(instancia);
+                instancia.estado_disponibilidad = estadoDisp.estado;
+                instancia.minutos_para_inicio = estadoDisp.minutos;
+
               } catch (err) { console.error('Error al obtener detalles adicionales:', err); }
               return instancia;
             })
@@ -1204,21 +1253,31 @@ const MisReservasPage: React.FC = () => {
   }, [searchTerm, instanciasTour]);
 
   const handleCreateReserva = (instancia: InstanciaTour) => {
-    const estadoTour = calcularEstadoTour(instancia);
-    
-    if (!estadoTour.puedeReservar) {
-      alert('⚠️ Este tour ya no está disponible para reservas (pasaron más de 3 horas desde la salida)');
+    const estadoDisp = calcularEstadoDisponibilidad(instancia);
+
+    // Si está bloqueado, no permitir
+    if (estadoDisp.estado === 'BLOQUEADO') {
+      alert('❌ Este tour ya no está disponible. Han pasado más de 3 horas desde su inicio.');
       return;
     }
 
-    if (estadoTour.estado === 'ADVERTENCIA') {
-      const confirmacion = window.confirm(
-        `⚠️ ADVERTENCIA:\n\n${estadoTour.mensaje}\n\n¿Desea continuar con la reserva? Recuerde verificar disponibilidad antes de venir.`
-      );
-      if (!confirmacion) return;
+    // Si está en advertencia, mostrar modal de confirmación
+    if (estadoDisp.estado === 'ADVERTENCIA') {
+      setTourToConfirm(instancia);
+      setShowConfirmModal(true);
+      return;
     }
 
+    // Si está disponible, ir directamente
     navigate(`/vendedor/reservas/nueva?instanciaId=${instancia.id_instancia}`);
+  };
+
+  const confirmarReservaConAdvertencia = () => {
+    if (tourToConfirm) {
+      navigate(`/vendedor/reservas/nueva?instanciaId=${tourToConfirm.id_instancia}`);
+      setShowConfirmModal(false);
+      setTourToConfirm(null);
+    }
   };
 
   const handleViewDetails = (instancia: InstanciaTour) => {
@@ -1248,20 +1307,8 @@ const MisReservasPage: React.FC = () => {
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + totalImages) % totalImages);
   };
 
-  // Formato de hora mejorado (estilo peruano 12h)
-  const formatearHora = (hora: string): string => {
-    if (!hora) return '-';
-    try {
-      if (hora.includes('T')) {
-        const date = new Date(hora);
-        if (isValid(date)) return format(date, 'hh:mm a', { locale: es }).toUpperCase();
-      }
-      const parsedHora = parse(hora, 'HH:mm:ss', new Date());
-      if (isValid(parsedHora)) return format(parsedHora, 'hh:mm a', { locale: es }).toUpperCase();
-    } catch (error) {
-      console.error(`Error al formatear hora: ${hora}`, error);
-    }
-    return hora;
+  const formatearHora = (hora: string, fecha?: string): string => {
+    return formatearHoraPeru(hora, fecha);
   };
 
   const formatearFecha = (fecha: string): string => safeFormatDate(fecha, 'EEEE dd MMMM yyyy');
@@ -1274,7 +1321,7 @@ const MisReservasPage: React.FC = () => {
         const horas = Math.floor(duracionMinutos / 60);
         const minutos = duracionMinutos % 60;
         return `${horas}h ${minutos > 0 ? `${minutos}min` : ''}`;
-      } else return `${duracionMinutos} min`;
+      } else return `${duracionMinutos} minutos`;
     }
     if (instancia.hora_inicio && instancia.hora_fin) {
       try {
@@ -1288,7 +1335,7 @@ const MisReservasPage: React.FC = () => {
               const horas = Math.floor(minutes / 60);
               const minutos = minutes % 60;
               return `${horas}h ${minutos > 0 ? `${minutos}min` : ''}`;
-            } else return `${minutes} min`;
+            } else return `${minutes} minutos`;
           }
         }
         const inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
@@ -1300,11 +1347,11 @@ const MisReservasPage: React.FC = () => {
             const horas = Math.floor(minutes / 60);
             const minutos = minutes % 60;
             return `${horas}h ${minutos > 0 ? `${minutos}min` : ''}`;
-          } else return `${minutes} min`;
+          } else return `${minutes} minutos`;
         }
       } catch (e) { console.error('Error al calcular duración:', e); }
     }
-    return 'N/A';
+    return 'Duración no disponible';
   };
 
   const precioMinimo = (instancia: InstanciaTour): number => {
@@ -1357,7 +1404,7 @@ const MisReservasPage: React.FC = () => {
       const parsedFecha = parse(fecha, 'yyyy-MM-dd', new Date());
       if (!isValid(parsedFecha)) return <span className="text-xs">{fecha}</span>;
       const esHoy = fecha === currentDate;
-      const esMañana = fecha === format(addDays(new Date(), 1), 'yyyy-MM-dd');
+      const esMañana = fecha === format(addDays(getCurrentDateTimePeru(), 1), 'yyyy-MM-dd');
       return (
         <div className="flex flex-col items-center text-center">
           <span className={`text-xs uppercase font-bold mb-1 ${esHoy ? 'text-teal-600' : esMañana ? 'text-teal-600' : 'text-gray-600'}`}>
@@ -1390,54 +1437,134 @@ const MisReservasPage: React.FC = () => {
     }
   };
 
+  // Badge de estado de disponibilidad
+  const renderEstadoBadge = (instancia: InstanciaTour) => {
+    const estadoDisp = calcularEstadoDisponibilidad(instancia);
+    
+    if (estadoDisp.estado === 'BLOQUEADO') {
+      return (
+        <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center">
+          <FaBan className="mr-1" /> BLOQUEADO
+        </div>
+      );
+    }
+    
+    if (estadoDisp.estado === 'ADVERTENCIA') {
+      return (
+        <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded flex items-center">
+          <FaExclamationTriangle className="mr-1" /> VERIFICAR
+        </div>
+      );
+    }
+    
+    return (
+      <div className="absolute top-2 right-2 bg-teal-600 text-white text-xs px-2 py-1 rounded flex items-center">
+        <FaCheckCircle className="mr-1" /> {instancia.estado}
+      </div>
+    );
+  };
+
+  // Modal de confirmación para tours con advertencia
+  const ConfirmacionModal = () => {
+    if (!tourToConfirm) return null;
+    const estadoDisp = calcularEstadoDisponibilidad(tourToConfirm);
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4" onClick={() => setShowConfirmModal(false)}>
+        <div className="relative bg-white rounded-lg overflow-hidden w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6">
+            <div className="flex items-center mb-4">
+              <FaExclamationTriangle className="text-yellow-500 text-3xl mr-3" />
+              <h2 className="text-xl font-bold text-gray-800">Confirmar Reserva</h2>
+            </div>
+            
+            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
+              <p className="text-sm text-gray-700">{estadoDisp.mensaje}</p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Detalles del Tour:</p>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div><strong>Tour:</strong> {getNombreTipoTour(tourToConfirm)}</div>
+                <div><strong>Hora de salida:</strong> {formatearHora(tourToConfirm.hora_inicio, tourToConfirm.fecha_especifica)}</div>
+                <div><strong>Fecha:</strong> {renderFechaInstancia(tourToConfirm)}</div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4">
+              <p className="text-xs text-blue-800">
+                <strong>Importante:</strong> Por favor, verifique la disponibilidad con el cliente antes de confirmar esta reserva. 
+                El tour está próximo a iniciar o ya ha iniciado.
+              </p>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button 
+                onClick={confirmarReservaConAdvertencia} 
+                className="flex-1 py-2 text-sm bg-yellow-600 text-white hover:bg-yellow-700" 
+                variant="warning"
+              >
+                <FaCheckCircle className="mr-1" /> Continuar con Reserva
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setTourToConfirm(null);
+                }} 
+                className="flex-1 py-2 text-sm bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                <FaTimes className="mr-1" /> Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const DetallesModal = () => {
     if (!selectedTour) return null;
     const instancia = selectedTour;
     const imagenes = getImagenesGaleria(instancia);
     const currentImage = imagenes.length > 0 ? imagenes[currentImageIndex] : null;
-    const estadoTour = calcularEstadoTour(instancia);
-
+    const estadoDisp = calcularEstadoDisponibilidad(instancia);
+    
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 overflow-y-auto" onClick={handleCloseModal}>
         <div className="relative bg-white rounded-lg overflow-hidden w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <button onClick={handleCloseModal} className="absolute top-3 right-3 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 z-10">
             <FaTimes className="text-xl" />
           </button>
-          
           <div className="relative h-64 bg-gray-200">
             {imagenes.length > 0 ? (
               <>
                 <img src={currentImage?.imagen_url || getImagenTour(instancia)} alt={currentImage?.descripcion || getNombreTipoTour(instancia)} className="w-full h-full object-cover" />
                 {imagenes.length > 1 && (
                   <>
-                    <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2">
-                      <span className="text-teal-600 text-xl">←</span>
+                    <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100">
+                      ←
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2">
-                      <span className="text-teal-600 text-xl">→</span>
+                    <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100">
+                      →
                     </button>
                   </>
                 )}
               </>
             ) : <div className="w-full h-full flex items-center justify-center"><FaShip className="text-gray-400 text-4xl" /></div>}
           </div>
-          
           <div className="p-6">
-            {/* Estado del tour */}
-            {estadoTour.estado !== 'DISPONIBLE' && (
-              <div className={`mb-4 p-3 rounded-lg flex items-center ${
-                estadoTour.estado === 'ADVERTENCIA' ? 'bg-yellow-100 border border-yellow-300' : 'bg-red-100 border border-red-300'
+            {/* Mensaje de advertencia o bloqueo */}
+            {estadoDisp.estado !== 'DISPONIBLE' && (
+              <div className={`mb-4 p-3 rounded-lg border-l-4 ${
+                estadoDisp.estado === 'BLOQUEADO' 
+                  ? 'bg-red-50 border-red-500' 
+                  : 'bg-yellow-50 border-yellow-500'
               }`}>
-                {estadoTour.estado === 'ADVERTENCIA' ? (
-                  <FaExclamationTriangle className="text-yellow-600 mr-2" />
-                ) : (
-                  <FaBan className="text-red-600 mr-2" />
-                )}
-                <span className={`text-sm font-semibold ${
-                  estadoTour.estado === 'ADVERTENCIA' ? 'text-yellow-800' : 'text-red-800'
+                <p className={`text-sm ${
+                  estadoDisp.estado === 'BLOQUEADO' ? 'text-red-800' : 'text-yellow-800'
                 }`}>
-                  {estadoTour.mensaje}
-                </span>
+                  {estadoDisp.mensaje}
+                </p>
               </div>
             )}
 
@@ -1449,61 +1576,68 @@ const MisReservasPage: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold text-gray-800">{getNombreTipoTour(instancia)}</h2>
               <div className="flex items-center mt-2">
-                <span className="bg-teal-100 text-teal-700 px-2 py-1 rounded-full text-xs font-semibold">{instancia.estado}</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  estadoDisp.estado === 'BLOQUEADO' 
+                    ? 'bg-red-100 text-red-700'
+                    : estadoDisp.estado === 'ADVERTENCIA'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-teal-100 text-teal-700'
+                }`}>
+                  {estadoDisp.estado === 'BLOQUEADO' ? 'NO DISPONIBLE' : instancia.estado}
+                </span>
                 <span className="ml-2 text-teal-700 text-xs">🕒 {calcularDuracion(instancia)}</span>
               </div>
             </div>
-            
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-teal-50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold text-teal-800 flex items-center mb-2"><FaInfoCircle className="mr-1" /> Información</h3>
                 <p className="text-gray-700 text-sm">{getDescripcionTipoTour(instancia)}</p>
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <div className="bg-white p-2 rounded">
-                    <span className="text-xs text-gray-500 block">Hora Salida</span>
-                    <span className="font-bold text-teal-700">{formatearHora(instancia.hora_inicio)}</span>
-                  </div>
-                  <div className="bg-white p-2 rounded">
-                    <span className="text-xs text-gray-500 block">Hora Regreso</span>
-                    <span className="font-bold text-teal-700">{formatearHora(instancia.hora_fin)}</span>
-                  </div>
-                  <div className="bg-white p-2 rounded">
-                    <span className="text-xs text-gray-500 block">Cupo Disponible</span>
-                    <span className="font-bold text-teal-700">{instancia.cupo_disponible} de {instancia.tour_programado?.cupo_maximo || '?'}</span>
-                  </div>
-                  <div className="bg-white p-2 rounded">
-                    <span className="text-xs text-gray-500 block">Precio desde</span>
-                    <span className="font-bold text-teal-700">S/ {precioMinimo(instancia).toFixed(2)}</span>
-                  </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div><span className="text-xs text-gray-500">Salida:</span> <span className="font-bold">{formatearHora(instancia.hora_inicio, instancia.fecha_especifica)}</span></div>
+                  <div><span className="text-xs text-gray-500">Regreso:</span> <span className="font-bold">{formatearHora(instancia.hora_fin, instancia.fecha_especifica)}</span></div>
+                  <div><span className="text-xs text-gray-500">Cupo:</span> <span className="font-bold">{instancia.cupo_disponible} de {instancia.tour_programado?.cupo_maximo || '?'}</span></div>
+                  <div><span className="text-xs text-gray-500">Precio:</span> <span className="font-bold">S/ {precioMinimo(instancia).toFixed(2)}</span></div>
                 </div>
               </div>
-              
               {instancia.tour_programado?.tipos_pasaje && instancia.tour_programado.tipos_pasaje.length > 0 && (
                 <div className="bg-teal-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-teal-800 flex items-center mb-2"><FaTicketAlt className="mr-1" /> Tipos de Pasajes</h3>
+                  <h3 className="text-lg font-semibold text-teal-800 flex items-center mb-2"><FaTicketAlt className="mr-1" /> Pasajes</h3>
                   <div className="space-y-2">
                     {instancia.tour_programado.tipos_pasaje.map(tipo => (
-                      <div key={tipo.id_tipo_pasaje} className="flex justify-between bg-white p-2 rounded text-sm">
-                        <span className="font-medium">{safeGetStringValue(tipo.nombre)} <span className="text-gray-500">({tipo.edad})</span></span>
-                        <span className="font-bold text-teal-700">S/ {tipo.costo.toFixed(2)}</span>
+                      <div key={tipo.id_tipo_pasaje} className="flex justify-between text-sm">
+                        <span>{safeGetStringValue(tipo.nombre)} ({tipo.edad})</span>
+                        <span className="font-bold">S/ {tipo.costo.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            
             <div className="mt-4 flex space-x-2">
               <Button 
-                onClick={(e) => { e.stopPropagation(); handleCreateReserva(instancia); }} 
-                className={`flex-1 py-2 text-sm text-white ${estadoTour.puedeReservar ? 'bg-teal-600 hover:bg-teal-700' : 'bg-gray-400 cursor-not-allowed'}`}
-                variant={estadoTour.puedeReservar ? 'success' : 'secondary'}
-                disabled={!estadoTour.puedeReservar}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  handleCreateReserva(instancia); 
+                }} 
+                className={`flex-1 py-2 text-sm ${
+                  estadoDisp.estado === 'BLOQUEADO'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : estadoDisp.estado === 'ADVERTENCIA'
+                    ? 'bg-yellow-600 hover:bg-yellow-700'
+                    : 'bg-teal-600 hover:bg-teal-700'
+                } text-white`}
+                disabled={estadoDisp.estado === 'BLOQUEADO'}
               >
-                <FaCalendarAlt className="mr-1 inline" /> {estadoTour.puedeReservar ? 'Reservar Ahora' : 'No Disponible'}
+                {estadoDisp.estado === 'BLOQUEADO' ? (
+                  <><FaBan className="mr-1" /> No Disponible</>
+                ) : estadoDisp.estado === 'ADVERTENCIA' ? (
+                  <><FaExclamationTriangle className="mr-1" /> Reservar (Verificar)</>
+                ) : (
+                  <><FaCalendarAlt className="mr-1" /> Reservar</>
+                )}
               </Button>
-              <Button onClick={handleCloseModal} className="flex-1 py-2 text-sm bg-gray-200 text-gray-800 hover:bg-gray-300" variant="secondary">
-                <FaTimes className="mr-1 inline" /> Cerrar
+              <Button onClick={handleCloseModal} className="flex-1 py-2 text-sm bg-gray-200 text-gray-800 hover:bg-gray-300">
+                <FaTimes className="mr-1" /> Cerrar
               </Button>
             </div>
           </div>
@@ -1529,7 +1663,7 @@ const MisReservasPage: React.FC = () => {
                   <FaShip className="text-4xl text-gray-400 mb-4" />
                   <h2 className="text-xl font-bold text-gray-800 text-center">No hay sede seleccionada</h2>
                   <p className="text-gray-600 text-center mt-2">Contacte al administrador para asignar una sede.</p>
-                  <button onClick={handleForceReload} className="mt-4 bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 flex items-center">
+                  <button onClick={handleForceReload} className="mt-4 bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700">
                     <FaSync className="mr-1" /> Actualizar
                   </button>
                 </div>
@@ -1553,19 +1687,34 @@ const MisReservasPage: React.FC = () => {
             <div className="text-center"><span className="font-bold text-teal-600">📅 {0}</span> Reservadas</div>
             <div className="text-center"><span className="font-bold text-teal-600">📊 {68}</span> Total</div>
           </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <button className="bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200">🔍 TODOS (68)</button>
+            <button className="bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200">✓ CONFIRMADA (39)</button>
+            <button className="bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200">📅 RESERVADO (0)</button>
+            <button className="bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200">⏱ PENDIENTE (0)</button>
+            <button className="bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200">✕ CANCELADA (29)</button>
+          </div>
         </div>
 
-        {/* Selector de Fechas (conservado) */}
-        <div className="bg-white rounded-lg p-3 shadow">
-          <div className="flex items-center space-x-2 overflow-x-auto">
+        {loadError && (
+          <div className="bg-teal-50 p-4 rounded-lg flex items-center">
+            <span className="text-teal-700 text-sm">{loadError}</span>
+            <button onClick={handleForceReload} className="ml-2 text-teal-600 hover:text-teal-800"><FaSync /></button>
+          </div>
+        )}
+
+        {/* Selector de fechas mejorado */}
+        <div className="bg-white rounded-lg p-4 shadow">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Seleccionar Fecha:</h3>
+          <div className="grid grid-cols-7 gap-2">
             {nextDates.map((fecha) => (
               <button
                 key={fecha}
                 onClick={() => setSelectedDate(fecha)}
-                className={`flex-shrink-0 px-3 py-2 rounded-lg transition-all ${
+                className={`p-2 rounded-lg border transition-all ${
                   selectedDate === fecha
-                    ? 'bg-teal-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-teal-600 text-white border-teal-700 shadow-md'
+                    : 'bg-white border-gray-200 hover:border-teal-300 hover:bg-teal-50'
                 }`}
               >
                 {renderFechaCorta(fecha)}
@@ -1574,27 +1723,17 @@ const MisReservasPage: React.FC = () => {
           </div>
         </div>
 
-        {loadError && (
-          <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex items-center justify-between">
-            <span className="text-red-700 text-sm">{loadError}</span>
-            <button onClick={handleForceReload} className="ml-2 text-red-600 hover:text-red-800"><FaSync /></button>
-          </div>
-        )}
-
         <div className="bg-white rounded-lg p-4 shadow">
           <div className="flex flex-col md:flex-row md:items-center gap-2">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar tours..."
-                className="border border-teal-200 rounded px-10 py-2 w-full text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Buscar tours..."
+              className="border border-teal-200 rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:border-teal-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
             <select
-              className="border border-teal-200 rounded px-3 py-2 text-sm"
+              className="border border-teal-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
               value={selectedTipoTour || ''}
               onChange={(e) => setSelectedTipoTour(e.target.value ? parseInt(e.target.value) : undefined)}
             >
@@ -1609,84 +1748,97 @@ const MisReservasPage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {loading ? (
-            <div className="col-span-full text-center p-4"><div className="animate-spin h-8 w-8 border-t-4 border-teal-600 rounded-full inline-block"></div> <p className="mt-2">Cargando tours...</p></div>
+            <div className="col-span-full text-center p-8 bg-white rounded-lg shadow">
+              <div className="animate-spin h-12 w-12 border-t-4 border-teal-600 rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando tours disponibles...</p>
+            </div>
           ) : filteredInstancias.length === 0 ? (
-            <div className="col-span-full text-center p-6 bg-white rounded-lg">
-              <FaShip className="text-gray-400 text-3xl mb-2 mx-auto" />
-              <p className="text-gray-600">No hay tours disponibles para esta fecha</p>
-              <button onClick={() => setSelectedDate(nextDates[0])} className="mt-3 text-teal-600 hover:text-teal-800 text-sm underline">Ver tours de hoy</button>
+            <div className="col-span-full text-center p-8 bg-white rounded-lg shadow">
+              <FaShip className="text-gray-400 text-4xl mb-4 mx-auto" />
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay tours disponibles</h3>
+              <p className="text-sm text-gray-500 mb-4">No se encontraron tours para la fecha seleccionada</p>
+              <button 
+                onClick={() => setSelectedDate(currentDate)} 
+                className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 text-sm"
+              >
+                Ver tours de hoy
+              </button>
             </div>
           ) : (
             filteredInstancias.map(instancia => {
-              const estadoTour = calcularEstadoTour(instancia);
-              
+              const estadoDisp = calcularEstadoDisponibilidad(instancia);
               return (
-                <Card key={instancia.id_instancia} className={`rounded-lg overflow-hidden bg-white border ${
-                  estadoTour.estado === 'BLOQUEADO' ? 'border-red-300 opacity-75' :
-                  estadoTour.estado === 'ADVERTENCIA' ? 'border-yellow-300' :
-                  'border-gray-100'
-                }`}>
+                <Card key={instancia.id_instancia} className="rounded-lg overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col h-full">
-                    <div className="relative w-full h-36 overflow-hidden">
+                    <div className="relative w-full h-40 overflow-hidden">
                       <img 
                         src={getImagenTour(instancia)} 
                         alt={getNombreTipoTour(instancia)} 
-                        className={`w-full h-full object-cover ${estadoTour.estado === 'BLOQUEADO' ? 'grayscale' : ''}`}
+                        className="w-full h-full object-cover" 
                         onError={(e) => e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen'} 
                       />
-                      <div className="absolute top-2 right-2 bg-teal-600 text-white text-xs px-2 py-1 rounded">
-                        {instancia.estado}
-                      </div>
-                      {estadoTour.estado !== 'DISPONIBLE' && (
-                        <div className={`absolute bottom-0 left-0 right-0 ${
-                          estadoTour.estado === 'ADVERTENCIA' ? 'bg-yellow-500' : 'bg-red-600'
-                        } text-white text-xs px-2 py-1 flex items-center`}>
-                          {estadoTour.estado === 'ADVERTENCIA' ? (
-                            <><FaExclamationTriangle className="mr-1" /> Verificar antes</>
-                          ) : (
-                            <><FaBan className="mr-1" /> No disponible</>
-                          )}
+                      {renderEstadoBadge(instancia)}
+                    </div>
+                    <div className="p-4 flex flex-col flex-grow">
+                      <h3 className="text-base font-bold text-gray-800 mb-2">{getNombreTipoTour(instancia)}</h3>
+                      
+                      {/* Mensaje de advertencia o bloqueo en la tarjeta */}
+                      {estadoDisp.estado !== 'DISPONIBLE' && (
+                        <div className={`text-xs p-2 rounded mb-2 ${
+                          estadoDisp.estado === 'BLOQUEADO' 
+                            ? 'bg-red-50 text-red-700 border border-red-200' 
+                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                        }`}>
+                          {estadoDisp.estado === 'BLOQUEADO' 
+                            ? '🚫 No disponible' 
+                            : '⚠️ Verificar disponibilidad'}
                         </div>
                       )}
-                    </div>
-                    
-                    <div className="p-3 flex flex-col flex-grow">
-                      <h3 className="text-sm font-bold text-gray-800 mb-2">{getNombreTipoTour(instancia)}</h3>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+
+                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                         <div className="flex items-center">
-                          <FaClock className="mr-1 text-teal-600" />
-                          <span className="font-semibold">{formatearHora(instancia.hora_inicio)}</span>
+                          <FaClock className="mr-1 text-teal-600 flex-shrink-0" /> 
+                          <span className="font-semibold">{formatearHora(instancia.hora_inicio, instancia.fecha_especifica)}</span>
                         </div>
                         <div className="flex items-center">
-                          <FaUserFriends className="mr-1 text-teal-600" />
+                          <FaUserFriends className="mr-1 text-teal-600 flex-shrink-0" /> 
                           <span>{instancia.cupo_disponible} cupos</span>
                         </div>
                         <div className="flex items-center col-span-2">
-                          <FaMoneyBillWave className="mr-1 text-teal-600" />
+                          <FaCalendarCheck className="mr-1 text-teal-600 flex-shrink-0" /> 
+                          <span>{renderFechaInstancia(instancia)}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Desde: </span>
                           <span className="font-bold text-teal-700">S/ {precioMinimo(instancia).toFixed(2)}</span>
                         </div>
                       </div>
                       
-                      <div className="mt-auto pt-2 flex space-x-1">
+                      <div className="mt-auto pt-2 flex space-x-2">
                         <Button 
                           onClick={() => handleCreateReserva(instancia)} 
-                          className={`flex-1 py-1 px-2 text-xs text-white ${
-                            estadoTour.puedeReservar 
-                              ? 'bg-teal-600 hover:bg-teal-700' 
-                              : 'bg-gray-400 cursor-not-allowed'
-                          }`}
-                          variant={estadoTour.puedeReservar ? 'success' : 'secondary'}
-                          disabled={!estadoTour.puedeReservar}
+                          className={`flex-1 py-2 px-3 text-xs font-semibold ${
+                            estadoDisp.estado === 'BLOQUEADO'
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : estadoDisp.estado === 'ADVERTENCIA'
+                              ? 'bg-yellow-600 hover:bg-yellow-700'
+                              : 'bg-teal-600 hover:bg-teal-700'
+                          } text-white rounded transition-colors`}
+                          disabled={estadoDisp.estado === 'BLOQUEADO'}
                         >
-                          {estadoTour.puedeReservar ? 'Reservar' : 'Bloqueado'}
+                          {estadoDisp.estado === 'BLOQUEADO' ? (
+                            <><FaBan className="inline mr-1" /> Bloqueado</>
+                          ) : estadoDisp.estado === 'ADVERTENCIA' ? (
+                            <><FaExclamationTriangle className="inline mr-1" /> Verificar</>
+                          ) : (
+                            <><FaCalendarAlt className="inline mr-1" /> Reservar</>
+                          )}
                         </Button>
                         <Button 
                           onClick={() => handleViewDetails(instancia)} 
-                          className="py-1 px-2 text-xs bg-gray-200 hover:bg-gray-300"
-                          variant="secondary"
+                          className="py-2 px-3 text-xs bg-gray-100 text-teal-700 hover:bg-gray-200 rounded border border-teal-200"
                         >
-                          <FaInfoCircle />
+                          <FaInfoCircle className="text-base" />
                         </Button>
                       </div>
                     </div>
@@ -1698,9 +1850,17 @@ const MisReservasPage: React.FC = () => {
         </div>
 
         {modalOpen && <DetallesModal />}
+        {showConfirmModal && <ConfirmacionModal />}
       </div>
     </div>
   );
 };
+
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+`;
+document.head.appendChild(style);
 
 export default MisReservasPage;
