@@ -96,6 +96,7 @@ func (c *ClienteController) GetByDocumento(ctx *gin.Context) {
 }
 
 // Update actualiza un cliente
+/*
 func (c *ClienteController) Update(ctx *gin.Context) {
 	// Parsear ID de la URL
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -124,6 +125,51 @@ func (c *ClienteController) Update(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar cliente", err))
 		return
 	}
+
+	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente actualizado exitosamente", nil))
+}
+*/
+
+// Update actualiza un cliente
+func (c *ClienteController) Update(ctx *gin.Context) {
+	// Parsear ID de la URL
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	fmt.Printf("Update Cliente: Actualizando cliente ID: %d\n", id)
+
+	var clienteReq entidades.ActualizarClienteRequest
+
+	// Parsear request
+	if err := ctx.ShouldBindJSON(&clienteReq); err != nil {
+		fmt.Printf("Update Cliente: Error al parsear JSON: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	fmt.Printf("Update Cliente: Datos recibidos: %+v\n", clienteReq)
+
+	// ⭐ VALIDAR SOLO CAMPOS NO VACÍOS (permitir actualizaciones parciales)
+	if clienteReq.TipoDocumento != "" && clienteReq.NumeroDocumento != "" {
+		if err := utils.ValidateStruct(clienteReq); err != nil {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+			return
+		}
+	}
+
+	// Actualizar cliente
+	err = c.clienteService.Update(id, &clienteReq)
+	if err != nil {
+		fmt.Printf("Update Cliente: Error del servicio: %v\n", err)
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar cliente", err))
+		return
+	}
+
+	fmt.Printf("Update Cliente: Actualización exitosa para ID: %d\n", id)
 
 	// Respuesta exitosa
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente actualizado exitosamente", nil))

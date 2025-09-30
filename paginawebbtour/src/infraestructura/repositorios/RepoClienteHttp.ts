@@ -297,11 +297,12 @@ export class RepoClienteHttp implements RepositorioCliente {
     }
   }
 
-  async obtenerPorId(id: number): Promise<Cliente | null> {
+ async obtenerPorId(id: number): Promise<Cliente | null> {
     try {
       console.log("📡 RepoClienteHttp: Obteniendo cliente por ID:", id);
       
-      const response = await clienteAxios.get(endpoints.cliente.obtenerPorId(id));
+      // ⭐ USAR EL ENDPOINT CORRECTO SIN ID
+      const response = await clienteAxios.get('/cliente/mi-perfil');
       
       console.log("📡 RepoClienteHttp: Respuesta obtenida:", response.data);
       
@@ -315,12 +316,14 @@ export class RepoClienteHttp implements RepositorioCliente {
     }
   }
 
+
   // ⭐ CORREGIDO: Actualizar cliente
   async actualizar(id: number, datos: ActualizarClienteRequest): Promise<void> {
     try {
       console.log("📡 RepoClienteHttp: Actualizando cliente", { id, datos });
       
-      const response = await clienteAxios.put(`/cliente/mi-perfil`, datos);
+      // ⭐ USAR EL ENDPOINT CORRECTO SIN ID
+      const response = await clienteAxios.put('/cliente/mi-perfil', datos);
       
       console.log("📡 RepoClienteHttp: Respuesta de actualización:", response.data);
       
@@ -342,6 +345,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       throw error;
     }
   }
+
 
   async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
     try {
@@ -408,10 +412,12 @@ export class RepoClienteHttp implements RepositorioCliente {
   }
 
   // ⭐ CORREGIDO: Cambiar contraseña
+   // ⭐ CORREGIDO: Cambiar contraseña
   async cambiarContrasena(id: number, datos: CambiarContrasenaRequest): Promise<void> {
     try {
       console.log("📡 RepoClienteHttp: Cambiando contraseña para cliente ID:", id);
       
+      // ⭐ USAR EL ENDPOINT CORRECTO
       const response = await clienteAxios.post(
         '/cliente/change-password', 
         {

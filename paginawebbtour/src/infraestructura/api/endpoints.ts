@@ -48,7 +48,17 @@ export const endpoints = {
     obtenerPorId: (id: number) => `/tours-programados/${id}`,
     listarPorFiltros: "/tours-programados/filtrar",
     listarDisponiblesSinDuplicados: "/tours/disponibles-sin-duplicados"
+  }, cliente: {
+    registro: "/clientes/registro",
+    login: "/clientes/login", 
+    refrescarToken: "/clientes/refresh",
+    cerrarSesion: "/clientes/logout",
+    obtenerPorId: (id: number) => `/cliente/mi-perfil`, // ⭐ CORREGIDO
+    actualizar: "/cliente/mi-perfil", // ⭐ CORREGIDO - sin ID en la URL
+    cambiarContrasena: "/cliente/change-password", // ⭐ CORREGIDO
+    obtenerPerfil: "/cliente/mi-perfil"
   },
+/*
    cliente: {
     registro: "/clientes/registro",
     login: "/clientes/login",
@@ -59,7 +69,7 @@ export const endpoints = {
     cambiarContrasena: (id: number) => `/clientes/${id}/cambiar-contrasena`,       
     obtenerPerfil: "/cliente/mi-perfil"
 
-  },  reserva: {
+  }, */ reserva: {
     listar: "/reservas",
     obtenerPorId: (id: number) => `/cliente/mis-reservas/${id}`, // ✅ CORRECTO - coincide con tu backend
     crear: "/reservas",
