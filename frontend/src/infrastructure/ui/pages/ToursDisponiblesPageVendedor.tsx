@@ -1,4 +1,4 @@
-/*import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Card from '../components/Card';
@@ -783,7 +783,7 @@ const ToursDisponiblesPage: React.FC = () => {
           className="relative bg-white rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-fadeIn" 
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Botón de cerrar *//*}
+          {/* Botón de cerrar */}
           <button 
             onClick={handleCloseModal}
             className="absolute top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
@@ -791,7 +791,7 @@ const ToursDisponiblesPage: React.FC = () => {
             <FaTimes className="text-gray-700 text-xl" />
           </button>
 
-          {/* Galería de imágenes *//*}
+          {/* Galería de imágenes */}
           <div className="relative h-80 md:h-96 bg-gray-200">
             {imagenes.length > 0 ? (
               <>
@@ -835,7 +835,7 @@ const ToursDisponiblesPage: React.FC = () => {
           </div>
 
           <div className="p-8">
-            {/* Encabezado *//*}
+            {/* Encabezado */}
             <div className="mb-6">
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <FaMapMarkerAlt className="mr-2 text-green-500" />
@@ -858,7 +858,7 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Información principal *//*}
+            {/* Información principal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
                 <h3 className="text-xl font-semibold text-blue-800 mb-4 flex items-center">
@@ -887,7 +887,7 @@ const ToursDisponiblesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tipos de pasaje *//*}
+              {/* Tipos de pasaje */}
               <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
                 <h3 className="text-xl font-semibold text-green-800 mb-4 flex items-center">
                   <FaTicketAlt className="mr-2" /> Tipos de Pasaje
@@ -912,7 +912,7 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Paquetes de pasajes *//*}
+            {/* Paquetes de pasajes */}
             {instancia.tour_programado?.paquetes_pasajes && instancia.tour_programado.paquetes_pasajes.length > 0 && (
               <div className="mb-8 bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
                 <h3 className="text-xl font-semibold text-purple-800 mb-4 flex items-center">
@@ -935,7 +935,7 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Botones de acción *//*}
+            {/* Botones de acción */}
             <div className="flex flex-col sm:flex-row gap-4 mt-6">
               <Button 
                 onClick={(e) => { e.stopPropagation(); handleCreateReserva(instancia); }}
@@ -1179,7 +1179,7 @@ const ToursDisponiblesPage: React.FC = () => {
             filteredInstancias.map(instancia => (
               <Card key={instancia.id_instancia} className="rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-300 border border-gray-100 transform hover:scale-[1.02]">
                 <div className="flex flex-col h-full">
-                  {/* Imagen principal del tour - simplificada *//*}
+                  {/* Imagen principal del tour - simplificada */}
                   <div className="w-full h-56 overflow-hidden relative">
                     <img 
                       src={getImagenTour(instancia)} 
@@ -1199,10 +1199,10 @@ const ToursDisponiblesPage: React.FC = () => {
                   </div>
 
                   <div className="p-6 flex flex-col flex-grow">
-                    {/* Título y breve descripción *//*}
+                    {/* Título y breve descripción */}
                     <h3 className="text-xl font-bold text-gray-800 mb-2">{safeGetStringValue(getNombreTipoTour(instancia))}</h3>
                     
-                    {/* Información esencial *//*}
+                    {/* Información esencial */}
                     <div className="grid grid-cols-2 gap-4 my-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 flex items-center justify-center bg-blue-100 rounded-lg mr-3">
@@ -1242,13 +1242,13 @@ const ToursDisponiblesPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Precio *//*}
+                    {/* Precio */}
                     <div className="bg-green-50 p-3 rounded-xl border border-green-200 flex justify-between items-center mb-4">
                       <span className="text-sm text-gray-600">Desde:</span>
                       <span className="font-bold text-xl text-green-600">S/ {precioMinimo(instancia).toFixed(2)}</span>
                     </div>
 
-                                      {/* Botones de acción *//*}
+                                      {/* Botones de acción */}
                     <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
                       <Button 
                         onClick={() => handleCreateReserva(instancia)}
@@ -1271,7 +1271,7 @@ const ToursDisponiblesPage: React.FC = () => {
           )}
         </div>
 
-        {/* Modal de detalles *//*}
+        {/* Modal de detalles */}
         {modalOpen && <DetallesModal />}
 
         {loading && (
@@ -1304,907 +1304,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-export default ToursDisponiblesPage;*/
-import { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { format, formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Printer, ArrowLeft, Users, MapPin, Clock, CreditCard, FileText, Calendar, Building, Package, Copy, CheckCircle } from 'lucide-react';
-import jsPDF from 'jspdf';
-import { RootState, AppDispatch } from '../../../store';
-import { useSelector, useDispatch } from 'react-redux';
-import { obtenerDetalleReservaPorId, limpiarReservaDetalle } from '../../../store/slices/sliceReserva';
-import Cargador from '../../componentes/comunes/Cargador';
-import Alerta from '../../componentes/comunes/Alerta';
-
-interface CantidadPasaje {
-  id_tipo_pasaje?: number;
-  nombre_tipo?: string;
-  cantidad: number;
-  precio_unitario?: number;
-  subtotal?: number;
-}
-
-interface PaqueteReserva {
-  id_paquete: number;
-  nombre_paquete?: string;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
-  cantidad_total?: number;
-  desglose_pasajes?: { tipo: string; cantidad: number }[];
-}
-
-interface ReservaDetallada {
-  id: number;
-  id_vendedor?: number | null;
-  id_cliente: number;
-  id_instancia?: number;
-  id_sede?: number;
-  total_pagar: number;
-  cantidad_pasajes?: CantidadPasaje[];
-  paquetes?: PaqueteReserva[];
-  notas?: string;
-  fecha_reserva: string;
-  fecha_actualizacion: string;
-  fecha_expiracion?: string;
-  metodo_pago?: string;
-  estado: EstadoReserva;
-  fecha_cancelacion?: string;
-  nombre_cliente?: string;
-  nombre_vendedor?: string;
-  nombre_tour?: string;
-  descripcion_tour?: string;
-  fecha_tour?: string;
-  hora_inicio_tour?: string;
-  hora_fin_tour?: string;
-  duracion_tour?: number;
-  cliente?: {
-    nombres: string;
-    apellidos: string;
-    email: string;
-    telefono?: string;
-    tipo_documento?: string;
-    numero_documento?: string;
-  };
-  sede?: {
-    nombre: string;
-    direccion?: string;
-    telefono?: string;
-  };
-}
-
-type EstadoReserva = 'CONFIRMADA' | 'CANCELADA' | 'PENDIENTE' | 'PROCESADO' | 'ANULADO' | 'RESERVADO';
-
-const PaginaDetalleReserva = () => {
-  const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-  const { reservaDetalle, cargando, error } = useSelector((state: RootState) => state.reserva);
-  const { autenticado } = useSelector((state: RootState) => state.autenticacion);
-  const reserva = reservaDetalle as ReservaDetallada | null;
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (id && !isNaN(parseInt(id)) && autenticado) {
-      dispatch(obtenerDetalleReservaPorId(parseInt(id)));
-    } else if (!autenticado) {
-      navigate(`/ingresar?redirect=/mis-reservas/${id}`);
-    } else {
-      navigate('/mis-reservas');
-    }
-    return () => {
-      dispatch(limpiarReservaDetalle());
-    };
-  }, [id, dispatch, autenticado, navigate]);
-
-  // ✅ Función mejorada para formatear fechas
-  const formatearFecha = (fechaStr?: string, formato: 'completo' | 'corto' | 'relativo' = 'completo'): string => {
-    if (!fechaStr) return 'No disponible';
-    
-    try {
-      let fecha: Date;
-      
-      if (fechaStr.includes('/')) {
-        const [day, month, year] = fechaStr.split('/').map(Number);
-        if (year && month && day) {
-          fecha = new Date(year, month - 1, day);
-        } else {
-          return 'Fecha inválida';
-        }
-      } else if (fechaStr.includes('-')) {
-        const [year, month, day] = fechaStr.split('T')[0].split('-').map(Number);
-        if (year && month && day) {
-          fecha = new Date(year, month - 1, day);
-        } else {
-          return 'Fecha inválida';
-        }
-      } else {
-        fecha = new Date(fechaStr);
-      }
-      
-      if (isNaN(fecha.getTime())) {
-        return 'Fecha inválida';
-      }
-      
-      switch (formato) {
-        case 'relativo':
-          return formatDistanceToNow(fecha, { addSuffix: true, locale: es });
-        case 'completo':
-          return format(fecha, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
-        case 'corto':
-          return format(fecha, 'd MMM yyyy', { locale: es });
-        default:
-          return format(fecha, 'd MMMM yyyy', { locale: es });
-      }
-      
-    } catch (error) {
-      console.error('Error al formatear fecha:', fechaStr, error);
-      return 'Fecha inválida';
-    }
-  };
-
-  const formatearHora = (horaStr?: string): string => {
-    if (!horaStr) return 'N/A';
-    return horaStr.includes(':') ? horaStr.split(':').slice(0, 2).join(':') : horaStr;
-  };
-
-  const getEstadoClase = (estado: EstadoReserva): string => ({
-    CONFIRMADA: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    CANCELADA: 'bg-red-50 text-red-700 border-red-200',
-    PENDIENTE: 'bg-amber-50 text-amber-700 border-amber-200',
-    PROCESADO: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    ANULADO: 'bg-gray-50 text-gray-700 border-gray-200',
-    RESERVADO: 'bg-teal-50 text-teal-700 border-teal-200',
-  })[estado] || 'bg-gray-50 text-gray-700 border-gray-200';
-
-  const getEstadoTexto = (estado: EstadoReserva): string => ({
-    CONFIRMADA: 'Confirmada',
-    CANCELADA: 'Cancelada',
-    PENDIENTE: 'Pendiente',
-    PROCESADO: 'Procesado',
-    ANULADO: 'Anulado',
-    RESERVADO: 'Reservado',
-  })[estado] || estado;
-
-  const calcularTotalPasajeros = useMemo(() => {
-    if (!reserva) return 0;
-    const totalIndividuales = (reserva.cantidad_pasajes || []).reduce((sum, p) => sum + (p.cantidad || 0), 0);
-    const totalPaquetes = (reserva.paquetes || []).reduce((sum, paquete) => {
-      return sum + ((paquete.cantidad_total || (paquete.desglose_pasajes?.reduce((s, d) => s + (d.cantidad || 0), 0) || 0)) * (paquete.cantidad || 0));
-    }, 0);
-    return totalIndividuales + totalPaquetes;
-  }, [reserva]);
-
-  const getDesglosePasajeros = useMemo(() => {
-    if (!reserva) return {};
-    const desglose: Record<string, { individuales: number; paquetes: number; total: number }> = {};
-    (reserva.cantidad_pasajes || []).forEach(p => {
-      const tipo = p.nombre_tipo || 'Pasajero';
-      desglose[tipo] = desglose[tipo] || { individuales: 0, paquetes: 0, total: 0 };
-      desglose[tipo].individuales += p.cantidad || 0;
-      desglose[tipo].total += p.cantidad || 0;
-    });
-    (reserva.paquetes || []).forEach(paquete => {
-      if (paquete.desglose_pasajes?.length) {
-        paquete.desglose_pasajes.forEach(d => {
-          const tipo = d.tipo || 'Pasajero';
-          desglose[tipo] = desglose[tipo] || { individuales: 0, paquetes: 0, total: 0 };
-          const total = (d.cantidad || 0) * (paquete.cantidad || 0);
-          desglose[tipo].paquetes += total;
-          desglose[tipo].total += total;
-        });
-      } else if (paquete.cantidad_total) {
-        const tipo = 'Pasajero';
-        desglose[tipo] = desglose[tipo] || { individuales: 0, paquetes: 0, total: 0 };
-        desglose[tipo].paquetes += paquete.cantidad_total * (paquete.cantidad || 0);
-        desglose[tipo].total += paquete.cantidad_total * (paquete.cantidad || 0);
-      }
-    });
-    return desglose;
-  }, [reserva]);
-
-  const copiarDetalles = () => {
-    if (!reserva) return;
-    const texto = `
-🎫 RESERVA #${reserva.id}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏝️ Tour: ${reserva.nombre_tour || 'N/A'}
-📅 Fecha: ${formatearFecha(reserva.fecha_tour, 'completo')}
-🕐 Horario: ${formatearHora(reserva.hora_inicio_tour)} - ${formatearHora(reserva.hora_fin_tour)}
-👥 Total Pasajeros: ${calcularTotalPasajeros}
-💰 Total a Pagar: S/ ${reserva.total_pagar.toFixed(2)}
-✅ Estado: ${getEstadoTexto(reserva.estado)}
-💳 Método de Pago: ${reserva.metodo_pago || 'N/A'}
-👤 Cliente: ${reserva.nombre_cliente || `${reserva.cliente?.nombres} ${reserva.cliente?.apellidos}`}
-🏢 Sede: ${reserva.sede?.nombre || 'N/A'}
-    `.trim();
-    navigator.clipboard.writeText(texto).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  // ✅ PDF MEJORADO CON TEMA OCEÁNICO
-  const generarPDF = () => {
-    if (!reserva) return;
-    const doc = new jsPDF();
-    let y = 20;
-    const hoy = format(new Date(), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es });
-
-    // 🎨 COLORES OCEÁNICOS
-    const colorPrimario = [14, 116, 144]; // Teal oscuro
-    const colorSecundario = [20, 184, 166]; // Teal claro
-    const colorAcento = [6, 182, 212]; // Cyan
-
-    // ✅ ENCABEZADO PROFESIONAL
-    doc.setFillColor(...colorPrimario);
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('COMPROBANTE DE RESERVA', 105, 18, { align: 'center' });
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Reserva #${reserva.id} - ${getEstadoTexto(reserva.estado)}`, 105, 28, { align: 'center' });
-    doc.text(`Generado: ${hoy}`, 105, 35, { align: 'center' });
-
-    y = 50;
-
-    // ✅ RESUMEN EN RECUADRO
-    doc.setFillColor(240, 253, 250);
-    doc.roundedRect(15, y, 180, 50, 3, 3, 'FD');
-    
-    doc.setTextColor(...colorPrimario);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMEN DE LA RESERVA', 20, y + 8);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    
-    const col1X = 20;
-    const col2X = 110;
-    let lineY = y + 18;
-    
-    doc.text(`Tour: ${reserva.nombre_tour || 'N/A'}`, col1X, lineY);
-    doc.text(`Fecha: ${formatearFecha(reserva.fecha_tour, 'corto')}`, col2X, lineY);
-    lineY += 7;
-    
-    doc.text(`Horario: ${formatearHora(reserva.hora_inicio_tour)} - ${formatearHora(reserva.hora_fin_tour)}`, col1X, lineY);
-    doc.text(`Pasajeros: ${calcularTotalPasajeros} personas`, col2X, lineY);
-    lineY += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...colorSecundario);
-    doc.text(`Total: S/ ${reserva.total_pagar.toFixed(2)}`, col1X, lineY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Pago: ${reserva.metodo_pago || 'N/A'}`, col2X, lineY);
-
-    y = lineY + 15;
-
-    // ✅ DETALLES DEL TOUR
-    if (reserva.nombre_tour) {
-      doc.setFillColor(...colorPrimario);
-      doc.rect(15, y, 180, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DETALLES DEL TOUR', 20, y + 6);
-      
-      y += 14;
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      if (reserva.descripcion_tour) {
-        const lines = doc.splitTextToSize(reserva.descripcion_tour, 170);
-        lines.forEach((line: string) => {
-          doc.text(line, 20, y);
-          y += 5;
-        });
-        y += 3;
-      }
-      
-      y += 5;
-    }
-
-    // ✅ DESGLOSE DE PASAJEROS
-    doc.setFillColor(...colorPrimario);
-    doc.rect(15, y, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DESGLOSE DE PASAJEROS', 20, y + 6);
-    
-    y += 14;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-
-    // Pasajes Individuales
-    if (reserva.cantidad_pasajes?.length) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('• Pasajes Individuales:', 20, y);
-      y += 6;
-      doc.setFont('helvetica', 'normal');
-      reserva.cantidad_pasajes.forEach(p => {
-        const precio = p.precio_unitario ? `S/ ${p.precio_unitario.toFixed(2)}` : 'Precio no disponible';
-        const subtotal = p.subtotal ? `S/ ${p.subtotal.toFixed(2)}` : 'N/A';
-        doc.text(`  - ${p.nombre_tipo || 'Pasajero'}: ${p.cantidad} x ${precio} = ${subtotal}`, 25, y);
-        y += 5;
-      });
-      y += 3;
-    }
-
-    // Paquetes
-    if (reserva.paquetes?.length) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('• Paquetes:', 20, y);
-      y += 6;
-      doc.setFont('helvetica', 'normal');
-      reserva.paquetes.forEach(p => {
-        const totalPas = p.cantidad_total || p.desglose_pasajes?.reduce((s, d) => s + (d.cantidad || 0), 0) || 0;
-        doc.text(`  - ${p.nombre_paquete || 'Paquete'}: ${p.cantidad} unidad(es) x ${totalPas} persona(s) = S/ ${p.subtotal.toFixed(2)}`, 25, y);
-        y += 5;
-      });
-      y += 5;
-    }
-
-    // ✅ INFORMACIÓN DEL CLIENTE
-    if (reserva.cliente || reserva.nombre_cliente) {
-      doc.setFillColor(...colorPrimario);
-      doc.rect(15, y, 180, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('INFORMACIÓN DEL CLIENTE', 20, y + 6);
-      
-      y += 14;
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      const nombreCliente = reserva.nombre_cliente || `${reserva.cliente?.nombres} ${reserva.cliente?.apellidos}`;
-      doc.text(`Nombre: ${nombreCliente}`, 20, y);
-      y += 6;
-      
-      if (reserva.cliente?.email) {
-        doc.text(`Email: ${reserva.cliente.email}`, 20, y);
-        y += 6;
-      }
-      
-      if (reserva.cliente?.telefono) {
-        doc.text(`Teléfono: ${reserva.cliente.telefono}`, 20, y);
-        y += 6;
-      }
-      
-      y += 5;
-    }
-
-    // ✅ TOTAL DESTACADO
-    doc.setFillColor(...colorSecundario);
-    doc.roundedRect(15, y, 180, 12, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`TOTAL A PAGAR: S/ ${reserva.total_pagar.toFixed(2)}`, 105, y + 8, { align: 'center' });
-
-    y += 18;
-
-    // ✅ NOTAS ADICIONALES
-    if (reserva.notas) {
-      doc.setTextColor(...colorPrimario);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Notas adicionales:', 20, y);
-      y += 6;
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(reserva.notas, 170);
-      lines.forEach((line: string) => {
-        doc.text(line, 20, y);
-        y += 5;
-      });
-    }
-
-    // ✅ PIE DE PÁGINA
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    const pie1 = `Documento generado el ${hoy}`;
-    const pie2 = 'Este documento no constituye un recibo fiscal oficial';
-    doc.text(pie1, 105, 280, { align: 'center' });
-    doc.text(pie2, 105, 285, { align: 'center' });
-
-    doc.save(`Reserva_${reserva.id}_${Date.now()}.pdf`);
-  };
-
-  if (!autenticado) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="flex items-center justify-center min-h-[60vh]"
-      >
-        <div className="text-center bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-teal-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicia sesión</h2>
-          <p className="text-gray-600 mb-6">Inicia sesión para ver tus reservas</p>
-          <Link
-            to={`/ingresar?redirect=/mis-reservas/${id}`}
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-full hover:from-teal-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Iniciar Sesión
-          </Link>
-        </div>
-      </motion.div>
-    );
-  }
-
-  if (cargando) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="min-h-screen py-12"
-      >
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8 text-center">
-            <Cargador tamanio="lg" color="text-teal-600" />
-            <p className="mt-4 text-gray-600 text-lg">Cargando detalles de tu reserva...</p>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  if (error || !reserva) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="min-h-screen py-12"
-      >
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-            <Alerta mensaje={error || 'No se pudo cargar la reserva'} tipo="error" />
-            <div className="text-center mt-6">
-              <Link
-                to="/mis-reservas"
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-full hover:from-teal-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver a Mis Reservas
-              </Link>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 py-12"
-    >
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-full-width { width: 100% !important; max-width: 100% !important; }
-        }
-      `}</style>
-      
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* 🎨 ENCABEZADO MEJORADO */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-teal-600 to-cyan-600 rounded-2xl shadow-xl p-6 mb-6 text-white"
-          >
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">
-                  {reserva.nombre_tour || 'Tour'} #{reserva.id}
-                </h1>
-                <div className="flex flex-wrap items-center gap-4 text-teal-50">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatearFecha(reserva.fecha_tour, 'completo')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatearHora(reserva.hora_inicio_tour)} - {formatearHora(reserva.hora_fin_tour)}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-sm opacity-90">Total</div>
-                  <div className="text-3xl font-bold">S/ {reserva.total_pagar.toFixed(2)}</div>
-                </div>
-                <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${getEstadoClase(reserva.estado)}`}>
-                  {getEstadoTexto(reserva.estado)}
-                </span>
-              </div>
-            </div>
-            
-            {/* Estadísticas rápidas */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
-                <Users className="h-4 w-4 mx-auto mb-1" />
-                <div className="text-sm opacity-90">Pasajeros</div>
-                <div className="text-xl font-bold">{calcularTotalPasajeros}</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
-                <Calendar className="h-4 w-4 mx-auto mb-1" />
-                <div className="text-sm opacity-90">Reservado</div>
-                <div className="text-sm font-semibold">{formatearFecha(reserva.fecha_reserva, 'corto')}</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
-                <CreditCard className="h-4 w-4 mx-auto mb-1" />
-                <div className="text-sm opacity-90">Pago</div>
-                <div className="text-sm font-semibold">{reserva.metodo_pago || 'N/A'}</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
-                <MapPin className="h-4 w-4 mx-auto mb-1" />
-                <div className="text-sm opacity-90">Sede</div>
-                <div className="text-sm font-semibold truncate">{reserva.sede?.nombre || 'N/A'}</div>
-              </div>
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* COLUMNA PRINCIPAL */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Detalles del Tour */}
-              {reserva.descripcion_tour && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                    <MapPin className="h-4 w-4 text-teal-600 mr-2" />
-                    Detalles del Tour
-                  </h2>
-                  <p className="text-gray-700 leading-relaxed">{reserva.descripcion_tour}</p>
-                </motion.div>
-              )}
-
-              {/* Desglose de Pasajeros */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-              >
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <Users className="h-4 w-4 text-teal-600 mr-2" />
-                  Desglose de Pasajeros
-                </h3>
-                
-                {Object.keys(getDesglosePasajeros).length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                    {Object.entries(getDesglosePasajeros).map(([tipo, datos]) => (
-                      <div key={tipo} className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="text-2xl font-bold text-teal-700">{datos.total}</div>
-                            <div className="text-sm font-semibold text-teal-600">{tipo}</div>
-                            {datos.individuales > 0 && (
-                              <div className="text-xs text-gray-600 mt-1">Individual: {datos.individuales}</div>
-                            )}
-                            {datos.paquetes > 0 && (
-                              <div className="text-xs text-gray-600">Paquetes: {datos.paquetes}</div>
-                            )}
-                          </div>
-                          <Users className="h-8 w-8 text-teal-400" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Pasajes Individuales */}
-                {reserva.cantidad_pasajes && reserva.cantidad_pasajes.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <FileText className="h-4 w-4 text-cyan-600 mr-2" />
-                      Pasajes Individuales
-                    </h4>
-                    <div className="space-y-3">
-                      {reserva.cantidad_pasajes.map((pasaje, index) => (
-                        <div key={index} className="bg-cyan-50 rounded-xl p-4 border border-cyan-200">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="font-semibold text-gray-900">{pasaje.nombre_tipo || 'Pasajero'}</div>
-                              <div className="text-sm text-gray-600">Cantidad: {pasaje.cantidad}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-cyan-700">
-                                S/ {pasaje.subtotal?.toFixed(2) || 'N/A'}
-                              </div>
-                              {pasaje.precio_unitario && (
-                                <div className="text-xs text-gray-600">
-                                  {pasaje.cantidad} x S/ {pasaje.precio_unitario.toFixed(2)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Paquetes */}
-                {reserva.paquetes && reserva.paquetes.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <Package className="h-4 w-4 text-teal-600 mr-2" />
-                      Paquetes Adquiridos
-                    </h4>
-                    <div className="space-y-3">
-                      {reserva.paquetes.map((paquete, index) => {
-                        const totalPas = paquete.cantidad_total || 
-                          paquete.desglose_pasajes?.reduce((s, d) => s + (d.cantidad || 0), 0) || 0;
-                        return (
-                          <div key={index} className="bg-teal-50 rounded-xl p-4 border border-teal-200">
-                            <div className="flex justify-between items-center mb-2">
-                              <div>
-                                <div className="font-semibold text-gray-900">{paquete.nombre_paquete || 'Paquete'}</div>
-                                <div className="text-sm text-gray-600">
-                                  {paquete.cantidad} unidad{paquete.cantidad > 1 ? 'es' : ''} × {totalPas} persona{totalPas > 1 ? 's' : ''}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-teal-700">
-                                  S/ {paquete.subtotal.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  Unitario: S/ {paquete.precio_unitario.toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-                            {paquete.desglose_pasajes && paquete.desglose_pasajes.length > 0 && (
-                              <details className="mt-2">
-                                <summary className="text-sm text-teal-700 cursor-pointer hover:text-teal-800 font-medium">
-                                  Ver desglose
-                                </summary>
-                                <div className="mt-2 space-y-1 text-sm text-gray-600 ml-4">
-                                  {paquete.desglose_pasajes.map((d, i) => (
-                                    <div key={i}>• {d.tipo}: {d.cantidad}</div>
-                                  ))}
-                                </div>
-                              </details>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-
-              {/* Información Adicional */}
-              {(reserva.notas || reserva.metodo_pago) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-                >
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                    <FileText className="h-4 w-4 text-teal-600 mr-2" />
-                    Información Adicional
-                  </h3>
-                  <div className="space-y-4">
-                    {reserva.notas && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Notas de la Reserva:</h4>
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                          <p className="text-gray-800">{reserva.notas}</p>
-                        </div>
-                      </div>
-                    )}
-                    {reserva.metodo_pago && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Método de Pago:</h4>
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
-                          <CreditCard className="h-5 w-5 text-emerald-600" />
-                          <p className="text-gray-800 font-medium">{reserva.metodo_pago}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            {/* SIDEBAR */}
-            <div className="space-y-6">
-              {/* Cliente */}
-              {reserva.cliente && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-                >
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <Users className="h-4 w-4 text-teal-600 mr-2" />
-                    Cliente
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">Nombre</div>
-                      <div className="font-semibold text-gray-900">
-                        {reserva.nombre_cliente || `${reserva.cliente.nombres} ${reserva.cliente.apellidos}`}
-                      </div>
-                    </div>
-                    {reserva.cliente.email && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">Email</div>
-                        <div className="text-gray-900">{reserva.cliente.email}</div>
-                      </div>
-                    )}
-                    {reserva.cliente.telefono && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">Teléfono</div>
-                        <div className="text-gray-900">{reserva.cliente.telefono}</div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Sede */}
-              {reserva.sede && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-                >
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <Building className="h-4 w-4 text-teal-600 mr-2" />
-                    Sede
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">Nombre</div>
-                      <div className="font-semibold text-gray-900">{reserva.sede.nombre}</div>
-                    </div>
-                    {reserva.sede.direccion && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">Dirección</div>
-                        <div className="text-gray-900">{reserva.sede.direccion}</div>
-                      </div>
-                    )}
-                    {reserva.sede.telefono && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">Teléfono</div>
-                        <div className="text-gray-900">{reserva.sede.telefono}</div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Fechas */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100"
-              >
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                  <Calendar className="h-4 w-4 text-teal-600 mr-2" />
-                  Fechas Importantes
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">Reserva Creada</div>
-                    <div className="text-gray-900">{formatearFecha(reserva.fecha_reserva, 'corto')}</div>
-                  </div>
-                  {reserva.fecha_actualizacion && reserva.fecha_actualizacion !== 'Fecha inválida' && (
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">Última Actualización</div>
-                      <div className="text-gray-900">{formatearFecha(reserva.fecha_actualizacion, 'corto')}</div>
-                    </div>
-                  )}
-                  {reserva.fecha_expiracion && (
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">Fecha de Expiración</div>
-                      <div className="text-amber-600 font-semibold">{formatearFecha(reserva.fecha_expiracion, 'corto')}</div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Acciones */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="bg-white rounded-2xl shadow-lg p-6 border border-teal-100 no-print"
-              >
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Acciones</h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => window.print()}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105"
-                  >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Imprimir
-                  </button>
-                  <button
-                    onClick={generarPDF}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Descargar PDF
-                  </button>
-                  <button
-                    onClick={copiarDetalles}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copiar Detalles
-                  </button>
-                  <Link
-                    to="/mis-reservas"
-                    className="w-full flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-medium"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Mis Reservas
-                  </Link>
-                  <Link
-                    to="/tours"
-                    className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg"
-                  >
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Explorar Tours
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Notificación de copiado */}
-          <AnimatePresence>
-            {copied && (
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                className="fixed bottom-8 right-8 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3"
-              >
-                <CheckCircle className="h-5 w-5" />
-                <span className="font-medium">¡Detalles copiados al portapapeles!</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-export default PaginaDetalleReserva;
+export default ToursDisponiblesPage;
