@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../../store';
-import { actualizarCliente, cambiarContrasena } from '../../../store/slices/sliceAutenticacion';
+import { actualizarCliente, cambiarContrasena, limpiarError } from '../../../store/slices/sliceAutenticacion';
 import Cargador from '../../componentes/comunes/Cargador';
 import Alerta from '../../componentes/comunes/Alerta';
 import { motion } from 'framer-motion';
@@ -10,6 +10,9 @@ import { motion } from 'framer-motion';
 const PaginaPerfil = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     console.log("🎯 PaginaPerfil: Componente montado correctamente");
   }, []);
 
@@ -29,7 +32,8 @@ const PaginaPerfil = () => {
     apellidos: '',
     correo: '',
     numero_celular: '',
-    numero_documento: ''
+    numero_documento: '',
+    tipo_documento: 'DNI'
   });
 
   // Estado para el formulario de cambio de contraseña
@@ -39,30 +43,34 @@ const PaginaPerfil = () => {
     confirmar_contrasena: ''
   });
 
-  // ⭐ DEBUG: Verificar usuario
-  console.log("🔍 PaginaPerfil - Estado de usuario:", {
-    usuario: usuario,
-    id_cliente: usuario?.id_cliente,
-    nombres: usuario?.nombres,
-    correo: usuario?.correo
-  });
+  // ⭐ LOG DEL ESTADO DEL USUARIO
+  useEffect(() => {
+    console.log("🔍 PaginaPerfil: Estado del usuario:", {
+      usuario,
+      tieneUsuario: !!usuario,
+      idCliente: usuario?.id_cliente,
+      nombres: usuario?.nombres,
+      correo: usuario?.correo
+    });
+  }, [usuario]);
 
   // Actualizar el formulario cuando cambia el usuario
   useEffect(() => {
     if (usuario) {
-      console.log("📝 PaginaPerfil: Actualizando formData con datos del usuario");
+      console.log("🔄 PaginaPerfil: Actualizando formulario con datos del usuario");
       setFormData({
         nombres: usuario.nombres || '',
         apellidos: usuario.apellidos || '',
         correo: usuario.correo || '',
         numero_celular: usuario.numero_celular || '',
-        numero_documento: usuario.numero_documento || ''
+        numero_documento: usuario.numero_documento || '',
+        tipo_documento: usuario.tipo_documento || 'DNI'
       });
     }
   }, [usuario]);
 
   // Manejar cambios en los inputs del formulario principal
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -79,31 +87,28 @@ const PaginaPerfil = () => {
     }));
   };
 
-  // Guardar cambios del perfil
+  // ⭐ CORREGIDO: Guardar cambios del perfil
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!usuario || !usuario.id_cliente) {
-      console.error("❌ PaginaPerfil: No hay usuario o ID de cliente");
-      setMensaje({
-        texto: 'Error: No se pudo identificar al usuario',
-        tipo: 'error'
-      });
+    if (!usuario) {
+      console.error("❌ PaginaPerfil: No hay usuario autenticado");
       return;
     }
     
     try {
-      console.log("🚀 PaginaPerfil: Enviando actualización de cliente", {
+      console.log("🚀 PaginaPerfil: Enviando actualización de perfil", {
         id: usuario.id_cliente,
         datos: formData
       });
 
+      // Limpiar errores previos
+      dispatch(limpiarError());
+      
       await dispatch(actualizarCliente({ 
-        id: usuario.id_cliente, 
+        id: usuario.id_cliente, // ⭐ Usar id_cliente del usuario autenticado
         datos: formData 
       })).unwrap();
-      
-      console.log("✅ PaginaPerfil: Actualización exitosa");
       
       setMensaje({
         texto: 'Datos actualizados correctamente',
@@ -114,26 +119,24 @@ const PaginaPerfil = () => {
       
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => setMensaje(null), 3000);
+      
+      console.log("✅ PaginaPerfil: Perfil actualizado exitosamente");
+      
     } catch (error: any) {
-      console.error("❌ PaginaPerfil: Error al actualizar:", error);
+      console.error("❌ PaginaPerfil: Error al actualizar perfil:", error);
       setMensaje({
-        texto: error.message || 'Error al actualizar datos',
+        texto: error || 'Error al actualizar datos',
         tipo: 'error'
       });
-      setTimeout(() => setMensaje(null), 5000);
     }
   };
 
-  // Cambiar contraseña
+  // ⭐ CORREGIDO: Cambiar contraseña
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!usuario || !usuario.id_cliente) {
-      console.error("❌ PaginaPerfil: No hay usuario o ID de cliente para cambio de contraseña");
-      setMensaje({
-        texto: 'Error: No se pudo identificar al usuario',
-        tipo: 'error'
-      });
+    if (!usuario) {
+      console.error("❌ PaginaPerfil: No hay usuario autenticado");
       return;
     }
     
@@ -143,17 +146,15 @@ const PaginaPerfil = () => {
         texto: 'Las contraseñas no coinciden',
         tipo: 'error'
       });
-      setTimeout(() => setMensaje(null), 3000);
       return;
     }
-
+    
     // Validar longitud mínima
     if (formContrasena.contrasena_nueva.length < 6) {
       setMensaje({
-        texto: 'La contraseña debe tener al menos 6 caracteres',
+        texto: 'La nueva contraseña debe tener al menos 6 caracteres',
         tipo: 'error'
       });
-      setTimeout(() => setMensaje(null), 3000);
       return;
     }
     
@@ -162,15 +163,16 @@ const PaginaPerfil = () => {
         id: usuario.id_cliente
       });
 
+      // Limpiar errores previos
+      dispatch(limpiarError());
+      
       await dispatch(cambiarContrasena({ 
-        id: usuario.id_cliente, 
+        id: usuario.id_cliente, // ⭐ Usar id_cliente del usuario autenticado
         datos: {
           contrasena_actual: formContrasena.contrasena_actual,
           nueva_contrasena: formContrasena.contrasena_nueva
         }
       })).unwrap();
-      
-      console.log("✅ PaginaPerfil: Cambio de contraseña exitoso");
       
       setMensaje({
         texto: 'Contraseña actualizada correctamente',
@@ -188,13 +190,15 @@ const PaginaPerfil = () => {
       
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => setMensaje(null), 3000);
+      
+      console.log("✅ PaginaPerfil: Contraseña cambiada exitosamente");
+      
     } catch (error: any) {
       console.error("❌ PaginaPerfil: Error al cambiar contraseña:", error);
       setMensaje({
-        texto: error.message || 'Error al cambiar la contraseña',
+        texto: error || 'Error al cambiar la contraseña',
         tipo: 'error'
       });
-      setTimeout(() => setMensaje(null), 5000);
     }
   };
 
@@ -229,7 +233,6 @@ const PaginaPerfil = () => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-1">Mi Perfil</h1>
                 <p className="text-gray-600">{usuario.nombres} {usuario.apellidos}</p>
-                <p className="text-sm text-gray-500">ID: {usuario.id_cliente}</p>
               </div>
             </div>
           </div>
@@ -254,7 +257,7 @@ const PaginaPerfil = () => {
               <Alerta 
                 mensaje={error} 
                 tipo="error" 
-                onCerrar={() => {}}
+                onCerrar={() => dispatch(limpiarError())}
               />
             </div>
           )}
@@ -342,7 +345,7 @@ const PaginaPerfil = () => {
                       </svg>
                       <h3 className="text-sm font-medium text-gray-700">Documento de Identidad</h3>
                     </div>
-                    <p className="text-gray-900 font-medium text-lg">{usuario.numero_documento || 'No registrado'}</p>
+                    <p className="text-gray-900 font-medium text-lg">{usuario.tipo_documento}: {usuario.numero_documento || 'No registrado'}</p>
                   </div>
                 </div>
               </div>
@@ -350,7 +353,9 @@ const PaginaPerfil = () => {
               <form onSubmit={handleSubmit} className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombres</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombres
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -368,7 +373,9 @@ const PaginaPerfil = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Apellidos</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apellidos
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -386,7 +393,9 @@ const PaginaPerfil = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Correo Electrónico
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -405,7 +414,9 @@ const PaginaPerfil = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Teléfono
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -418,12 +429,29 @@ const PaginaPerfil = () => {
                         value={formData.numero_celular}
                         onChange={handleInputChange}
                         className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="+51 999 999 999"
+                        placeholder="999999999"
                       />
                     </div>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Documento de Identidad</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Documento
+                    </label>
+                    <select
+                      name="tipo_documento"
+                      value={formData.tipo_documento}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="DNI">DNI</option>
+                      <option value="CE">Carné de Extranjería</option>
+                      <option value="Pasaporte">Pasaporte</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de Documento
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -497,7 +525,14 @@ const PaginaPerfil = () => {
                 </button>
               ) : (
                 <button
-                  onClick={() => setCambiandoContrasena(false)}
+                  onClick={() => {
+                    setCambiandoContrasena(false);
+                    setFormContrasena({
+                      contrasena_actual: '',
+                      contrasena_nueva: '',
+                      confirmar_contrasena: ''
+                    });
+                  }}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-all"
                 >
                   Cancelar
@@ -509,7 +544,9 @@ const PaginaPerfil = () => {
               <form onSubmit={handleChangePassword} className="p-8">
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña Actual</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contraseña Actual
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -527,7 +564,9 @@ const PaginaPerfil = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nueva Contraseña</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nueva Contraseña
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -547,7 +586,9 @@ const PaginaPerfil = () => {
                     <p className="text-xs text-gray-500 mt-2">La contraseña debe tener al menos 6 caracteres</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar Contraseña</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirmar Contraseña
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -568,7 +609,14 @@ const PaginaPerfil = () => {
                 <div className="mt-8 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setCambiandoContrasena(false)}
+                    onClick={() => {
+                      setCambiandoContrasena(false);
+                      setFormContrasena({
+                        contrasena_actual: '',
+                        contrasena_nueva: '',
+                        confirmar_contrasena: ''
+                      });
+                    }}
                     className="mr-3 px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     Cancelar
