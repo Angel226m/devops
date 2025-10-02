@@ -1305,19 +1305,21 @@ style.textContent = `
 document.head.appendChild(style);
 
 export default ToursDisponiblesPage;*/
-
-
-import React, { useState, useEffect, useCallback } from 'react';
+ import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../infrastructure/store';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaStar, FaTimes } from 'react-icons/fa';
-import { format, parse, isValid, differenceInMinutes, addDays, parseISO } from 'date-fns';
+import { FaShip, FaClock, FaUserFriends, FaMoneyBillWave, FaCalendarAlt, FaSearch, FaMapMarkerAlt, FaCalendarCheck, FaTicketAlt, FaBox, FaInfoCircle, FaSync, FaTimes } from 'react-icons/fa';
+import { format, parse, isValid, differenceInMinutes, addDays, parseISO, addHours } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatInTimeZone } from 'date-fns-tz'; // Import date-fns-tz for timezone support
 import axios from '../../../infrastructure/api/axiosClient';
 import { endpoints } from '../../../infrastructure/api/endpoints';
 import { useNavigate } from 'react-router-dom';
+
+// Cache for API responses (simple in-memory cache)
+const cache = new Map<string, any>();
 
 interface StringWithValidity {
   String: string;
@@ -1367,7 +1369,7 @@ interface TourProgramado {
   vigencia_hasta: string;
   cupo_maximo: number;
   cupo_disponible: number;
-  estado: "PROGRAMADO" | "EN_CURSO" | "COMPLETADO" | "CANCELADO";
+  estado: 'PROGRAMADO' | 'EN_CURSO' | 'COMPLETADO' | 'CANCELADO';
   eliminado: boolean;
   es_excepcion: boolean;
   notas_excepcion: { String: string; Valid: boolean } | null;
@@ -1452,12 +1454,17 @@ const ToursDisponiblesPage: React.FC = () => {
   const [selectedTour, setSelectedTour] = useState<InstanciaTour | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const getCurrentDate = () => {
+  const getCurrentPeruDate = () => {
     const now = new Date();
-    return format(now, 'yyyy-MM-dd');
+    return formatInTimeZone(now, 'America/Lima', 'yyyy-MM-dd');
   };
 
-  const currentDate = getCurrentDate();
+  const getCurrentPeruTime = () => {
+    return new Date(formatInTimeZone(new Date(), 'America/Lima', 'yyyy-MM-dd HH:mm:ssXXX'));
+  };
+
+  const currentDate = getCurrentPeruDate();
+  const currentTime = getCurrentPeruTime();
   const currentUser = "Angel226m";
 
   const [loading, setLoading] = useState(true);
@@ -1475,20 +1482,15 @@ const ToursDisponiblesPage: React.FC = () => {
 
   const checkAuthAndSede = useCallback(() => {
     if (isAuthenticated) {
-      console.log("Autenticación completada");
       setIsAuthReady(true);
-
       if (selectedSede?.id_sede) {
-        console.log("Sede seleccionada:", selectedSede.id_sede);
         setSedeError(false);
         return true;
       } else {
-        console.log("No hay sede seleccionada");
         setSedeError(true);
         return false;
       }
     } else {
-      console.log("Esperando autenticación");
       return false;
     }
   }, [isAuthenticated, selectedSede]);
@@ -1500,11 +1502,9 @@ const ToursDisponiblesPage: React.FC = () => {
   const safeGetStringValue = (obj: any): string => {
     if (obj === null || obj === undefined) return '';
     if (typeof obj === 'string') return obj;
-
     if (isStringWithValidity(obj)) {
       return obj.Valid ? obj.String : '';
     }
-
     return String(obj);
   };
 
@@ -1512,19 +1512,17 @@ const ToursDisponiblesPage: React.FC = () => {
     if (!dateString) return defaultValue;
 
     try {
+      let date: Date;
       if (dateString.includes('T')) {
-        const date = parseISO(dateString);
-        if (isValid(date)) {
-          return format(date, formatStr, { locale: es });
-        }
+        date = parseISO(dateString);
+      } else {
+        date = parse(dateString, 'yyyy-MM-dd', new Date());
       }
-
-      const date = parse(dateString, 'yyyy-MM-dd', new Date());
       if (isValid(date)) {
-        return format(date, formatStr, { locale: es });
+        return formatInTimeZone(date, 'America/Lima', formatStr, { locale: es });
       }
     } catch (error) {
-      console.error(`Error al formatear fecha: ${dateString}`, error);
+      // Silenciar errores
     }
 
     return defaultValue;
@@ -1533,16 +1531,13 @@ const ToursDisponiblesPage: React.FC = () => {
   useEffect(() => {
     const dates = [];
     try {
-      const baseDate = new Date();
-
+      const baseDate = new Date(currentTime);
       for (let i = 0; i < 7; i++) {
         const date = addDays(baseDate, i);
-        dates.push(format(date, 'yyyy-MM-dd'));
+        dates.push(formatInTimeZone(date, 'America/Lima', 'yyyy-MM-dd'));
       }
-
       setNextDates(dates);
     } catch (error) {
-      console.error("Error al generar fechas:", error);
       const today = new Date();
       const fallbackDates = [];
       for (let i = 0; i < 7; i++) {
@@ -1558,201 +1553,178 @@ const ToursDisponiblesPage: React.FC = () => {
       if (Array.isArray(response.data)) {
         return response.data;
       }
-
       if (response.data && Array.isArray(response.data.data)) {
         return response.data.data;
       }
-
       if (response.data && typeof response.data === 'object') {
         const arrayProps = Object.keys(response.data).filter(key => 
           Array.isArray(response.data[key])
         );
-
         if (arrayProps.length > 0) {
           return response.data[arrayProps[0]];
         }
       }
     } catch (error) {
-      console.error('Error al procesar datos de array:', error);
+      // Silenciar errores
     }
-
     return [];
   };
 
   const getSingleObject = <T,>(response: any): T | null => {
     try {
       if (!response.data) return null;
-
       if (typeof response.data === 'object' && !Array.isArray(response.data)) {
         if (response.data.data && !Array.isArray(response.data.data)) {
           return response.data.data as T;
         }
         return response.data as T;
       }
-
       if (Array.isArray(response.data) && response.data.length === 1) {
         return response.data[0] as T;
       }
-
       if (Array.isArray(response.data)) {
         return response.data[0] as T;
       }
     } catch (error) {
-      console.error('Error al procesar datos de objeto:', error);
+      // Silenciar errores
     }
-
     return null;
   };
+
+  const fetchTiposTour = useCallback(async () => {
+    const cacheKey = `tiposTour_${selectedSede!.id_sede}`;
+    if (cache.has(cacheKey)) {
+      setTiposTour(cache.get(cacheKey));
+      return true;
+    }
+
+    try {
+      const response = await axios.get(endpoints.tiposTour.vendedorList);
+      const tiposTourArray = getDataArray<TipoTour>(response);
+      const tiposTourSede = tiposTourArray.filter(tipo => 
+        tipo.id_sede === selectedSede!.id_sede
+      );
+      setTiposTour(tiposTourSede);
+      cache.set(cacheKey, tiposTourSede);
+      return true;
+    } catch (error) {
+      setLoadError("Error al cargar tipos de tour. Intente recargar la página.");
+      return false;
+    }
+  }, [selectedSede]);
+
+  const fetchInstanciasTour = useCallback(async () => {
+    const cacheKey = `instanciasTour_${selectedDate}_${selectedSede!.id_sede}_${selectedTipoTour || 'all'}`;
+    if (cache.has(cacheKey)) {
+      const instancias = cache.get(cacheKey);
+      setInstanciasTour(instancias);
+      setFilteredInstancias(instancias);
+      return true;
+    }
+
+    try {
+      const filtro: FiltrosInstanciaTour = {
+        fecha_inicio: selectedDate,
+        fecha_fin: selectedDate,
+        estado: 'PROGRAMADO',
+        id_sede: selectedSede!.id_sede
+      };
+
+      if (selectedTipoTour) {
+        filtro.id_tipo_tour = selectedTipoTour;
+      }
+
+      const response = await axios.post(endpoints.instanciaTour.vendedorFiltrar, filtro);
+      const instanciasArray = getDataArray<InstanciaTour>(response);
+
+      if (instanciasArray.length === 0) {
+        setInstanciasTour([]);
+        setFilteredInstancias([]);
+        cache.set(cacheKey, []);
+        return true;
+      }
+
+      const instanciasEnriquecidas = await Promise.all(
+        instanciasArray.map(async (instancia: InstanciaTour) => {
+          try {
+            const tourCacheKey = `tour_${instancia.id_tour_programado}`;
+            let tourData: TourProgramado | null = cache.get(tourCacheKey);
+
+            if (!tourData) {
+              const tourResponse = await axios.get(
+                endpoints.tourProgramado.vendedorGetById(instancia.id_tour_programado)
+              );
+              tourData = getSingleObject<TourProgramado>(tourResponse);
+              if (tourData) {
+                cache.set(tourCacheKey, tourData);
+              }
+            }
+
+            if (tourData) {
+              const tourDataSafe = { ...tourData };
+              instancia.tour_programado = tourDataSafe;
+
+              if (instancia.tour_programado.id_tipo_tour) {
+                const tipoTourId = instancia.tour_programado.id_tipo_tour;
+                const tipoTourCacheKey = `tipoTour_${tipoTourId}`;
+                let tipoTourData: TipoTour | null = cache.get(tipoTourCacheKey);
+
+                if (!tipoTourData) {
+                  const tipoTourResponse = await axios.get(
+                    endpoints.tiposTour.vendedorGetById(tipoTourId)
+                  );
+                  tipoTourData = getSingleObject<TipoTour>(tipoTourResponse);
+                  if (tipoTourData) {
+                    cache.set(tipoTourCacheKey, tipoTourData);
+                  }
+                }
+
+                if (tipoTourData) {
+                  instancia.tour_programado.tipo_tour = tipoTourData;
+
+                  const [galeriaResponse, tiposPasajeResponse, paquetesResponse] = await Promise.all([
+                    axios.get(endpoints.galeriaTour.vendedorListByTipoTour(tipoTourId)),
+                    axios.get(endpoints.tipoPasaje.vendedorListByTipoTour(tipoTourId)),
+                    axios.get(endpoints.paquetePasajes.vendedorListByTipoTour(tipoTourId))
+                  ]);
+
+                  const galeriaData = getDataArray<GaleriaTour>(galeriaResponse);
+                  instancia.tour_programado.galeria_imagenes = galeriaData;
+
+                  const tiposPasajeData = getDataArray<TipoPasaje>(tiposPasajeResponse);
+                  instancia.tour_programado.tipos_pasaje = tiposPasajeData;
+
+                  const paquetesData = getDataArray<PaquetePasajes>(paquetesResponse);
+                  instancia.tour_programado.paquetes_pasajes = paquetesData;
+                }
+              }
+            }
+          } catch (err) {
+            // Silenciar errores
+          }
+          return instancia;
+        })
+      );
+
+      setInstanciasTour(instanciasEnriquecidas);
+      setFilteredInstancias(instanciasEnriquecidas);
+      cache.set(cacheKey, instanciasEnriquecidas);
+      return true;
+    } catch (error) {
+      setLoadError("Error al cargar instancias de tour. Intente recargar la página.");
+      return false;
+    }
+  }, [selectedDate, selectedSede, selectedTipoTour]);
 
   const fetchData = useCallback(async () => {
     try {
       if (!checkAuthAndSede()) {
-        console.log("No se puede cargar datos sin autenticación o sede");
         setLoading(false);
         return;
       }
 
-      console.log("Iniciando carga de datos...");
       setLoading(true);
       setLoadError(null);
-
-      const fetchTiposTour = async () => {
-        console.log("Cargando tipos de tour...");
-        try {
-          const response = await axios.get(endpoints.tiposTour.vendedorList);
-          console.log('Respuesta de tipos tour:', response.data);
-
-          const tiposTourArray = getDataArray<TipoTour>(response);
-
-          const tiposTourSede = tiposTourArray.filter(tipo => 
-            tipo.id_sede === selectedSede!.id_sede
-          );
-
-          setTiposTour(tiposTourSede);
-          console.log(`Se cargaron ${tiposTourSede.length} tipos de tour`);
-          return true;
-        } catch (error) {
-          console.error('Error al cargar tipos de tour:', error);
-          setLoadError("Error al cargar tipos de tour. Intente recargar la página.");
-          return false;
-        }
-      };
-
-      const fetchInstanciasTour = async () => {
-        console.log("Cargando instancias de tour...");
-        try {
-          const filtro: FiltrosInstanciaTour = {
-            fecha_inicio: selectedDate,
-            fecha_fin: selectedDate,
-            estado: 'PROGRAMADO',
-            id_sede: selectedSede!.id_sede
-          };
-
-          if (selectedTipoTour) {
-            filtro.id_tipo_tour = selectedTipoTour;
-          }
-
-          const response = await axios.post(endpoints.instanciaTour.vendedorFiltrar, filtro);
-          console.log('Respuesta de instancias tour:', response.data);
-
-          const instanciasArray = getDataArray<InstanciaTour>(response);
-          console.log(`Se encontraron ${instanciasArray.length} instancias`);
-
-          if (instanciasArray.length === 0) {
-            setInstanciasTour([]);
-            setFilteredInstancias([]);
-            return true;
-          }
-
-          const instanciasEnriquecidas = await Promise.all(
-            instanciasArray.map(async (instancia: InstanciaTour, index) => {
-              try {
-                console.log(`[${index + 1}/${instanciasArray.length}] Procesando instancia ID ${instancia.id_instancia}...`);
-                const tourResponse = await axios.get(
-                  endpoints.tourProgramado.vendedorGetById(instancia.id_tour_programado)
-                );
-
-                const tourData = getSingleObject<TourProgramado>(tourResponse);
-
-                if (tourData) {
-                  const tourDataSafe = { ...tourData };
-                  instancia.tour_programado = tourDataSafe;
-
-                  if (instancia.tour_programado.id_tipo_tour) {
-                    const tipoTourId = instancia.tour_programado.id_tipo_tour;
-
-                    try {
-                      const tipoTourResponse = await axios.get(
-                        endpoints.tiposTour.vendedorGetById(tipoTourId)
-                      );
-
-                      const tipoTourData = getSingleObject<TipoTour>(tipoTourResponse);
-
-                      if (tipoTourData) {
-                        instancia.tour_programado.tipo_tour = tipoTourData;
-                        console.log(`URL de imagen del tipo de tour ${tipoTourId}:`, tipoTourData.url_imagen);
-
-                        try {
-                          const galeriaResponse = await axios.get(
-                            endpoints.galeriaTour.vendedorListByTipoTour(tipoTourId)
-                          );
-
-                          const galeriaData = getDataArray<GaleriaTour>(galeriaResponse);
-                          instancia.tour_programado.galeria_imagenes = galeriaData;
-                          console.log(`Se cargaron ${galeriaData.length} imágenes para el tipo de tour ${tipoTourId}`);
-                        } catch (err) {
-                          console.error(`Error al cargar galería para tipo tour ${tipoTourId}:`, err);
-                          instancia.tour_programado.galeria_imagenes = [];
-                        }
-
-                        try {
-                          const tiposPasajeResponse = await axios.get(
-                            endpoints.tipoPasaje.vendedorListByTipoTour(tipoTourId)
-                          );
-
-                          const tiposPasajeData = getDataArray<TipoPasaje>(tiposPasajeResponse);
-                          instancia.tour_programado.tipos_pasaje = tiposPasajeData;
-                          console.log(`Se cargaron ${tiposPasajeData.length} tipos de pasaje para el tipo de tour ${tipoTourId}`);
-                        } catch (err) {
-                          console.error(`Error al cargar tipos de pasaje para tipo tour ${tipoTourId}:`, err);
-                          instancia.tour_programado.tipos_pasaje = [];
-                        }
-
-                        try {
-                          const paquetesResponse = await axios.get(
-                            endpoints.paquetePasajes.vendedorListByTipoTour(tipoTourId)
-                          );
-
-                          const paquetesData = getDataArray<PaquetePasajes>(paquetesResponse);
-                          instancia.tour_programado.paquetes_pasajes = paquetesData;
-                          console.log(`Se cargaron ${paquetesData.length} paquetes para el tipo de tour ${tipoTourId}`);
-                        } catch (err) {
-                          console.error(`Error al cargar paquetes de pasajes para tipo tour ${tipoTourId}:`, err);
-                          instancia.tour_programado.paquetes_pasajes = [];
-                        }
-                      }
-                    } catch (err) {
-                      console.error(`Error al cargar tipo de tour ${tipoTourId}:`, err);
-                    }
-                  }
-                }
-              } catch (err) {
-                console.error('Error al obtener detalles adicionales:', err);
-              }
-              return instancia;
-            })
-          );
-
-          setInstanciasTour(instanciasEnriquecidas);
-          setFilteredInstancias(instanciasEnriquecidas);
-          console.log("Datos de instancias enriquecidas cargados correctamente");
-          return true;
-        } catch (error) {
-          console.error('Error al cargar instancias de tour:', error);
-          setLoadError("Error al cargar instancias de tour. Intente recargar la página.");
-          return false;
-        }
-      };
 
       const tiposTourLoaded = await fetchTiposTour();
       if (tiposTourLoaded) {
@@ -1760,122 +1732,98 @@ const ToursDisponiblesPage: React.FC = () => {
       }
 
       setDataLoaded(true);
-
     } catch (error) {
-      console.error('Error general al cargar datos:', error);
       setLoadError("Error al cargar datos. Intente recargar la página.");
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, selectedSede, selectedTipoTour, checkAuthAndSede]);
+  }, [checkAuthAndSede, fetchTiposTour, fetchInstanciasTour]);
 
   useEffect(() => {
     if (isAuthReady && selectedSede && !dataLoaded) {
-      console.log("Autenticación completa, iniciando carga de datos...");
       fetchData();
     }
   }, [isAuthReady, selectedSede, dataLoaded, fetchData]);
 
   useEffect(() => {
     if (dataLoaded && !sedeError) {
-      console.log("Filtros cambiados, recargando datos...");
-      fetchData();
+      fetchInstanciasTour();
     }
-  }, [selectedDate, selectedTipoTour, fetchData, dataLoaded, sedeError]);
+  }, [selectedDate, selectedTipoTour, fetchInstanciasTour, dataLoaded, sedeError]);
 
   const handleForceReload = () => {
-    console.log("Recargando datos manualmente...");
+    cache.clear(); // Clear cache on manual reload
     fetchData();
   };
 
   useEffect(() => {
-    let filtered = instanciasTour;
-
-    if (searchTerm.trim() !== '') {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(instancia => {
-        const nombreTipoTour = safeGetStringValue(instancia.nombre_tipo_tour).toLowerCase();
-        const descripcionTipoTour = safeGetStringValue(instancia.tour_programado?.tipo_tour?.descripcion).toLowerCase();
-        const nombreSede = safeGetStringValue(instancia.nombre_sede).toLowerCase();
-        const nombreEmbarcacion = safeGetStringValue(instancia.nombre_embarcacion).toLowerCase();
-
-        return nombreTipoTour.includes(lowerSearchTerm) || 
-               descripcionTipoTour.includes(lowerSearchTerm) || 
-               nombreSede.includes(lowerSearchTerm) ||
-               nombreEmbarcacion.includes(lowerSearchTerm);
-      });
+    if (searchTerm.trim() === '') {
+      setFilteredInstancias(instanciasTour);
+      return;
     }
 
-    // Ordenar por hora_inicio
-    filtered = filtered.sort((a, b) => {
-      const horaA = a.hora_inicio || '00:00:00';
-      const horaB = b.hora_inicio || '00:00:00';
-      return horaA.localeCompare(horaB);
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    const filtered = instanciasTour.filter(instancia => {
+      const nombreTipoTour = safeGetStringValue(instancia.nombre_tipo_tour).toLowerCase();
+      const descripcionTipoTour = safeGetStringValue(instancia.tour_programado?.tipo_tour?.descripcion).toLowerCase();
+      const nombreSede = safeGetStringValue(instancia.nombre_sede).toLowerCase();
+      const nombreEmbarcacion = safeGetStringValue(instancia.nombre_embarcacion).toLowerCase();
+
+      return nombreTipoTour.includes(lowerSearchTerm) || 
+             descripcionTipoTour.includes(lowerSearchTerm) || 
+             nombreSede.includes(lowerSearchTerm) ||
+             nombreEmbarcacion.includes(lowerSearchTerm);
     });
 
     setFilteredInstancias(filtered);
   }, [searchTerm, instanciasTour]);
 
   const handleCreateReserva = (instancia: InstanciaTour) => {
-    console.log('Crear reserva para:', instancia);
     navigate(`/vendedor/reservas/nueva?instanciaId=${instancia.id_instancia}`);
   };
 
-  // Modificar para abrir el modal en lugar de navegar
   const handleViewDetails = (instancia: InstanciaTour) => {
-    console.log('Ver detalles de:', instancia);
     setSelectedTour(instancia);
     setModalOpen(true);
-    setCurrentImageIndex(0); // Reiniciar el índice de imagen al abrir
-    // Scroll a inicio del modal (importante para móviles)
-    document.body.style.overflow = 'hidden'; // Prevenir scroll en la página principal
+    setCurrentImageIndex(0);
+    document.body.style.overflow = 'hidden';
   };
 
-  // Cerrar modal
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedTour(null);
-    document.body.style.overflow = 'auto'; // Restaurar scroll
+    document.body.style.overflow = 'auto';
   };
 
-  // Navegación de imágenes en el modal
   const handleNextImage = () => {
     if (!selectedTour || !selectedTour.tour_programado?.galeria_imagenes) return;
-    
     const totalImages = selectedTour.tour_programado.galeria_imagenes.length;
     if (totalImages <= 1) return;
-    
     setCurrentImageIndex((prevIndex) => (prevIndex + 1) % totalImages);
   };
 
   const handlePrevImage = () => {
     if (!selectedTour || !selectedTour.tour_programado?.galeria_imagenes) return;
-    
     const totalImages = selectedTour.tour_programado.galeria_imagenes.length;
     if (totalImages <= 1) return;
-    
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + totalImages) % totalImages);
   };
 
   const formatearHora = (hora: string): string => {
     if (!hora) return '-';
-
     try {
+      let parsedHora: Date;
       if (hora.includes('T')) {
-        const date = new Date(hora);
-        if (isValid(date)) {
-          return format(date, 'hh:mm a', { locale: es });
-        }
+        parsedHora = new Date(hora);
+      } else {
+        parsedHora = parse(hora, 'HH:mm:ss', new Date());
       }
-
-      const parsedHora = parse(hora, 'HH:mm:ss', new Date());
       if (isValid(parsedHora)) {
-        return format(parsedHora, 'hh:mm a', { locale: es });
+        return formatInTimeZone(parsedHora, 'America/Lima', 'hh:mm a', { locale: es });
       }
     } catch (error) {
-      console.error(`Error al formatear hora: ${hora}`, error);
+      // Silenciar errores
     }
-
     return hora;
   };
 
@@ -1889,7 +1837,6 @@ const ToursDisponiblesPage: React.FC = () => {
 
   const calcularDuracion = (instancia: InstanciaTour): string => {
     const duracionMinutos = instancia.tour_programado?.tipo_tour?.duracion_minutos;
-
     if (duracionMinutos) {
       if (duracionMinutos >= 60) {
         const horas = Math.floor(duracionMinutos / 60);
@@ -1902,33 +1849,18 @@ const ToursDisponiblesPage: React.FC = () => {
 
     if (instancia.hora_inicio && instancia.hora_fin) {
       try {
+        let inicio: Date, fin: Date;
         if (instancia.hora_inicio.includes('T') && instancia.hora_fin.includes('T')) {
-          const inicio = new Date(instancia.hora_inicio);
-          const fin = new Date(instancia.hora_fin);
-
-          if (isValid(inicio) && isValid(fin)) {
-            let minutes = differenceInMinutes(fin, inicio);
-            if (minutes < 0) minutes += 24 * 60;
-
-            if (minutes >= 60) {
-              const horas = Math.floor(minutes / 60);
-              const minutos = minutes % 60;
-              return `${horas}h ${minutos > 0 ? `${minutos}min` : ''}`;
-            } else {
-              return `${minutes} minutos`;
-            }
-          }
+          inicio = new Date(instancia.hora_inicio);
+          fin = new Date(instancia.hora_fin);
+        } else {
+          inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
+          fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
         }
-
-        const inicio = parse(instancia.hora_inicio, 'HH:mm:ss', new Date());
-        const fin = parse(instancia.hora_fin, 'HH:mm:ss', new Date());
 
         if (isValid(inicio) && isValid(fin)) {
           let minutes = differenceInMinutes(fin, inicio);
-          if (minutes < 0) {
-            minutes += 24 * 60;
-          }
-
+          if (minutes < 0) minutes += 24 * 60;
           if (minutes >= 60) {
             const horas = Math.floor(minutes / 60);
             const minutos = minutes % 60;
@@ -1938,75 +1870,53 @@ const ToursDisponiblesPage: React.FC = () => {
           }
         }
       } catch (e) {
-        console.error('Error al calcular duración:', e);
+        // Silenciar errores
       }
     }
-
     return 'Duración no disponible';
   };
 
   const precioMinimo = (instancia: InstanciaTour): number => {
     if (!instancia.tour_programado?.tipos_pasaje?.length) return 0;
-
     const precios = instancia.tour_programado.tipos_pasaje.map(tp => tp.costo);
-    if (precios.length > 0) {
-      return Math.min(...precios);
-    }
-
-    return 0;
+    return precios.length > 0 ? Math.min(...precios) : 0;
   };
 
   const getImagenTour = (instancia: InstanciaTour): string => {
     try {
       if (!instancia.tour_programado) {
-        console.log("No hay tour_programado en la instancia");
         return 'https://via.placeholder.com/400x300?text=Sin+Imagen';
       }
-
       if (instancia.tour_programado.tipo_tour && instancia.tour_programado.tipo_tour.url_imagen) {
         const urlImagen = instancia.tour_programado.tipo_tour.url_imagen;
-        console.log("Usando url_imagen del tipo_tour:", urlImagen);
-
         if (typeof urlImagen === 'string') {
           return urlImagen;
         }
-
-        if (typeof urlImagen === 'object' && urlImagen !== null) {
-          if ('String' in urlImagen && 'Valid' in urlImagen) {
-            const validObj = urlImagen as unknown as StringWithValidity;
-            if (validObj.Valid) {
-              return validObj.String;
-            }
+        if (typeof urlImagen === 'object' && urlImagen !== null && 'String' in urlImagen && 'Valid' in urlImagen) {
+          const validObj = urlImagen as unknown as StringWithValidity;
+          if (validObj.Valid) {
+            return validObj.String;
           }
         }
       }
-
       const galeria = instancia.tour_programado.galeria_imagenes || [];
-
       if (galeria.length > 0) {
         const imagenPortada = galeria.find(img => img.es_portada);
         if (imagenPortada && imagenPortada.imagen_url) {
-          console.log("Usando imagen de portada de galería:", imagenPortada.imagen_url);
           return imagenPortada.imagen_url;
         }
-
         if (galeria[0] && galeria[0].imagen_url) {
-          console.log("Usando primera imagen de galería:", galeria[0].imagen_url);
           return galeria[0].imagen_url;
         }
       }
-
-      console.log("No se encontró imagen, usando imagen por defecto");
       return 'https://via.placeholder.com/400x300?text=Sin+Imagen';
     } catch (error) {
-      console.error("Error al obtener imagen del tour:", error);
       return 'https://via.placeholder.com/400x300?text=Sin+Imagen';
     }
   };
 
   const getImagenesGaleria = (instancia: InstanciaTour): GaleriaTour[] => {
     const galeria = instancia.tour_programado?.galeria_imagenes || [];
-
     return galeria.filter(img => 
       img && 
       img.imagen_url && 
@@ -2025,11 +1935,9 @@ const ToursDisponiblesPage: React.FC = () => {
     if (instancia.tour_programado?.tipo_tour?.descripcion) {
       return safeGetStringValue(instancia.tour_programado.tipo_tour.descripcion);
     }
-
     if (instancia.tour_programado?.notas_excepcion) {
       return safeGetStringValue(instancia.tour_programado.notas_excepcion);
     }
-
     return 'Sin descripción disponible';
   };
 
@@ -2039,25 +1947,22 @@ const ToursDisponiblesPage: React.FC = () => {
       if (!isValid(parsedFecha)) {
         return <span className="text-xs">{fecha}</span>;
       }
-
       const esHoy = fecha === currentDate;
-      const esMañana = fecha === format(addDays(new Date(), 1), 'yyyy-MM-dd');
-
+      const esMañana = fecha === formatInTimeZone(addDays(new Date(currentTime), 1), 'America/Lima', 'yyyy-MM-dd');
       return (
         <div className="flex flex-col items-center text-center">
           <span className={`text-xs uppercase font-bold mb-1 ${esHoy ? 'text-green-600' : esMañana ? 'text-blue-600' : 'text-gray-600'}`}>
-            {esHoy ? 'HOY' : esMañana ? 'MAÑANA' : format(parsedFecha, 'EEE', { locale: es })}
+            {esHoy ? 'HOY' : esMañana ? 'MAÑANA' : formatInTimeZone(parsedFecha, 'America/Lima', 'EEE', { locale: es })}
           </span>
           <span className={`text-lg font-bold ${esHoy ? 'text-green-700' : esMañana ? 'text-blue-700' : 'text-gray-700'}`}>
-            {format(parsedFecha, 'dd', { locale: es })}
+            {formatInTimeZone(parsedFecha, 'America/Lima', 'dd', { locale: es })}
           </span>
           <span className={`text-xs mt-1 capitalize ${esHoy ? 'text-green-600' : esMañana ? 'text-blue-600' : 'text-gray-500'}`}>
-            {format(parsedFecha, 'MMM', { locale: es })}
+            {formatInTimeZone(parsedFecha, 'America/Lima', 'MMM', { locale: es })}
           </span>
         </div>
       );
     } catch (error) {
-      console.error(`Error al renderizar fecha corta: ${fecha}`, error);
       return <span>{fecha}</span>;
     }
   };
@@ -2067,56 +1972,43 @@ const ToursDisponiblesPage: React.FC = () => {
       if (!instancia.fecha_especifica) {
         return <span>Fecha no disponible</span>;
       }
-
       const fecha = instancia.fecha_especifica;
       const parsedFecha = parse(fecha, 'yyyy-MM-dd', new Date());
-
       if (!isValid(parsedFecha)) {
         return <span>{fecha}</span>;
       }
-
       return (
-        <span>{format(parsedFecha, 'dd MMM yyyy', { locale: es })}</span>
+        <span>{formatInTimeZone(parsedFecha, 'America/Lima', 'dd MMM yyyy', { locale: es })}</span>
       );
     } catch (error) {
-      console.error(`Error al renderizar fecha de instancia`, error);
       return <span>Fecha no disponible</span>;
     }
   };
 
-  // Función para determinar el estado del tour basado en la hora actual (asumiendo hora local de Perú)
-  const getTourStatus = (instancia: InstanciaTour) => {
-    if (selectedDate !== currentDate) {
-      return 'normal'; // Para fechas futuras o pasadas, mostrar normal (aunque pasadas no deberían cargarse)
+  const isTourBlocked = (instancia: InstanciaTour): { blocked: boolean; warning: boolean; message: string } => {
+    if (instancia.fecha_especifica !== currentDate) {
+      return { blocked: false, warning: false, message: '' };
     }
 
-    const now = new Date();
-    let tourStartStr = `${instancia.fecha_especifica}T${instancia.hora_inicio}`;
-    if (instancia.hora_inicio.length === 5) { // Si es HH:mm, agregar :00
-      tourStartStr += ':00';
+    try {
+      const tourStartStr = `${instancia.fecha_especifica}T${instancia.hora_inicio}`;
+      const tourStart = parseISO(tourStartStr);
+      if (!isValid(tourStart)) {
+        return { blocked: false, warning: false, message: '' };
+      }
+
+      const diffMinutes = differenceInMinutes(currentTime, tourStart);
+      if (diffMinutes > 180) {
+        return { blocked: true, warning: false, message: 'Tour bloqueado: Ha pasado más de 3 horas desde la salida.' };
+      } else if (diffMinutes > 0 && diffMinutes <= 180) {
+        return { blocked: false, warning: true, message: 'Posible demora: Verificar si el tour ya ha salido.' };
+      }
+    } catch (error) {
+      // Silenciar errores
     }
-    const tourStart = new Date(tourStartStr);
-
-    if (!isValid(tourStart)) {
-      return 'normal'; // Si la fecha/hora no es válida, tratar como normal
-    }
-
-    if (tourStart > now) {
-      return 'normal';
-    }
-
-    const hoursPassed = differenceInMinutes(now, tourStart) / 60;
-
-    if (hoursPassed > 3) {
-      return 'disabled';
-    } else if (hoursPassed > 0) {
-      return 'warning';
-    }
-
-    return 'normal';
+    return { blocked: false, warning: false, message: '' };
   };
 
-  // Componente de Modal para detalles del tour
   const DetallesModal = () => {
     if (!selectedTour) return null;
 
@@ -2127,10 +2019,9 @@ const ToursDisponiblesPage: React.FC = () => {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 overflow-y-auto backdrop-blur-sm" onClick={handleCloseModal}>
         <div 
-          className="relative bg-white rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-fadeIn" 
+          className="relative bg-white rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Botón de cerrar */}
           <button 
             onClick={handleCloseModal}
             className="absolute top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
@@ -2138,7 +2029,6 @@ const ToursDisponiblesPage: React.FC = () => {
             <FaTimes className="text-gray-700 text-xl" />
           </button>
 
-          {/* Galería de imágenes */}
           <div className="relative h-80 md:h-96 bg-gray-200">
             {imagenes.length > 0 ? (
               <>
@@ -2182,7 +2072,6 @@ const ToursDisponiblesPage: React.FC = () => {
           </div>
 
           <div className="p-8">
-            {/* Encabezado */}
             <div className="mb-6">
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <FaMapMarkerAlt className="mr-2 text-green-500" />
@@ -2205,7 +2094,6 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Información principal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
                 <h3 className="text-xl font-semibold text-blue-800 mb-4 flex items-center">
@@ -2234,7 +2122,6 @@ const ToursDisponiblesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tipos de pasaje */}
               <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
                 <h3 className="text-xl font-semibold text-green-800 mb-4 flex items-center">
                   <FaTicketAlt className="mr-2" /> Tipos de Pasaje
@@ -2259,7 +2146,6 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Paquetes de pasajes */}
             {instancia.tour_programado?.paquetes_pasajes && instancia.tour_programado.paquetes_pasajes.length > 0 && (
               <div className="mb-8 bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
                 <h3 className="text-xl font-semibold text-purple-800 mb-4 flex items-center">
@@ -2282,7 +2168,6 @@ const ToursDisponiblesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Botones de acción */}
             <div className="flex flex-col sm:flex-row gap-4 mt-6">
               <Button 
                 onClick={(e) => { e.stopPropagation(); handleCreateReserva(instancia); }}
@@ -2312,7 +2197,6 @@ const ToursDisponiblesPage: React.FC = () => {
             <div className="p-8 text-center">
               {!isAuthReady ? (
                 <>
-                  <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto"></div>
                   <h2 className="mt-6 text-2xl font-bold text-gray-700">Verificando sesión...</h2>
                   <p className="mt-3 text-gray-500">Por favor espere mientras verificamos su cuenta.</p>
                 </>
@@ -2327,7 +2211,6 @@ const ToursDisponiblesPage: React.FC = () => {
                       Su cuenta no tiene una sede asignada. Contacte con el administrador del sistema para 
                       que le asigne una sede y pueda acceder a los tours disponibles.
                     </p>
-                    
                     <div className="mt-8 border-t border-gray-200 pt-6 w-full">
                       <h3 className="font-semibold text-gray-700 mb-4">¿Qué puede hacer?</h3>
                       <ul className="text-left space-y-3 text-gray-600">
@@ -2345,7 +2228,6 @@ const ToursDisponiblesPage: React.FC = () => {
                         </li>
                       </ul>
                     </div>
-                    
                     <button 
                       onClick={handleForceReload}
                       className="mt-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-8 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -2377,14 +2259,13 @@ const ToursDisponiblesPage: React.FC = () => {
                 <span className="font-semibold">{safeGetStringValue(selectedSede?.nombre)}</span>
               </p>
             </div>
-            
             <div className="flex items-center space-x-4">
               <button 
                 onClick={handleForceReload}
                 className="flex items-center text-blue-600 hover:text-blue-800 transition-all duration-200 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg font-medium shadow-sm hover:shadow-md"
                 disabled={loading}
               >
-                <FaSync className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> 
+                <FaSync className="mr-2" /> 
                 <span>Actualizar</span>
               </button>
               <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow">
@@ -2425,11 +2306,10 @@ const ToursDisponiblesPage: React.FC = () => {
             Seleccionar Fecha
           </h3>
           <div className="flex space-x-3">
-            {nextDates.map((date, index) => {
+            {nextDates.map((date) => {
               const esSeleccionado = selectedDate === date;
               const esHoy = date === currentDate;
-              const esMañana = date === format(addDays(new Date(), 1), 'yyyy-MM-dd');
-
+              const esMañana = date === formatInTimeZone(addDays(new Date(currentTime), 1), 'America/Lima', 'yyyy-MM-dd');
               return (
                 <button
                   key={date}
@@ -2471,7 +2351,6 @@ const ToursDisponiblesPage: React.FC = () => {
               />
               <FaSearch className="absolute left-4 top-4.5 text-gray-400 text-xl" />
             </div>
-
             <div className="md:w-1/3">
               <select
                 className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-medium bg-white text-lg"
@@ -2523,28 +2402,18 @@ const ToursDisponiblesPage: React.FC = () => {
             </div>
           ) : (
             filteredInstancias.map(instancia => {
-              const status = getTourStatus(instancia);
-              let cardClass = "rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-300 border border-gray-100 transform hover:scale-[1.02]";
-              let message = null;
-
-              if (status === 'disabled') {
-                cardClass += " opacity-50 cursor-not-allowed";
-                message = <div className="bg-red-100 text-red-700 p-3 rounded mb-4">Tour bloqueado: Han pasado más de 3 horas desde la hora de salida.</div>;
-              } else if (status === 'warning') {
-                message = <div className="bg-yellow-100 text-yellow-700 p-3 rounded mb-4">Posible demora: La hora de salida ha pasado (menos de 3 horas). Verificar si ha salido el tour.</div>;
-              }
+              const { blocked, warning, message } = isTourBlocked(instancia);
+              if (blocked) return null;
 
               return (
-                <Card key={instancia.id_instancia} className={cardClass}>
+                <Card key={instancia.id_instancia} className="rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-300 border border-gray-100 transform hover:scale-[1.02]">
                   <div className="flex flex-col h-full">
-                    {/* Imagen principal del tour - simplificada */}
                     <div className="w-full h-56 overflow-hidden relative">
                       <img 
                         src={getImagenTour(instancia)} 
                         alt={safeGetStringValue(getNombreTipoTour(instancia))}
                         className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                         onError={(e) => {
-                          console.log("Error al cargar imagen, usando fallback");
                           e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen';
                         }}
                       />
@@ -2557,13 +2426,7 @@ const ToursDisponiblesPage: React.FC = () => {
                     </div>
 
                     <div className="p-6 flex flex-col flex-grow">
-                      {/* Título y breve descripción */}
                       <h3 className="text-xl font-bold text-gray-800 mb-2">{safeGetStringValue(getNombreTipoTour(instancia))}</h3>
-                      
-                      {/* Mensaje de estado */}
-                      {message}
-
-                      {/* Información esencial */}
                       <div className="grid grid-cols-2 gap-4 my-4">
                         <div className="flex items-center">
                           <div className="w-10 h-10 flex items-center justify-center bg-blue-100 rounded-lg mr-3">
@@ -2602,27 +2465,26 @@ const ToursDisponiblesPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-
-                      {/* Precio */}
                       <div className="bg-green-50 p-3 rounded-xl border border-green-200 flex justify-between items-center mb-4">
                         <span className="text-sm text-gray-600">Desde:</span>
                         <span className="font-bold text-xl text-green-600">S/ {precioMinimo(instancia).toFixed(2)}</span>
                       </div>
-
-                      {/* Botones de acción */}
+                      {warning && (
+                        <div className="bg-yellow-100 p-3 rounded-xl border border-yellow-200 mb-4 text-yellow-700 text-sm">
+                          {message}
+                        </div>
+                      )}
                       <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
                         <Button 
                           onClick={() => handleCreateReserva(instancia)}
                           className="py-3 text-sm font-semibold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-lg transition-all duration-200"
                           variant="success"
-                          disabled={status === 'disabled'}
                         >
                           <FaCalendarAlt className="mr-2" /> Reservar
                         </Button>
                         <Button 
                           onClick={() => handleViewDetails(instancia)}
                           className="py-3 text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg transition-all duration-200"
-                          disabled={status === 'disabled'}
                         >
                           <FaInfoCircle className="mr-2" /> Detalles
                         </Button>
@@ -2635,25 +2497,10 @@ const ToursDisponiblesPage: React.FC = () => {
           )}
         </div>
 
-        {/* Modal de detalles */}
         {modalOpen && <DetallesModal />}
-
       </div>
     </div>
   );
 };
-
-// Añadir estilo global para la animación de fadeIn
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out forwards;
-  }
-`;
-document.head.appendChild(style);
 
 export default ToursDisponiblesPage;
