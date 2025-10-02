@@ -50,6 +50,6 @@ export interface CambiarEstadoPagoRequest {
 }
 
 // Constantes para opciones disponibles
-export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'YAPE', 'PLIN', 'MERCADOPAGO', 'DEPOSITO'];
+export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'TARJETA', 'YAPE', 'PLIN', 'DEPOSITO'];
 export const CANALES_PAGO = ['LOCAL', 'WEB', 'APP', 'TELEFONO'];
 export const ESTADOS_PAGO = ['PROCESADO', 'PENDIENTE', 'ANULADO'];
