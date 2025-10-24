@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/*import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -965,7 +965,7 @@ useEffect(() => {
           </div>
         )}
         
-        {/* Error de validación general */}
+        {/* Error de validación general *//*}
         {formErrors.vigencia_general && (
           <motion.div 
             className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm mb-6"
@@ -999,7 +999,7 @@ useEffect(() => {
           </motion.div>
         )}
         
-        {/* Panel de debugging */}
+        {/* Panel de debugging *//*}
         {process.env.NODE_ENV === 'development' && horarioTourSeleccionado && (
           <motion.div 
             className="bg-gray-50 border-l-4 border-gray-400 text-gray-700 p-4 rounded-md shadow-sm mb-6"
@@ -1359,7 +1359,7 @@ useEffect(() => {
                 )}
               </div>
               
-              {/* Opción para generar instancias */}
+              {/* Opción para generar instancias *//*}
               <div className="md:col-span-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-start">
                   <div className="flex items-center h-5">
@@ -1462,7 +1462,7 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Información sobre instancias generadas */}
+              {/* Información sobre instancias generadas *//*}
               {cantidadGenerada !== null && (
                 <div className="md:col-span-2 p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center">
@@ -1527,16 +1527,10 @@ useEffect(() => {
 
 export default TourProgramadoForm;
 
+*/
 
 
-
-
-
-
-
-
-
-/*import React, { useState, useEffect, useCallback } from 'react';
+ import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -1547,6 +1541,12 @@ import {
   clearError,
   clearCreatedId
 } from '../../../../infrastructure/store/slices/tourProgramadoSlice';
+
+// Importar acciones de instanciaTour
+import {
+  generarInstancias
+} from '../../../../infrastructure/store/slices/instanciaTourSlice';
+
 import { fetchTiposTourPorSede } from '../../../../infrastructure/store/slices/tipoTourSlice';
 import { fetchEmbarcacionesPorSede } from '../../../../infrastructure/store/slices/embarcacionSlice';
 import { 
@@ -1565,13 +1565,21 @@ import {
   FaExclamationTriangle,
   FaInfoCircle,
   FaCalendarCheck,
-  FaCalculator,
   FaBug,
-  FaCheckCircle
+  FaCheckCircle,
+  FaCalendarAlt
 } from 'react-icons/fa';
 import { format, addMonths, parseISO, eachDayOfInterval, getDay, isValid } from 'date-fns';
 
-// Función para asegurar que los valores sean texto
+// ============================================================================
+// FUNCIONES AUXILIARES
+// ============================================================================
+
+/**
+ * Asegura que un valor sea convertido a texto (string)
+ * @param valor - Valor a convertir
+ * @returns String del valor
+ */
 const asegurarTexto = (valor: any): string => {
   if (valor === null || valor === undefined) return '';
   if (typeof valor === 'string') return valor;
@@ -1592,7 +1600,11 @@ const asegurarTexto = (valor: any): string => {
   return String(valor);
 };
 
-// Función para asegurar que un valor sea número
+/**
+ * Asegura que un valor sea convertido a número
+ * @param valor - Valor a convertir
+ * @returns Número del valor (0 si no es válido)
+ */
 const asegurarNumero = (valor: any): number => {
   if (valor === null || valor === undefined) return 0;
   if (typeof valor === 'number') return valor;
@@ -1603,7 +1615,11 @@ const asegurarNumero = (valor: any): number => {
   return 0;
 };
 
-// Función para asegurar que un valor sea booleano
+/**
+ * Asegura que un valor sea convertido a booleano
+ * @param valor - Valor a convertir
+ * @returns Booleano del valor
+ */
 const asegurarBooleano = (valor: any): boolean => {
   if (typeof valor === 'boolean') return valor;
   if (valor === 1 || valor === '1' || valor === 'true') return true;
@@ -1611,20 +1627,32 @@ const asegurarBooleano = (valor: any): boolean => {
   return Boolean(valor);
 };
 
-// Función para obtener el nombre del día
+/**
+ * Obtiene el nombre del día de la semana
+ * @param numeroDay - Número del día (0-6)
+ * @returns Nombre del día
+ */
 const obtenerNombreDia = (numeroDay: number): string => {
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   return dias[numeroDay] || 'Desconocido';
 };
 
-// Función para analizar el horario de tour y obtener información detallada
-const analizarHorarioTour = (horarioTour: any): { diasActivos: number[], diasNombres: string[], detalleCompleto: string } => {
+/**
+ * Analiza el horario de tour y obtiene información detallada sobre días activos
+ * @param horarioTour - Objeto con la información del horario
+ * @returns Objeto con días activos, nombres y detalle completo
+ */
+const analizarHorarioTour = (horarioTour: any): { 
+  diasActivos: number[], 
+  diasNombres: string[], 
+  detalleCompleto: string 
+} => {
   const diasActivos: number[] = [];
   const diasNombres: string[] = [];
   
   console.log('🔍 ANALIZANDO HORARIO DE TOUR:', horarioTour);
   
-  // Verificar cada día de la semana de forma más robusta
+  // Verificar cada día de la semana
   const diasSemana = [
     { campo: 'disponible_domingo', numero: 0, nombre: 'Domingo', abrev: 'D' },
     { campo: 'disponible_lunes', numero: 1, nombre: 'Lunes', abrev: 'L' },
@@ -1659,8 +1687,22 @@ const analizarHorarioTour = (horarioTour: any): { diasActivos: number[], diasNom
   return { diasActivos, diasNombres, detalleCompleto };
 };
 
-// Función para calcular cuántos tours se van a crear
-const calcularToursACrear = (horarioTour: any, vigenciaDesde: string, vigenciaHasta: string): { cantidad: number, detalle: string, error?: string } => {
+/**
+ * Calcula cuántos tours se van a crear basándose en el horario y las fechas de vigencia
+ * @param horarioTour - Objeto con la información del horario
+ * @param vigenciaDesde - Fecha de inicio de vigencia
+ * @param vigenciaHasta - Fecha de fin de vigencia
+ * @returns Objeto con cantidad, detalle y posible error
+ */
+const calcularToursACrear = (
+  horarioTour: any, 
+  vigenciaDesde: string, 
+  vigenciaHasta: string
+): { 
+  cantidad: number, 
+  detalle: string, 
+  error?: string 
+} => {
   try {
     console.log('🚀 INICIANDO CÁLCULO DE TOURS PROGRAMADOS');
     console.log('📅 Parámetros recibidos:', { 
@@ -1669,6 +1711,7 @@ const calcularToursACrear = (horarioTour: any, vigenciaDesde: string, vigenciaHa
       vigenciaHasta 
     });
     
+    // Validaciones iniciales
     if (!horarioTour) {
       const error = 'No se ha seleccionado un horario de tour válido';
       console.log('❌ ERROR:', error);
@@ -1743,12 +1786,18 @@ const calcularToursACrear = (horarioTour: any, vigenciaDesde: string, vigenciaHa
   }
 };
 
-// Componente Toast para notificaciones
-const Toast: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; onClose: () => void }> = ({ 
-  message, 
-  type, 
-  onClose 
-}) => {
+// ============================================================================
+// COMPONENTE TOAST (NOTIFICACIONES)
+// ============================================================================
+
+/**
+ * Componente para mostrar notificaciones temporales
+ */
+const Toast: React.FC<{ 
+  message: string; 
+  type: 'success' | 'error' | 'warning'; 
+  onClose: () => void 
+}> = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -1802,11 +1851,16 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error' | 'warning'; 
   );
 };
 
+// ============================================================================
+// COMPONENTE PRINCIPAL: FORMULARIO DE TOUR PROGRAMADO
+// ============================================================================
+
 interface TourProgramadoFormProps {
   isEditing?: boolean;
 }
 
 const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = false }) => {
+  // ===== HOOKS DE NAVEGACIÓN Y PARÁMETROS =====
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1815,14 +1869,16 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
   const searchParams = new URLSearchParams(location.search);
   const tipoIdFromQuery = searchParams.get('tipo');
   
+  // ===== SELECTORES DE REDUX =====
   const { currentTour, loading, error, createdTourId } = useSelector((state: RootState) => state.tourProgramado);
   const { tiposTour, loading: loadingTiposTour } = useSelector((state: RootState) => state.tipoTour);
   const { embarcaciones, loading: loadingEmbarcaciones } = useSelector((state: RootState) => state.embarcacion);
   const { horariosTour, loading: loadingHorarios } = useSelector((state: RootState) => state.horarioTour);
   const { usuarios, loading: loadingUsuarios } = useSelector((state: RootState) => state.usuario);
   const { selectedSede } = useSelector((state: RootState) => state.auth);
+  const { cantidadGenerada, loading: loadingInstancias } = useSelector((state: RootState) => state.instanciaTour);
   
-  // Estado inicial del formulario
+  // ===== ESTADO INICIAL DEL FORMULARIO =====
   const initialFormState = {
     id_tipo_tour: 0,
     id_embarcacion: 0,
@@ -1835,9 +1891,11 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     cupo_maximo: 0,
     cupo_disponible: 0,
     es_excepcion: false,
-    notas_excepcion: ''
+    notas_excepcion: '',
+    generar_instancias: true // Controla la generación automática de instancias
   };
   
+  // ===== ESTADOS DEL COMPONENTE =====
   const [formData, setFormData] = useState(initialFormState);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
@@ -1847,27 +1905,38 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
   const [choferesLoaded, setChoferesLoaded] = useState(false);
   const [toursACrear, setToursACrear] = useState(0);
   const [detalleCalculo, setDetalleCalculo] = useState('');
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
+  const [generandoInstancias, setGenerandoInstancias] = useState(false);
+  const [toast, setToast] = useState<{ 
+    show: boolean; 
+    message: string; 
+    type: 'success' | 'error' | 'warning' 
+  }>({
     show: false,
     message: '',
     type: 'success'
   });
   
-  // Fecha actual y máxima para datepicker
+  // ===== CONSTANTES DE FECHAS =====
   const today = format(new Date(), 'yyyy-MM-dd');
   const oneYearFromNow = format(addMonths(new Date(), 12), 'yyyy-MM-dd');
   
-  // Mostrar notificación
+  // ===== FUNCIONES AUXILIARES DEL COMPONENTE =====
+  
+  /**
+   * Muestra una notificación toast
+   */
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     setToast({ show: true, message, type });
   }, []);
 
-  // Ocultar notificación
+  /**
+   * Oculta la notificación toast
+   */
   const hideToast = useCallback(() => {
     setToast(prev => ({ ...prev, show: false }));
   }, []);
   
-  // Calcular tours a crear cuando cambian los parámetros
+  // ===== EFECTO: CALCULAR TOURS A CREAR =====
   useEffect(() => {
     console.log('🔄 EFECTO DE CÁLCULO DISPARADO');
     console.log('   isEditing:', isEditing);
@@ -1875,14 +1944,14 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     console.log('   formData.id_tipo_tour:', formData.id_tipo_tour);
     console.log('   horariosTour.length:', horariosTour.length);
     
-    // DEBUGGING: Mostrar todos los horarios cargados
+    // Mostrar todos los horarios cargados (debugging)
     console.log('🕐 HORARIOS TOUR CARGADOS:');
     horariosTour.forEach((h, index) => {
       console.log(`   ${index + 1}. ID: ${h.id_horario}, Tipo: ${h.id_tipo_tour}, Hora: ${h.hora_inicio}-${h.hora_fin}`);
     });
     
     if (formData.id_horario > 0 && formData.vigencia_desde && formData.vigencia_hasta && !isEditing) {
-      // VERIFICACIÓN CORREGIDA: Buscar por ID y tipo de tour
+      // Buscar horario por ID y tipo de tour
       const horarioTourSeleccionado = horariosTour.find(h => 
         h.id_horario === formData.id_horario && 
         h.id_tipo_tour === formData.id_tipo_tour
@@ -1925,7 +1994,6 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
         setToursACrear(0);
         setDetalleCalculo('');
         
-        // NO limpiar automáticamente, solo mostrar error
         setFormErrors(prev => ({
           ...prev,
           id_horario: `El horario seleccionado no pertenece al tipo de tour actual. Seleccione un horario válido.`
@@ -1938,24 +2006,27 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   }, [formData.id_horario, formData.id_tipo_tour, formData.vigencia_desde, formData.vigencia_hasta, horariosTour, isEditing]);
 
-  // Cargar datos iniciales
+  // ===== EFECTO: CARGAR DATOS INICIALES =====
   useEffect(() => {
     if (selectedSede?.id_sede) {
+      // Cargar tipos de tour
       dispatch(fetchTiposTourPorSede(selectedSede.id_sede))
-        .then(() => console.log("Tipos de tour cargados correctamente"))
-        .catch(err => console.error("Error al cargar tipos de tour:", err));
+        .then(() => console.log("✅ Tipos de tour cargados correctamente"))
+        .catch(err => console.error("❌ Error al cargar tipos de tour:", err));
       
+      // Cargar embarcaciones
       dispatch(fetchEmbarcacionesPorSede(selectedSede.id_sede))
-        .then(() => console.log("Embarcaciones cargadas correctamente"))
-        .catch(err => console.error("Error al cargar embarcaciones:", err));
+        .then(() => console.log("✅ Embarcaciones cargadas correctamente"))
+        .catch(err => console.error("❌ Error al cargar embarcaciones:", err));
       
+      // Cargar choferes
       dispatch(fetchUsuariosPorRol('CHOFER'))
         .then(() => {
-          console.log("Choferes cargados correctamente");
+          console.log("✅ Choferes cargados correctamente");
           setChoferesLoaded(true);
         })
         .catch(err => {
-          console.error("Error al cargar choferes:", err);
+          console.error("❌ Error al cargar choferes:", err);
           showToast("Error al cargar lista de choferes", "error");
         });
       
@@ -1964,13 +2035,14 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
       showToast("No hay sede seleccionada", "error");
     }
     
+    // Si estamos editando, cargar el tour
     if (isEditing && id) {
       const numericId = parseInt(id);
       if (!isNaN(numericId)) {
         dispatch(fetchTourProgramadoById(numericId))
-          .then(() => console.log("Tour cargado correctamente"))
+          .then(() => console.log("✅ Tour cargado correctamente"))
           .catch(err => {
-            console.error("Error al cargar tour:", err);
+            console.error("❌ Error al cargar tour:", err);
             showToast("Error al cargar datos del tour", "error");
           });
       } else {
@@ -1979,31 +2051,34 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
       }
     }
     
+    // Si viene un tipo de tour en la URL
     if (tipoIdFromQuery && !isEditing) {
       const tipoId = parseInt(tipoIdFromQuery);
       if (!isNaN(tipoId)) {
         setFormData(prev => ({ ...prev, id_tipo_tour: tipoId }));
         
         dispatch(fetchHorariosTourPorTipoTour(tipoId))
-          .then(() => console.log("Horarios de tour cargados correctamente"))
+          .then(() => console.log("✅ Horarios de tour cargados correctamente"))
           .catch(err => {
-            console.error("Error al cargar horarios de tour:", err);
+            console.error("❌ Error al cargar horarios de tour:", err);
             showToast("Error al cargar horarios de tour disponibles", "error");
           });
       }
     }
     
+    // Limpiar al desmontar
     return () => {
       dispatch(clearError());
       dispatch(clearCreatedId());
     };
   }, [dispatch, id, isEditing, selectedSede, tipoIdFromQuery, showToast, navigate]);
   
-  // Actualizar formulario cuando se carga el tour para edición
+  // ===== EFECTO: ACTUALIZAR FORMULARIO AL CARGAR TOUR PARA EDICIÓN =====
   useEffect(() => {
     if (isEditing && currentTour && dataLoaded) {
-      console.log("Actualizando formulario con datos del tour:", currentTour);
+      console.log("📝 Actualizando formulario con datos del tour:", currentTour);
       
+      // Extraer ID de chofer (puede venir en diferentes formatos)
       let chofer: number | undefined = undefined;
       if (currentTour.id_chofer && typeof currentTour.id_chofer === 'object' && 'Int64' in currentTour.id_chofer) {
         chofer = currentTour.id_chofer.Valid ? currentTour.id_chofer.Int64 : undefined;
@@ -2023,20 +2098,23 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
         cupo_maximo: asegurarNumero(currentTour.cupo_maximo),
         cupo_disponible: asegurarNumero(currentTour.cupo_disponible),
         es_excepcion: asegurarBooleano(currentTour.es_excepcion),
-        notas_excepcion: currentTour.notas_excepcion?.String || ''
+        notas_excepcion: currentTour.notas_excepcion?.String || '',
+        generar_instancias: false // En modo edición, no generar por defecto
       };
       
       setFormData(updatedFormData);
       
+      // Cargar horarios del tipo de tour
       if (currentTour.id_tipo_tour) {
         dispatch(fetchHorariosTourPorTipoTour(asegurarNumero(currentTour.id_tipo_tour)))
-          .then(() => console.log("Horarios de tour cargados correctamente para edición"))
+          .then(() => console.log("✅ Horarios de tour cargados para edición"))
           .catch(err => {
-            console.error("Error al cargar horarios de tour para edición:", err);
+            console.error("❌ Error al cargar horarios de tour para edición:", err);
             showToast("Error al cargar horarios de tour disponibles", "error");
           });
       }
       
+      // Verificar si el cupo fue modificado manualmente
       const embarcacion = embarcaciones.find(e => e.id_embarcacion === currentTour.id_embarcacion);
       if (embarcacion && embarcacion.capacidad) {
         const capacidad = asegurarNumero(embarcacion.capacidad);
@@ -2048,7 +2126,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   }, [currentTour, dispatch, isEditing, dataLoaded, embarcaciones, selectedSede, showToast, today]);
   
-  // Cuando cambia el tipo de tour, cargar horarios correspondientes
+  // ===== EFECTO: CARGAR HORARIOS AL CAMBIAR TIPO DE TOUR =====
   useEffect(() => {
     if (formData.id_tipo_tour > 0) {
       console.log('🔄 Cargando horarios de tour para tipo:', formData.id_tipo_tour);
@@ -2059,40 +2137,78 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
       }
       
       dispatch(fetchHorariosTourPorTipoTour(formData.id_tipo_tour))
-        .then(() => console.log("Horarios de tour actualizados"))
+        .then(() => console.log("✅ Horarios de tour actualizados"))
         .catch(err => {
-          console.error("Error al actualizar horarios de tour:", err);
+          console.error("❌ Error al actualizar horarios de tour:", err);
           showToast("Error al cargar horarios de tour", "error");
         });
     }
   }, [dispatch, formData.id_tipo_tour, showToast]);
   
-  // Redirigir después de crear exitosamente
+  // ===== EFECTO: REDIRIGIR DESPUÉS DE CREAR EXITOSAMENTE =====
   useEffect(() => {
-    if (createdTourId) {
-      if (toursACrear > 1) {
-        showToast(`${toursACrear} tours programados creados exitosamente`, 'success');
+    if (createdTourId && !generandoInstancias) {
+      console.log("🎉 Tour programado creado con ID:", createdTourId);
+      
+      // Extraer el ID de manera segura
+      let tourId: number;
+      
+      if (typeof createdTourId === 'object' && createdTourId !== null) {
+        tourId = (createdTourId as any).id || 0;
+        console.log("ID extraído del objeto:", tourId);
+      } else if (typeof createdTourId === 'number') {
+        tourId = createdTourId;
+        console.log("ID ya es un número:", tourId);
       } else {
-        showToast('Tour programado guardado exitosamente', 'success');
+        tourId = 0;
+        console.log("No se pudo extraer un ID válido");
       }
       
-      setTimeout(() => {
+      // Verificar si se deben generar instancias
+      if (formData.generar_instancias && !isEditing && tourId > 0) {
+        console.log("🔄 Generando instancias para el tour programado ID:", tourId);
+        setGenerandoInstancias(true);
+        
+        dispatch(generarInstancias(tourId))
+          .unwrap()
+          .then((cantidad) => {
+            console.log("✅ Instancias generadas:", cantidad);
+            showToast(`Tour programado creado y ${cantidad} instancias generadas exitosamente`, 'success');
+            navigate(`/admin/tours`);
+          })
+          .catch(error => {
+            console.error("❌ Error al generar instancias:", error);
+            showToast(`Tour creado pero hubo un problema al generar instancias: ${error}`, 'warning');
+            navigate(`/admin/tours`);
+          })
+          .finally(() => {
+            setGenerandoInstancias(false);
+          });
+      } else {
+        if (toursACrear > 1) {
+          showToast(`${toursACrear} tours programados creados exitosamente`, 'success');
+        } else {
+          showToast('Tour programado guardado exitosamente', 'success');
+        }
         navigate(`/admin/tours`);
-      }, 1500);
-    }
-  }, [createdTourId, navigate, showToast, toursACrear]);
+      }
 
-  // Actualizar cupo máximo automáticamente
+      // Limpiar el ID creado para evitar duplicación
+      dispatch(clearCreatedId());
+    }
+  }, [createdTourId, navigate, showToast, toursACrear, formData.generar_instancias, isEditing, dispatch, generandoInstancias]);
+
+  // ===== EFECTO: ACTUALIZAR CUPO AUTOMÁTICAMENTE AL CAMBIAR EMBARCACIÓN =====
   useEffect(() => {
     if (formData.id_embarcacion > 0 && !isEmbarcacionManual) {
       const embarcacionSeleccionada = embarcaciones.find(e => e.id_embarcacion === formData.id_embarcacion);
       if (embarcacionSeleccionada && embarcacionSeleccionada.capacidad) {
         const capacidad = asegurarNumero(embarcacionSeleccionada.capacidad);
-        
+
         console.log("Capacidad detectada:", capacidad, "para embarcación:", embarcacionSeleccionada.nombre);
-        
+
         if (capacidad > 0) {
-          setFormData(prev => ({ 
+          setFormData(prev => ({
             ...prev, 
             cupo_maximo: capacidad,
             cupo_disponible: isEditing ? prev.cupo_disponible : capacidad
@@ -2102,6 +2218,11 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   }, [formData.id_embarcacion, embarcaciones, isEmbarcacionManual, isEditing]);
   
+  // ===== MANEJADORES DE EVENTOS =====
+  
+  /**
+   * Maneja los cambios en los campos del formulario
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
@@ -2157,6 +2278,9 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   };
   
+  /**
+   * Restablece el cupo máximo a la capacidad de la embarcación
+   */
   const handleRestablecerCupo = () => {
     if (formData.id_embarcacion > 0) {
       const embarcacionSeleccionada = embarcaciones.find(e => e.id_embarcacion === formData.id_embarcacion);
@@ -2175,14 +2299,26 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   };
 
+  /**
+   * Valida el formulario antes de enviar
+   * @returns true si el formulario es válido
+   */
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    if (formData.id_tipo_tour <= 0) newErrors.id_tipo_tour = 'Seleccione un tipo de tour';
-    if (formData.id_embarcacion <= 0) newErrors.id_embarcacion = 'Seleccione una embarcación';
-    if (formData.id_horario <= 0) newErrors.id_horario = 'Seleccione un horario de tour';
+    if (formData.id_tipo_tour <= 0) {
+      newErrors.id_tipo_tour = 'Seleccione un tipo de tour';
+    }
     
-    // VALIDACIÓN MEJORADA: Verificar que el horario pertenece al tipo de tour
+    if (formData.id_embarcacion <= 0) {
+      newErrors.id_embarcacion = 'Seleccione una embarcación';
+    }
+    
+    if (formData.id_horario <= 0) {
+      newErrors.id_horario = 'Seleccione un horario de tour';
+    }
+    
+    // Verificar que el horario pertenece al tipo de tour
     if (formData.id_horario > 0 && formData.id_tipo_tour > 0) {
       const horarioValid = horariosTour.find(h => 
         h.id_horario === formData.id_horario && 
@@ -2220,6 +2356,10 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Verifica conflictos y genera advertencias
+   * @returns Array de advertencias
+   */
   const verificarConflictos = (): string[] => {
     const warnings: string[] = [];
     
@@ -2250,6 +2390,9 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     return warnings;
   };
   
+  /**
+   * Maneja el envío del formulario
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -2269,6 +2412,9 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     await proceedWithSubmit();
   };
   
+  /**
+   * Procede con el envío del formulario después de validar
+   */
   const proceedWithSubmit = async () => {
     try {
       const datosFormateados = {
@@ -2286,7 +2432,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
         notas_excepcion: formData.notas_excepcion
       };
       
-      console.log("Datos que se enviarán al backend:", datosFormateados);
+      console.log("📤 Datos que se enviarán al backend:", datosFormateados);
       
       if (isEditing && id) {
         const numericId = parseInt(id);
@@ -2298,7 +2444,24 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           id: numericId, 
           tourProgramado: datosFormateados 
         })).unwrap();
-        showToast('Tour actualizado exitosamente', 'success');
+        
+        // Si se solicita generar instancias en modo edición
+        if (formData.generar_instancias) {
+          setGenerandoInstancias(true);
+          
+          try {
+            const cantidad = await dispatch(generarInstancias(numericId)).unwrap();
+            showToast(`Tour actualizado y ${cantidad} instancias generadas exitosamente`, 'success');
+          } catch (error) {
+            console.error("❌ Error al generar instancias:", error);
+            showToast('Tour actualizado pero hubo un problema al generar instancias', 'warning');
+          } finally {
+            setGenerandoInstancias(false);
+          }
+        } else {
+          showToast('Tour actualizado exitosamente', 'success');
+        }
+        
         setTimeout(() => {
           navigate(`/admin/tours`);
         }, 1500);
@@ -2309,9 +2472,10 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
         };
         
         await dispatch(createTourProgramado(submissionData)).unwrap();
+        // Las instancias se generarán en el useEffect cuando detecte createdTourId
       }
     } catch (err) {
-      console.error('Error al guardar el tour programado:', err);
+      console.error('❌ Error al guardar el tour programado:', err);
       let errorMsg = 'Error al guardar el tour programado';
       
       if (err && typeof err === 'object' && 'message' in err) {
@@ -2322,24 +2486,32 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     }
   };
   
+  /**
+   * Continúa con el envío a pesar de las advertencias
+   */
   const handleContinuarPeseLasAdvertencias = () => {
     setShowWarnings(false);
     showToast('Continuando a pesar de las advertencias', 'warning');
     proceedWithSubmit();
   };
   
+  /**
+   * Cancela la operación y vuelve atrás
+   */
   const handleCancel = () => {
     navigate(-1);
   };
   
+  // ===== VARIABLES DE ESTADO PARA RENDERIZADO =====
   const isInitialLoading = loading && isEditing && !currentTour;
   const isDataLoading = loadingTiposTour || loadingEmbarcaciones || loadingHorarios || loadingUsuarios;
   
   // Asegurar que las condiciones de disabled sean booleanas
-  const isFormDisabled = Boolean(loading || isDataLoading);
+  const isFormDisabled = Boolean(loading || isDataLoading || generandoInstancias || loadingInstancias);
   const hasValidationError = Boolean(formErrors.vigencia_general && !isEditing);
   const isSubmitDisabled = Boolean(isFormDisabled || hasValidationError);
   
+  // ===== RENDERIZADO CONDICIONAL: PANTALLA DE CARGA =====
   if (isInitialLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
@@ -2352,6 +2524,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     );
   }
 
+  // ===== PREPARAR DATOS PARA EL RENDERIZADO =====
   const choferes = usuarios.filter(u => u.rol === 'CHOFER');
   const choferesDisponibles = choferes.length > 0;
   
@@ -2361,8 +2534,10 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
     h.id_tipo_tour === formData.id_tipo_tour
   );
   
+  // ===== RENDERIZADO PRINCIPAL =====
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 py-8">
+      {/* Toast de notificaciones */}
       {toast.show && (
         <Toast 
           message={toast.message} 
@@ -2372,6 +2547,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
       )}
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Encabezado */}
         <div className="mb-8">
           <button 
             onClick={handleCancel}
@@ -2387,6 +2563,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </p>
         </div>
         
+        {/* Mensaje de error general */}
         {error && (
           <motion.div 
             className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm mb-6"
@@ -2401,6 +2578,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </motion.div>
         )}
         
+        {/* Advertencia: No hay choferes disponibles */}
         {choferesLoaded && !choferesDisponibles && (
           <motion.div 
             className="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm mb-6"
@@ -2417,6 +2595,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </motion.div>
         )}
         
+        {/* Mensaje: Cargando datos */}
         {isDataLoading && (
           <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-sm mb-6 flex items-center">
             <div className="w-5 h-5 mr-3 relative">
@@ -2427,7 +2606,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </div>
         )}
         
-        {/* Error de validación general *//*}
+        {/* Error de validación general */}
         {formErrors.vigencia_general && (
           <motion.div 
             className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm mb-6"
@@ -2461,7 +2640,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </motion.div>
         )}
         
-        {/* Panel de debugging *//*}
+        {/* Panel de debugging (solo en desarrollo) */}
         {process.env.NODE_ENV === 'development' && horarioTourSeleccionado && (
           <motion.div 
             className="bg-gray-50 border-l-4 border-gray-400 text-gray-700 p-4 rounded-md shadow-sm mb-6"
@@ -2492,6 +2671,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </motion.div>
         )}
         
+        {/* Modal de advertencias */}
         {showWarnings && validationWarnings.length > 0 && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg mx-auto">
@@ -2526,6 +2706,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           </div>
         )}
         
+        {/* Formulario principal */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -2533,6 +2714,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
           className="bg-white p-6 rounded-xl shadow-md"
         >
           <form onSubmit={handleSubmit}>
+            {/* Panel informativo */}
             <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
               <div className="flex">
                 <FaInfoCircle className="h-6 w-6 text-blue-500 mr-4 flex-shrink-0 mt-1" />
@@ -2541,9 +2723,10 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                   <div className="space-y-3 text-sm text-blue-700">
                     <p><strong>Conceptos clave:</strong></p>
                     <ul className="ml-4 space-y-1">
-                      <li>• <strong>Horario de Tour:</strong> Horarios fijos del servicio (ej: 8-10, 11-13, 14-16)</li>
+                      <li>• <strong>Horario de Tour:</strong> Horarios fijos del servicio (ej: 8:00-10:00, 11:00-13:00, 14:00-16:00)</li>
                       <li>• <strong>Chofer:</strong> Conductor asignado (con horario de disponibilidad independiente)</li>
                       <li>• <strong>Período de vigencia:</strong> Cuándo está disponible para reservas</li>
+                      <li>• <strong>Instancias:</strong> Ocurrencias específicas del tour en fechas concretas</li>
                     </ul>
                     
                     <div className="bg-white/50 p-3 rounded border-l-4 border-blue-300">
@@ -2554,7 +2737,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                         <li>• Vigencia: 1 Jun - 30 Sep 2025</li>
                       </ul>
                       <p className="mt-2 font-medium text-green-700">
-                        → Se crearán tours para <strong>todos</strong> los lunes y miércoles del período
+                        → Se crearán instancias para <strong>todos</strong> los lunes y miércoles del período
                       </p>
                     </div>
                   </div>
@@ -2562,6 +2745,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
               </div>
             </div>
 
+                        {/* Indicador de tours a crear */}
             {!isEditing && toursACrear > 0 && (
               <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center">
@@ -2578,7 +2762,9 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
               </div>
             )}
 
+            {/* Campos del formulario */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tipo de Tour */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo de Tour <span className="text-red-500">*</span>
@@ -2604,6 +2790,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 )}
               </div>
               
+              {/* Embarcación */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Embarcación <span className="text-red-500">*</span>
@@ -2634,6 +2821,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 )}
               </div>
               
+              {/* Horario del Tour */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Horario del Tour <span className="text-red-500">*</span>
@@ -2658,18 +2846,24 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                     </option>
                     {horariosTour
                       .filter(h => h.id_tipo_tour === formData.id_tipo_tour)
-                      .map((h: any) => (
-                        <option key={h.id_horario} value={h.id_horario}>
-                          {asegurarTexto(h.hora_inicio)} - {asegurarTexto(h.hora_fin)} 
-                          {asegurarBooleano(h.disponible_lunes) ? ' | L' : ''}
-                          {asegurarBooleano(h.disponible_martes) ? ' | M' : ''}
-                          {asegurarBooleano(h.disponible_miercoles) ? ' | X' : ''}
-                          {asegurarBooleano(h.disponible_jueves) ? ' | J' : ''}
-                          {asegurarBooleano(h.disponible_viernes) ? ' | V' : ''}
-                          {asegurarBooleano(h.disponible_sabado) ? ' | S' : ''}
-                          {asegurarBooleano(h.disponible_domingo) ? ' | D' : ''}
-                        </option>
-                      ))}
+                      .map((h: any) => {
+                        // Formatear correctamente las horas
+                        const horaInicio = asegurarTexto(h.hora_inicio).padStart(5, '0');
+                        const horaFin = asegurarTexto(h.hora_fin).padStart(5, '0');
+                        
+                        return (
+                          <option key={h.id_horario} value={h.id_horario}>
+                            {horaInicio} - {horaFin}
+                            {asegurarBooleano(h.disponible_lunes) ? ' | L' : ''}
+                            {asegurarBooleano(h.disponible_martes) ? ' | M' : ''}
+                            {asegurarBooleano(h.disponible_miercoles) ? ' | X' : ''}
+                            {asegurarBooleano(h.disponible_jueves) ? ' | J' : ''}
+                            {asegurarBooleano(h.disponible_viernes) ? ' | V' : ''}
+                            {asegurarBooleano(h.disponible_sabado) ? ' | S' : ''}
+                            {asegurarBooleano(h.disponible_domingo) ? ' | D' : ''}
+                          </option>
+                        );
+                      })}
                   </select>
                 </div>
                 {formErrors.id_horario && (
@@ -2685,12 +2879,13 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </p>
               </div>
               
+              {/* Chofer Asignado */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Chofer Asignado <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUserTie className="h-4 w-4 text-gray-400" />
                   </div>
                   <select
@@ -2723,6 +2918,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </p>
               </div>
               
+              {/* Disponible desde */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Disponible desde <span className="text-red-500">*</span>
@@ -2749,6 +2945,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </p>
               </div>
               
+              {/* Disponible hasta */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Disponible hasta <span className="text-red-500">*</span>
@@ -2775,6 +2972,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </p>
               </div>
               
+              {/* Cupo Máximo */}
               <div className="md:col-span-2">
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-medium text-gray-700">
@@ -2813,6 +3011,44 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 )}
               </div>
               
+              {/* Opción para generar instancias */}
+              <div className="md:col-span-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="generar_instancias"
+                      name="generar_instancias"
+                      type="checkbox"
+                      checked={formData.generar_instancias}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="generar_instancias" className="font-medium text-gray-700">
+                      Generar instancias automáticamente
+                    </label>
+                    <p className="text-gray-500">
+                      {isEditing 
+                        ? "Genera las instancias específicas para este tour (fechas concretas según los días operativos)"
+                        : "Crear automáticamente todas las fechas específicas según los días seleccionados en el horario"}
+                    </p>
+                    <div className="mt-2 text-xs bg-green-100 p-2 rounded text-green-700">
+                      <div className="flex items-center mb-1">
+                        <FaCalendarAlt className="mr-1 text-green-600" />
+                        <span className="font-medium">¿Qué son las instancias?</span>
+                      </div>
+                      <p>
+                        Las instancias son las fechas específicas en las que se realizará este tour.
+                        Por ejemplo, si el horario indica "Lunes y Miércoles" y la vigencia es del 1 al 30 de junio,
+                        se crearán instancias para cada lunes y miércoles de junio.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Marcar como excepción */}
               <div className="md:col-span-2">
                 <div className="flex items-center">
                   <input
@@ -2829,6 +3065,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </div>
               </div>
               
+              {/* Notas de Excepción (si está marcado como excepción) */}
               {formData.es_excepcion && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2848,6 +3085,7 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                 </div>
               )}
               
+              {/* Información de reservas (solo en modo edición) */}
               {isEditing && (
                 <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <h4 className="text-sm font-medium text-gray-800">Información de reservas</h4>
@@ -2878,33 +3116,60 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
                   )}
                 </div>
               )}
+
+              {/* Información sobre instancias generadas */}
+              {cantidadGenerada !== null && cantidadGenerada > 0 && (
+                <div className="md:col-span-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center">
+                    <FaCheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                    <div>
+                      <p className="text-green-800 font-medium">
+                        Se han generado {cantidadGenerada} instancias correctamente
+                      </p>
+                      <p className="text-green-600 text-sm mt-1">
+                        Las instancias representan las fechas específicas en las que operará este tour
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Botones de acción */}
             <div className="mt-8 flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={handleCancel}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-colors duration-200"
+                disabled={isFormDisabled}
               >
                 <FaTimes className="mr-2 -ml-1 h-4 w-4" />
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitDisabled}
               >
-                {loading ? (
+                {loading || generandoInstancias ? (
                   <>
                     <div className="w-4 h-4 mr-2 -ml-1 relative">
                       <div className="absolute top-0 left-0 w-full h-full border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                    {!isEditing && toursACrear > 1 ? `Creando ${toursACrear} tours...` : 'Guardando...'}
+                    {generandoInstancias 
+                      ? 'Generando instancias...' 
+                      : (!isEditing && toursACrear > 1 
+                          ? `Creando ${toursACrear} tours...` 
+                          : 'Guardando...')}
                   </>
                 ) : (
                   <>
                     <FaSave className="mr-2 -ml-1 h-4 w-4" />
-                    {isEditing ? 'Actualizar Tour' : (toursACrear > 1 ? `Crear ${toursACrear} Tours` : 'Crear Tour')}
+                    {isEditing 
+                      ? (formData.generar_instancias ? 'Actualizar y generar instancias' : 'Actualizar Tour') 
+                      : (toursACrear > 1 
+                          ? `Crear ${toursACrear} Tours y sus instancias` 
+                          : 'Crear Tour y sus instancias')}
                   </>
                 )}
               </button>
@@ -2916,4 +3181,4 @@ const TourProgramadoForm: React.FC<TourProgramadoFormProps> = ({ isEditing = fal
   );
 };
 
-export default TourProgramadoForm;*/
+export default TourProgramadoForm;
