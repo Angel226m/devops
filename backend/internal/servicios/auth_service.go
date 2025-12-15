@@ -31,6 +31,7 @@ func NewAuthService(usuarioRepo *repositorios.UsuarioRepository, sedeRepo *repos
 // Login autentica a un usuario y genera tokens JWT
 func (s *AuthService) Login(loginReq *entidades.LoginRequest, rememberMe bool) (*entidades.LoginResponse, error) {
 	// SOLO PARA DESARROLLO: Usuario hardcodeado para admin
+	//eliminar cuando pase a dev
 	if loginReq.Correo == "admin@sistema-tours.com" && loginReq.Contrasena == "admin123" {
 		// Intentar obtener el usuario de la BD para tener todos los datos
 		usuario, err := s.usuarioRepo.GetByEmail(loginReq.Correo)

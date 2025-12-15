@@ -20,12 +20,13 @@ func NewHorarioChoferRepository(db *sql.DB) *HorarioChoferRepository {
 	}
 }
 
+/*
 // GetByID obtiene un horario de chofer por su ID
 func (r *HorarioChoferRepository) GetByID(id int) (*entidades.HorarioChofer, error) {
 	horario := &entidades.HorarioChofer{}
 	query := `SELECT hc.id_horario_chofer, hc.id_usuario, hc.id_sede, hc.hora_inicio, hc.hora_fin,
-              hc.disponible_lunes, hc.disponible_martes, hc.disponible_miercoles, 
-              hc.disponible_jueves, hc.disponible_viernes, hc.disponible_sabado, 
+              hc.disponible_lunes, hc.disponible_martes, hc.disponible_miercoles,
+              hc.disponible_jueves, hc.disponible_viernes, hc.disponible_sabado,
               hc.disponible_domingo, hc.fecha_inicio, hc.fecha_fin, hc.eliminado,
               u.nombres, u.apellidos, u.numero_documento, u.telefono, s.nombre
               FROM horario_chofer hc
@@ -45,6 +46,41 @@ func (r *HorarioChoferRepository) GetByID(id int) (*entidades.HorarioChofer, err
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("horario de chofer no encontrado")
+		}
+		return nil, err
+	}
+
+	return horario, nil
+}
+*/
+
+// GetByID obtiene un horario de chofer por su ID, incluyendo datos del chofer y sede
+func (r *HorarioChoferRepository) GetByID(id int) (*entidades.HorarioChofer, error) {
+	query := `SELECT hc.id_horario_chofer, hc.id_usuario, hc.id_sede, hc.hora_inicio, hc.hora_fin,
+              hc.disponible_lunes, hc.disponible_martes, hc.disponible_miercoles, 
+              hc.disponible_jueves, hc.disponible_viernes, hc.disponible_sabado, 
+              hc.disponible_domingo, hc.fecha_inicio, hc.fecha_fin, hc.eliminado,
+              u.nombres, u.apellidos, u.numero_documento, u.telefono, s.nombre
+              FROM horario_chofer hc
+              INNER JOIN usuario u ON hc.id_usuario = u.id_usuario
+              INNER JOIN sede s ON hc.id_sede = s.id_sede
+              WHERE hc.id_horario_chofer = $1
+              AND hc.eliminado = false`
+
+	horario := &entidades.HorarioChofer{}
+
+	err := r.db.QueryRow(query, id).Scan(
+		&horario.ID, &horario.IDUsuario, &horario.IDSede, &horario.HoraInicio, &horario.HoraFin,
+		&horario.DisponibleLunes, &horario.DisponibleMartes, &horario.DisponibleMiercoles,
+		&horario.DisponibleJueves, &horario.DisponibleViernes, &horario.DisponibleSabado,
+		&horario.DisponibleDomingo, &horario.FechaInicio, &horario.FechaFin, &horario.Eliminado,
+		&horario.NombreChofer, &horario.ApellidosChofer, &horario.DocumentoChofer,
+		&horario.TelefonoChofer, &horario.NombreSede,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // o puedes devolver un error personalizado como errors.New("horario no encontrado")
 		}
 		return nil, err
 	}

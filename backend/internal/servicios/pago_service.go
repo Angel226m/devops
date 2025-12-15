@@ -57,7 +57,7 @@ func (s *PagoService) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 
 	// Verificar canal de pago válido
 	canalesValidos := map[string]bool{
-		"LOCAL":    true,
+		"LOCAL":    true, //local no debe de estar
 		"WEB":      true,
 		"APP":      true,
 		"TELEFONO": true,

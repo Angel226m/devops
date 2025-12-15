@@ -132,7 +132,9 @@ import "time"
 		Expirada        bool      `json:"expirada"`
 		Mensaje         string    `json:"mensaje"`
 	}
-*/package entidades
+*/
+
+package entidades
 
 import "time"
 

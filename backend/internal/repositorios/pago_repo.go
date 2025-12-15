@@ -65,34 +65,6 @@ func (r *PagoRepository) GetByID(id int) (*entidades.Pago, error) {
 	return pago, nil
 }
 
-/*
-// Create guarda un nuevo pago en la base de datos
-func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
-	var id int
-	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante,
-              numero_comprobante, url_comprobante, eliminado)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
-              RETURNING id_pago`
-
-	err := r.db.QueryRow(
-		query,
-		pago.IDReserva,
-		pago.MetodoPago,
-		pago.CanalPago,
-		pago.IDSede, // Si es nil, se insertará NULL
-		pago.Monto,
-		pago.Comprobante,
-		pago.NumeroComprobante,
-		pago.URLComprobante,
-	).Scan(&id)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
-}
-*/
 // Create guarda un nuevo pago en la base de datos y genera automáticamente el número de comprobante y URL
 func (r *PagoRepository) Create(pago *entidades.NuevoPagoRequest) (int, error) {
 	// Comenzamos una transacción para asegurar que todas las operaciones son atómicas
@@ -514,29 +486,6 @@ func (r *PagoRepository) ListBySede(idSede int) ([]*entidades.Pago, error) {
 
 	return pagos, nil
 }
-
-// CrearPagoMercadoPago crea un pago específico para MercadoPago
-/*
-func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {
-	var id int
-	query := `INSERT INTO pago (id_reserva, metodo_pago, canal_pago, id_sede, monto, comprobante, estado, eliminado)
-              VALUES ($1, 'MERCADOPAGO', 'WEB', NULL, $2, $3, 'PROCESADO', FALSE)
-              RETURNING id_pago`
-
-	err := r.db.QueryRow(
-		query,
-		idReserva,
-		monto,
-		referenciaPago,
-	).Scan(&id)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
-}
-*/
 
 // CrearPagoMercadoPago crea un pago específico para MercadoPago con generación automática de comprobante
 func (r *PagoRepository) CrearPagoMercadoPago(idReserva int, monto float64, referenciaPago string) (int, error) {

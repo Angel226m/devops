@@ -75,7 +75,7 @@ func SetupRoutes(
 		public.GET("/auth/validar-token", recuperacionController.ValidarToken)
 		public.POST("/auth/cambiar-contrasena", recuperacionController.CambiarContrasena)
 
-		// Autenticación
+		// Autenticación personal
 		public.POST("/auth/login", authController.Login)
 		public.POST("/auth/refresh", authController.RefreshToken)
 		public.POST("/auth/logout", authController.Logout)
