@@ -268,6 +268,16 @@ class AuthService {
 export const authService = new AuthService();*/
 
 
+
+
+
+
+
+
+
+
+/*
+
 import { clienteAxios } from "../api/clienteAxios";
 import { clientePublico } from "../api/clientePublico";
 import { store } from "../store";
@@ -429,6 +439,140 @@ class AuthService {
       clearInterval(this._intervalId);
       this._intervalId = undefined;
       console.log("⏹️ AuthService: Renovación automática de token detenida");
+    }
+  }
+}
+
+export const authService = new AuthService();*/
+
+
+import { clienteAxios } from "../api/clienteAxios";
+import { clientePublico } from "../api/clientePublico";
+import { store } from "../store";
+import { establecerUsuario, finalizarCargaAutenticacion, limpiarEstadoAutenticacion } from "../store/slices/sliceAutenticacion";
+import { endpoints } from "../api/endpoints";
+
+class AuthService {
+  // Propiedad para almacenar el ID del intervalo
+  private _intervalId: NodeJS.Timeout | undefined = undefined;
+
+  // Verificar si hay una sesión activa
+  async verificarSesion(): Promise<boolean> {
+    try {
+      console.log("🔍 AuthService: Iniciando verificación de sesión...");
+
+      // Si ya sabemos que no hay sesión, no intentar
+      const estado = store.getState().autenticacion;
+      if (!estado.autenticado && !estado.cargandoAutenticacion) {
+        console.log("⏹️ AuthService: Sesión previamente cerrada, no verificar");
+        return false;
+      }
+
+      try {
+        console.log("🔄 AuthService: Intentando renovar token automáticamente (cookie HttpOnly)");
+
+        // POST simple: el navegador envía la cookie refresh_token automáticamente
+        const refreshResponse = await clientePublico.post(endpoints.cliente.refrescarToken);
+
+        console.log("📡 AuthService: Respuesta del servidor:", { status: refreshResponse.status });
+
+        if (refreshResponse.data && refreshResponse.data.success) {
+          console.log("✅ AuthService: Sesión válida - usuario recuperado");
+
+          const responseData = refreshResponse.data.data;
+          const usuario = responseData.usuario;
+
+          console.log("👤 AuthService: Usuario autenticado:", {
+            id: usuario?.id_cliente,
+            nombre: usuario?.nombre_completo || usuario?.razon_social,
+            correo: usuario?.correo,
+            rol: "CLIENTE"
+          });
+
+          // Actualizar solo el usuario en Redux (tokens están en cookies HttpOnly)
+          store.dispatch(establecerUsuario(usuario));
+
+          // Configurar renovación automática
+          this.configurarRenovacionToken();
+
+          return true;
+        } else {
+          console.log("❌ AuthService: Respuesta inesperada del servidor");
+          return false;
+        }
+      } catch (refreshError: any) {
+        console.warn("⚠️ AuthService: Error al intentar renovar token:", {
+          status: refreshError.response?.status,
+          message: refreshError.response?.data?.message || refreshError.message
+        });
+
+        // Si es 401 → no hay sesión válida
+        if (refreshError.response?.status === 401) {
+          console.log("🔒 AuthService: No hay sesión activa");
+          store.dispatch(limpiarEstadoAutenticacion());
+        }
+
+        return false;
+      }
+    } catch (error: any) {
+      console.error("❌ AuthService: Error general en verificación:", error);
+      return false;
+    } finally {
+      console.log("🏁 AuthService: Finalizando carga de autenticación");
+      store.dispatch(finalizarCargaAutenticacion());
+    }
+  }
+
+  // Configurar renovación automática del token (cada 14 minutos)
+  configurarRenovacionToken() {
+    const INTERVALO_RENOVACION = 14 * 60 * 1000; // 14 minutos
+
+    // Limpiar intervalo previo si existe
+    if (this._intervalId) {
+      clearInterval(this._intervalId);
+    }
+
+    this._intervalId = setInterval(async () => {
+      try {
+        console.log("🔄 AuthService: Renovación automática de token...");
+
+        const response = await clientePublico.post(endpoints.cliente.refrescarToken);
+
+        if (response.data && response.data.success) {
+          console.log("✅ AuthService: Token renovado automáticamente");
+
+          const usuario = response.data.data.usuario;
+          store.dispatch(establecerUsuario(usuario));
+
+          console.log("👤 AuthService: Usuario actualizado en renovación automática");
+        } else {
+          console.warn("⚠️ AuthService: Respuesta inesperada en renovación automática");
+        }
+      } catch (error: any) {
+        console.error("❌ AuthService: Error en renovación automática:", {
+          status: error.response?.status,
+          message: error.response?.data?.message
+        });
+
+        // Si falla (probablemente 401), detener intervalo y limpiar sesión
+        this.detenerRenovacionToken();
+
+        if (error.response?.status === 401) {
+          console.log("🔒 AuthService: Sesión expirada - limpiando estado");
+          store.dispatch(limpiarEstadoAutenticacion());
+        }
+      }
+    }, INTERVALO_RENOVACION);
+
+    console.log("⏰ AuthService: Renovación automática configurada (cada 14 min)");
+  }
+
+  // Detener la renovación automática
+  detenerRenovacionToken() {
+    if (this._intervalId) {
+      clearInterval(this._intervalId);
+      this._intervalId = undefined;
+      console.log("⏹️ AuthService: Renovación automática detenida");
     }
   }
 }
