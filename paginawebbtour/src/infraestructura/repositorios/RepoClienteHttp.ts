@@ -396,7 +396,9 @@ export class RepoClienteHttp implements RepositorioCliente {
   async cerrarSesion(): Promise<void> {
     try {
       console.log("📡 RepoClienteHttp: Cerrando sesión...");
-      
+         document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
+    document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
+    
       const response = await clienteAxios.post('/cliente/logout');
       
       if (response.data && response.data.success) {
