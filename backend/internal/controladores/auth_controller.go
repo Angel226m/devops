@@ -54,7 +54,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		"/",             // Path
 		"",              // Domain (vacío = dominio actual)
 		true,            // Secure (false para desarrollo local)
-		false,           // HttpOnly (false para permitir acceso desde JS en desarrollo)
+		true,            // HttpOnly (false para permitir acceso desde JS en desarrollo)
 	)
 
 	// Configurar cookie para el refresh token con duración variable
@@ -73,7 +73,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		"/",                    // Path
 		"",                     // Domain
 		true,                   // Secure (false para desarrollo local)
-		false,                  // HttpOnly (false para permitir acceso desde JS en desarrollo)
+		true,                   // HttpOnly (false para permitir acceso desde JS en desarrollo)
 	)
 
 	// Para administradores, no incluir sede en la respuesta
@@ -197,7 +197,7 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 		"/",            // Path
 		"",             // Domain (vacío = dominio actual)
 		true,           // Secure
-		false,          // HttpOnly
+		true,           // HttpOnly(en caso de fallos canbiar)
 	)
 
 	// Configurar cookie para el nuevo refresh token manteniendo la misma duración
@@ -216,7 +216,7 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 		"/",             // Path
 		"",              // Domain
 		true,            // Secure
-		false,           // HttpOnly
+		true,            // HttpOnly(cambair en caso de fallos)
 	)
 
 	fmt.Println("RefreshToken: Cookies establecidas exitosamente")
@@ -303,7 +303,7 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 				"/",            // Path
 				"",             // Domain (vacío = dominio actual)
 				true,           // Secure
-				false,          // HttpOnly
+				true,           // HttpOnly(cambiar en caso de fallas)
 			)
 
 			var refreshExpiry int
@@ -321,7 +321,7 @@ func (c *AuthController) CheckStatus(ctx *gin.Context) {
 				"/",             // Path
 				"",              // Domain
 				true,            // Secure
-				false,           // HttpOnly
+				true,            // HttpOnly(cambiar en caso de fallas)
 			)
 
 			fmt.Println("CheckStatus: Tokens actualizados por discrepancia de rol")
@@ -429,7 +429,7 @@ func (c *AuthController) SelectSede(ctx *gin.Context) {
 		"/",            // Path
 		"",             // Domain
 		true,           // Secure
-		false,          // HttpOnly
+		true,           // HttpOnly(en caso de fallos cambiar)
 	)
 
 	// Configurar cookie para el refresh token manteniendo la misma duración
@@ -449,7 +449,7 @@ func (c *AuthController) SelectSede(ctx *gin.Context) {
 		"/",             // Path
 		"",              // Domain
 		true,            // Secure
-		false,           // HttpOnly
+		true,            // HttpOnly (cambiar aen caso fallos)
 	)
 
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sede seleccionada exitosamente", gin.H{
@@ -490,8 +490,8 @@ func (c *AuthController) ChangePassword(ctx *gin.Context) {
 func (c *AuthController) Logout(ctx *gin.Context) {
 	// Eliminar cookies estableciendo tiempo de expiración en el pasado
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("access_token", "", -1, "/", "", true, false)
-	ctx.SetCookie("refresh_token", "", -1, "/", "", true, false)
+	ctx.SetCookie("access_token", "", -1, "/", "", true, true) /*(cambiar)*/
+	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
 }

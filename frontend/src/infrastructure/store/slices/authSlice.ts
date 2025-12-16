@@ -453,6 +453,26 @@ export const { clearError, markSessionAsChecked } = authSlice.actions;
 export default authSlice.reducer;*/
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { axiosClient } from '../../api/axiosClient';
 import { endpoints } from '../../api/endpoints';
@@ -958,6 +978,329 @@ const authSlice = createSlice({
           lastAuthCheck: Date.now()
         };
       });
+  },
+});
+
+export const { clearError, markSessionAsChecked, forceUserRole } = authSlice.actions;
+export default authSlice.reducer;*/
+
+
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { axiosClient } from '../../api/axiosClient';
+import { endpoints } from '../../api/endpoints';
+
+// Definición de tipos
+export interface Usuario {
+  id_usuario: number;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  rol: string;
+  id_sede: number | null;
+  telefono?: string;
+  direccion?: string;
+  fecha_nacimiento?: string;
+  nacionalidad?: string;
+  tipo_documento?: string;
+  numero_documento?: string;
+  fecha_registro?: string;
+  eliminado?: boolean;
+}
+
+export interface Sede {
+  id_sede: number;
+  nombre: string;
+  ciudad?: string;
+  direccion?: string;
+  telefono?: string;
+  correo?: string;
+  provincia?: string;
+  pais?: string;
+  eliminado?: boolean;
+}
+
+export interface AuthState {
+  user: Usuario | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  availableSedes: Sede[];
+  selectedSede: Sede | null;
+  sessionChecked: boolean;
+  isRefreshing: boolean;
+  lastAuthCheck: number;
+}
+
+// Estado inicial
+const initialState: AuthState = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+  availableSedes: [],
+  selectedSede: null,
+  sessionChecked: false,
+  isRefreshing: false,
+  lastAuthCheck: 0
+};
+
+// Thunk para refrescar token – SIMPLE y SEGURO (confía en la cookie HttpOnly)
+export const refreshToken = createAsyncThunk(
+  'auth/refreshToken',
+  async (_, { rejectWithValue }) => {
+    try {
+      console.log("[Auth] Intentando refrescar token automáticamente...");
+      
+      // POST vacío: el navegador envía la cookie refresh_token automáticamente
+      const response = await axiosClient.post(endpoints.auth.refresh);
+      
+      console.log("[Auth] Token refrescado exitosamente");
+      return response.data.data || response.data;
+    } catch (error: any) {
+      console.error("[Auth] Error al refrescar token:", error.response?.status);
+      return rejectWithValue('Sesión expirada');
+    }
+  }
+);
+
+// Thunk para login
+export const login = createAsyncThunk(
+  'auth/login',
+  async ({ correo, contrasena, rememberMe = false }: { 
+    correo: string; 
+    contrasena: string; 
+    rememberMe?: boolean 
+  }, { rejectWithValue }) => {
+    try {
+      console.log(`[Auth] Iniciando sesión para: ${correo}`);
+      
+      const response = await axiosClient.post(
+        `${endpoints.auth.login}?remember_me=${rememberMe}`,
+        { correo, contrasena }
+      );
+      
+      console.log("[Auth] Login exitoso");
+      
+      const userData = response.data.data || response.data;
+      
+      if (userData.usuario) {
+        console.log(`[Auth] Usuario: ${userData.usuario.nombres}, Rol: ${userData.usuario.rol}`);
+      }
+      
+      return userData;
+    } catch (error: any) {
+      console.error("[Auth] Error de login:", error.response?.data);
+      return rejectWithValue(error.response?.data?.message || 'Error al iniciar sesión');
+    }
+  }
+);
+
+// Thunk para verificar estado – con retry automático si falla por token expirado
+export const checkAuthStatus = createAsyncThunk(
+  'auth/checkStatus',
+  async (_, { dispatch, getState, rejectWithValue }) => {
+    const state = getState() as { auth: AuthState };
+    
+    const now = Date.now();
+    if (now - state.auth.lastAuthCheck < 1000 && state.auth.sessionChecked) {
+      console.log("[Auth] Verificación omitida (reciente)");
+      return rejectWithValue('recent');
+    }
+    
+    console.log("[Auth] Verificando estado de sesión...");
+    
+    try {
+      const response = await axiosClient.get(endpoints.auth.status);
+      const authData = response.data.data;
+      
+      console.log("[Auth] Sesión válida");
+      if (authData?.usuario) {
+        console.log(`[Auth] Usuario activo: ${authData.usuario.nombres} (${authData.usuario.rol})`);
+      }
+      
+      return authData;
+    } catch (error: any) {
+      if (error.response?.status === 401 && !state.auth.isRefreshing) {
+        console.log("[Auth] Token expirado (401) → intentando refresh");
+        try {
+          await dispatch(refreshToken()).unwrap();
+          console.log("[Auth] Refresh exitoso → reintentando check");
+          const retryResponse = await axiosClient.get(endpoints.auth.status);
+          return retryResponse.data.data;
+        } catch {
+          console.log("[Auth] Refresh falló → sesión cerrada");
+        }
+      }
+      
+      console.log("[Auth] No hay sesión activa");
+      return rejectWithValue('unauthenticated');
+    }
+  }
+);
+
+// Thunk para obtener sedes (solo admins)
+export const fetchUserSedes = createAsyncThunk(
+  'auth/fetchUserSedes',
+  async (_, { rejectWithValue }) => {
+    try {
+      console.log("[Auth] Cargando sedes disponibles...");
+      const response = await axiosClient.get(endpoints.auth.userSedes);
+      const sedes = response.data.data.sedes || [];
+      console.log(`[Auth] ${sedes.length} sedes cargadas`);
+      return sedes;
+    } catch (error: any) {
+      console.error('[Auth] Error al cargar sedes:', error);
+      return rejectWithValue(error.response?.data?.message || 'Error al obtener sedes');
+    }
+  }
+);
+
+// Thunk para seleccionar sede
+export const selectSede = createAsyncThunk(
+  'auth/selectSede',
+  async (id_sede: number, { rejectWithValue }) => {
+    try {
+      console.log(`[Auth] Seleccionando sede ID: ${id_sede}`);
+      const response = await axiosClient.post(endpoints.auth.selectSede, { id_sede });
+      console.log("[Auth] Sede seleccionada correctamente");
+      return response.data.data.sede;
+    } catch (error: any) {
+      console.error('[Auth] Error al seleccionar sede:', error);
+      return rejectWithValue(error.response?.data?.message || 'Error al seleccionar sede');
+    }
+  }
+);
+
+// Thunk para logout
+export const logout = createAsyncThunk(
+  'auth/logout',
+  async (_, { rejectWithValue }) => {
+    try {
+      console.log("[Auth] Cerrando sesión...");
+      await axiosClient.post(endpoints.auth.logout);
+      console.log("[Auth] Logout exitoso");
+    } catch (error: any) {
+      console.error('[Auth] Error en logout (se limpia igual):', error);
+    } finally {
+      return null;
+    }
+  }
+);
+
+// Slice
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    markSessionAsChecked: (state) => {
+      state.sessionChecked = true;
+    },
+    forceUserRole: (state, action) => {
+      if (state.user) {
+        state.user.rol = action.payload;
+        console.log(`[Auth Debug] Rol forzado a: ${action.payload}`);
+      }
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Refresh Token
+      .addCase(refreshToken.pending, (state) => {
+        state.isRefreshing = true;
+        state.isLoading = true;
+      })
+      .addCase(refreshToken.fulfilled, (state) => {
+        state.isRefreshing = false;
+        state.isLoading = false;
+        state.lastAuthCheck = Date.now();
+      })
+      .addCase(refreshToken.rejected, (state) => {
+        state.isRefreshing = false;
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.selectedSede = null;
+      })
+
+      // Login
+      .addCase(login.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.sessionChecked = true;
+        state.lastAuthCheck = Date.now();
+
+        if (action.payload?.usuario) {
+          state.user = action.payload.usuario;
+          state.selectedSede = action.payload.sede || null;
+        } else {
+          state.user = action.payload;
+        }
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.sessionChecked = true;
+        state.error = action.payload as string;
+      })
+
+      // Check Status
+      .addCase(checkAuthStatus.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(checkAuthStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.sessionChecked = true;
+        state.error = null;
+        state.lastAuthCheck = Date.now();
+
+        if (action.payload?.usuario) {
+          state.user = action.payload.usuario;
+          state.selectedSede = action.payload.sede || null;
+        }
+      })
+      .addCase(checkAuthStatus.rejected, (state) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.sessionChecked = true;
+        state.user = null;
+        state.selectedSede = null;
+      })
+
+      // Sedes
+      .addCase(fetchUserSedes.fulfilled, (state, action) => {
+        state.availableSedes = action.payload || [];
+        state.isLoading = false;
+      })
+      .addCase(fetchUserSedes.rejected, (state) => {
+        state.availableSedes = [];
+        state.isLoading = false;
+      })
+
+      // Select Sede
+      .addCase(selectSede.fulfilled, (state, action) => {
+        state.selectedSede = action.payload;
+        state.isLoading = false;
+      })
+
+      // Logout
+      .addCase(logout.fulfilled, () => ({
+        ...initialState,
+        sessionChecked: true,
+        lastAuthCheck: Date.now()
+      }))
+      .addCase(logout.rejected, () => ({
+        ...initialState,
+        sessionChecked: true,
+        lastAuthCheck: Date.now()
+      }));
   },
 });
 
