@@ -125,6 +125,10 @@ class AuthService {
   async verificarSesion(): Promise<boolean> {
     try {
       console.log("🔍 AuthService: Iniciando verificación de sesión...");
+       const estado = store.getState().autenticacion;
+      if (!estado.autenticado && !estado.cargandoAutenticacion) {
+        console.log("⏹️ AuthService: Sesión previamente cerrada, no verificar");
+        return false;
       
       try {
         console.log("🔄 AuthService: Intentando refrescar token desde cookie...");

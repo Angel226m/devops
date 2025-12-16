@@ -329,6 +329,8 @@ import {
   RespuestaAutenticacion 
 } from "../../../dominio/entidades/Cliente";
 import { RepoClienteHttp } from "../../repositorios/RepoClienteHttp";
+import { authService } from "../../servicios/AuthService"; // Importar authService
+
 
 export interface EstadoAutenticacion {
   usuario: ClienteAutenticado | null;
@@ -491,6 +493,16 @@ const autenticacionSlice = createSlice({
     },
     finalizarCargaAutenticacion: (state) => {
       state.cargandoAutenticacion = false;
+    },
+    /**eliminar si hay fallas agrgeagdo pro erores d eatenticacion */
+      limpiarEstadoAutenticacion: (state) => {
+      state.usuario = null;
+      state.token = null;
+      state.refreshToken = null;
+      state.autenticado = false;
+      state.error = null;
+      state.cargando = false;
+      state.cargandoAutenticacion = false;
     }
   },
   extraReducers: (builder) => {
@@ -554,6 +566,9 @@ const autenticacionSlice = createSlice({
         state.cargando = true;
       })
       .addCase(cerrarSesion.fulfilled, (state) => {
+        /*cambair en caso de fallos  */
+        authService.detenerRenovacionToken();
+        /*  */
         state.cargando = false;
         state.cargandoAutenticacion = false;
         state.usuario = null;
@@ -634,7 +649,9 @@ export const {
   establecerToken, 
   establecerRefreshToken, 
   limpiarError,
-  finalizarCargaAutenticacion
+  finalizarCargaAutenticacion,
+  /*se elimina si fallas */
+   limpiarEstadoAutenticacion
 } = autenticacionSlice.actions;
 
 export default autenticacionSlice.reducer;

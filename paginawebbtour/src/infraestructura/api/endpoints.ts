@@ -48,7 +48,9 @@ export const endpoints = {
     obtenerPorId: (id: number) => `/tours-programados/${id}`,
     listarPorFiltros: "/tours-programados/filtrar",
     listarDisponiblesSinDuplicados: "/tours/disponibles-sin-duplicados"
-  }, cliente: {
+  }, 
+  
+  cliente: {
     registro: "/clientes/registro",
     login: "/clientes/login", 
     refrescarToken: "/clientes/refresh",
