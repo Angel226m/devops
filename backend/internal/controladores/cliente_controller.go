@@ -700,6 +700,7 @@ func (c *ClienteController) ChangePassword(ctx *gin.Context) {
 }
 
 // Logout cierra la sesión de un cliente
+/*
 func (c *ClienteController) Logout(ctx *gin.Context) {
 	fmt.Println("Logout Cliente: Cerrando sesión")
 
@@ -709,6 +710,43 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
+	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
+}*/
+// Logout cierra la sesión de un cliente
+func (c *ClienteController) Logout(ctx *gin.Context) {
+	fmt.Println("Logout Cliente: Cerrando sesión")
+
+	// ⭐ CORREGIDO: Eliminar cookies de manera más explícita
+	// Primero intentar con MaxAge negativo
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie(
+		"access_token", // nombre
+		"",             // valor vacío
+		-1,             // MaxAge negativo para eliminar
+		"/",            // path
+		"",             // domain
+		true,           // secure
+		true,           // httpOnly
+	)
+
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	ctx.SetCookie(
+		"refresh_token", // nombre
+		"",              // valor vacío
+		-1,              // MaxAge negativo para eliminar
+		"/",             // path
+		"",              // domain
+		true,            // secure
+		true,            // httpOnly
+	)
+
+	// ⭐ NUEVO: También intentar eliminar con Expires en el pasado como fallback
+	ctx.Header("Set-Cookie", "access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=None")
+	ctx.Header("Set-Cookie", "refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=None")
+
+	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
+
 	// Respuesta exitosa
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
 }

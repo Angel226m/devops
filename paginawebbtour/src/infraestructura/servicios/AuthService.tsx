@@ -452,16 +452,25 @@ import { endpoints } from "../api/endpoints";
 
 class AuthService {
   private _intervalId: NodeJS.Timeout | undefined = undefined;
+  // ⭐ NUEVO: Flag para controlar si acabamos de hacer logout
+  private _logoutReciente: boolean = false;
 
   // ⭐ CORREGIDO: Verificar si hay una sesión activa
   async verificarSesion(): Promise<boolean> {
     try {
       console.log("🔍 AuthService: Iniciando verificación de sesión...");
 
+      // ⭐ NUEVO: Si acabamos de hacer logout, no intentar verificar
+      if (this._logoutReciente) {
+        console.log("🚫 AuthService: Logout reciente detectado → no verificar sesión");
+        store.dispatch(limpiarEstadoAutenticacion());
+        store.dispatch(finalizarCargaAutenticacion());
+        this._logoutReciente = false; // Resetear flag
+        return false;
+      }
+
       const estado = store.getState().autenticacion;
 
-      // ⭐ CLAVE: Solo NO intentar si ya estamos cargando o ya sabemos que está limpia por logout
-      // Pero al recargar la página, cargandoAutenticacion = true inicialmente → SÍ permite intentar
       if (estado.cargandoAutenticacion) {
         console.log("⏳ AuthService: Ya en proceso de verificación → continuando");
       }
@@ -488,10 +497,7 @@ class AuthService {
             usuarioCorreo: usuario?.correo
           });
 
-          // Actualizamos el estado de Redux solo con el usuario
           store.dispatch(establecerUsuario(usuario));
-
-          // ⭐ NUEVO: Iniciar renovación automática solo si la sesión es válida
           this.configurarRenovacionToken();
 
           console.log("✅ AuthService: Estado Redux actualizado correctamente");
@@ -508,7 +514,6 @@ class AuthService {
           data: refreshError.response?.data
         });
 
-        // ⭐ NUEVO: Si el error es 401, significa que no hay sesión válida
         if (refreshError.response?.status === 401) {
           console.log("🔒 AuthService: No hay sesión válida (401)");
           store.dispatch(limpiarEstadoAutenticacion());
@@ -524,7 +529,6 @@ class AuthService {
       store.dispatch(limpiarEstadoAutenticacion());
       return false;
     } finally {
-      // Siempre finalizar la carga de autenticación
       console.log("🏁 AuthService: Finalizando carga de autenticación");
       store.dispatch(finalizarCargaAutenticacion());
     }
@@ -586,6 +590,19 @@ class AuthService {
       this._intervalId = undefined;
       console.log("⏹️ AuthService: Renovación automática de token detenida");
     }
+  }
+
+  // ⭐ NUEVO: Marcar que acabamos de hacer logout
+  marcarLogout() {
+    console.log("🔴 AuthService: Marcando logout reciente");
+    this._logoutReciente = true;
+    this.detenerRenovacionToken();
+    
+    // ⭐ Resetear el flag después de 2 segundos para permitir verificaciones futuras
+    setTimeout(() => {
+      this._logoutReciente = false;
+      console.log("✅ AuthService: Flag de logout reseteado");
+    }, 2000);
   }
 }
 
