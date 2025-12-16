@@ -705,8 +705,8 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 
 	// Eliminar cookies estableciendo tiempo de expiración en el pasado
 	ctx.SetSameSite(http.SameSiteNoneMode)
-	ctx.SetCookie("access_token", "", -1, "/", "", true, false)
-	ctx.SetCookie("refresh_token", "", -1, "/", "", true, false)
+	ctx.SetCookie("access_token", "", -1, "/", "", true, true)
+	ctx.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
 	// Respuesta exitosa
