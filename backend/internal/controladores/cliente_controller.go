@@ -1,4 +1,4 @@
-package controladores
+/*package controladores
 
 import (
 	"fmt" // Añadido para logs de depuración
@@ -132,6 +132,7 @@ func (c *ClienteController) Update(ctx *gin.Context) {
 */
 
 // Update actualiza un cliente
+/*
 func (c *ClienteController) Update(ctx *gin.Context) {
 	// Parsear ID de la URL
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -488,6 +489,7 @@ func (c *ClienteController) Login(ctx *gin.Context) {
 }*/
 
 // RefreshToken renueva los tokens de un cliente
+/*
 func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 	fmt.Println("RefreshToken Cliente: Iniciando regeneración de token")
 	fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
@@ -714,6 +716,7 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
 }*/
 // Logout cierra la sesión de un cliente
+/*
 func (c *ClienteController) Logout(ctx *gin.Context) {
 	fmt.Println("Logout Cliente: Cerrando sesión")
 
@@ -774,5 +777,471 @@ func (c *ClienteController) GetPerfilCliente(ctx *gin.Context) {
 	}
 
 	// Respuesta exitosa
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Perfil obtenido", cliente))
+}
+*/
+package controladores
+
+import (
+	"fmt"
+	"net/http"
+	"sistema-toursseft/internal/config"
+	"sistema-toursseft/internal/entidades"
+	"sistema-toursseft/internal/servicios"
+	"sistema-toursseft/internal/utils"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
+)
+
+// ClienteController maneja los endpoints de clientes
+type ClienteController struct {
+	clienteService *servicios.ClienteService
+	config         *config.Config
+}
+
+// NewClienteController crea una nueva instancia de ClienteController
+func NewClienteController(clienteService *servicios.ClienteService, config *config.Config) *ClienteController {
+	return &ClienteController{
+		clienteService: clienteService,
+		config:         config,
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTES PARA COOKIES (MANTENER CONSISTENCIA)
+// ═══════════════════════════════════════════════════════════════
+
+const (
+	cookieAccessToken  = "access_token"
+	cookieRefreshToken = "refresh_token"
+	cookiePath         = "/"
+	cookieDomain       = "" // Vacío = dominio actual
+	cookieSecure       = true
+	cookieHttpOnly     = true // ⭐ CRÍTICO: Debe ser igual en Login, Refresh y Logout
+	cookieSameSite     = http.SameSiteNoneMode
+)
+
+// setCookie es una función helper para establecer cookies de manera consistente
+func (c *ClienteController) setCookie(ctx *gin.Context, name, value string, maxAge int) {
+	ctx.SetSameSite(cookieSameSite)
+	ctx.SetCookie(
+		name,
+		value,
+		maxAge,
+		cookiePath,
+		cookieDomain,
+		cookieSecure,
+		cookieHttpOnly,
+	)
+}
+
+// deleteCookie es una función helper para eliminar cookies
+func (c *ClienteController) deleteCookie(ctx *gin.Context, name string) {
+	// Usar exactamente los mismos parámetros que setCookie pero con MaxAge -1
+	ctx.SetSameSite(cookieSameSite)
+	ctx.SetCookie(
+		name,
+		"",
+		-1, // MaxAge negativo elimina la cookie
+		cookiePath,
+		cookieDomain,
+		cookieSecure,
+		cookieHttpOnly,
+	)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENDPOINTS DE AUTENTICACIÓN
+// ═══════════════════════════════════════════════════════════════
+
+// Login maneja el inicio de sesión de un cliente
+func (c *ClienteController) Login(ctx *gin.Context) {
+	var loginReq struct {
+		Correo     string `json:"correo" validate:"required,email"`
+		Contrasena string `json:"contrasena" validate:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	if err := utils.ValidateStruct(loginReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	rememberMe, _ := strconv.ParseBool(ctx.DefaultQuery("remember_me", "false"))
+
+	// Intentar login
+	cliente, token, refreshToken, err := c.clienteService.Login(loginReq.Correo, loginReq.Contrasena, rememberMe)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Credenciales incorrectas", err))
+		return
+	}
+
+	// ⭐ Configurar cookies usando la función helper
+	c.setCookie(ctx, cookieAccessToken, token, 60*15) // 15 minutos
+
+	// Duración variable para refresh token
+	var refreshExpiry int
+	if rememberMe {
+		refreshExpiry = 60 * 60 * 24 * 7 // 7 días
+	} else {
+		refreshExpiry = 60 * 60 // 1 hora
+	}
+	c.setCookie(ctx, cookieRefreshToken, refreshToken, refreshExpiry)
+
+	// Preparar respuesta
+	responseData := gin.H{
+		"usuario": gin.H{
+			"id_cliente":       cliente.ID,
+			"tipo_documento":   cliente.TipoDocumento,
+			"numero_documento": cliente.NumeroDocumento,
+			"correo":           cliente.Correo,
+			"numero_celular":   cliente.NumeroCelular,
+			"rol":              "CLIENTE",
+		},
+	}
+
+	if cliente.TipoDocumento == "RUC" {
+		responseData["usuario"].(gin.H)["razon_social"] = cliente.RazonSocial
+		responseData["usuario"].(gin.H)["direccion_fiscal"] = cliente.DireccionFiscal
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.RazonSocial
+	} else {
+		responseData["usuario"].(gin.H)["nombres"] = cliente.Nombres
+		responseData["usuario"].(gin.H)["apellidos"] = cliente.Apellidos
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.Nombres + " " + cliente.Apellidos
+	}
+
+	// Solo incluir token en desarrollo
+	if gin.Mode() != gin.ReleaseMode {
+		responseData["token"] = token
+		responseData["refresh_token"] = refreshToken
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Login exitoso", responseData))
+}
+
+// RefreshToken renueva los tokens de un cliente
+func (c *ClienteController) RefreshToken(ctx *gin.Context) {
+	fmt.Println("RefreshToken Cliente: Iniciando regeneración de token")
+
+	// Intentar obtener refresh token de múltiples fuentes
+	refreshToken, err := ctx.Cookie(cookieRefreshToken)
+	if err != nil || refreshToken == "" {
+		authHeader := ctx.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			refreshToken = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+
+	if refreshToken == "" {
+		var refreshReq struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if ctx.ShouldBindJSON(&refreshReq) == nil && refreshReq.RefreshToken != "" {
+			refreshToken = refreshReq.RefreshToken
+		}
+	}
+
+	if refreshToken == "" {
+		fmt.Println("RefreshToken Cliente: No se encontró el refresh token")
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Refresh token no proporcionado", nil))
+		return
+	}
+
+	// Renovar tokens
+	newToken, newRefreshToken, cliente, err := c.clienteService.RefreshClienteToken(refreshToken)
+	if err != nil {
+		fmt.Printf("RefreshToken Cliente: Error al actualizar token: %v\n", err)
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Error al actualizar token", err))
+		return
+	}
+
+	// Determinar si tenía remember_me activo
+	var isRememberMe bool
+	token, _ := jwt.ParseWithClaims(refreshToken, &utils.ClienteTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(c.config.JWTRefreshSecret), nil
+	})
+
+	if token != nil {
+		if claims, ok := token.Claims.(*utils.ClienteTokenClaims); ok {
+			expiresAt := claims.ExpiresAt.Time
+			issuedAt := claims.IssuedAt.Time
+			isRememberMe = expiresAt.Sub(issuedAt) > 24*time.Hour
+		}
+	}
+
+	// ⭐ Configurar nuevas cookies usando la función helper
+	c.setCookie(ctx, cookieAccessToken, newToken, 60*15) // 15 minutos
+
+	var refreshExpiry int
+	if isRememberMe {
+		refreshExpiry = 60 * 60 * 24 * 7 // 7 días
+	} else {
+		refreshExpiry = 60 * 60 // 1 hora
+	}
+	c.setCookie(ctx, cookieRefreshToken, newRefreshToken, refreshExpiry)
+
+	fmt.Println("RefreshToken Cliente: Cookies actualizadas exitosamente")
+
+	// Preparar respuesta
+	responseData := gin.H{
+		"usuario": gin.H{
+			"id_cliente":       cliente.ID,
+			"tipo_documento":   cliente.TipoDocumento,
+			"numero_documento": cliente.NumeroDocumento,
+			"correo":           cliente.Correo,
+			"numero_celular":   cliente.NumeroCelular,
+			"rol":              "CLIENTE",
+		},
+	}
+
+	if cliente.TipoDocumento == "RUC" {
+		responseData["usuario"].(gin.H)["razon_social"] = cliente.RazonSocial
+		responseData["usuario"].(gin.H)["direccion_fiscal"] = cliente.DireccionFiscal
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.RazonSocial
+	} else {
+		responseData["usuario"].(gin.H)["nombres"] = cliente.Nombres
+		responseData["usuario"].(gin.H)["apellidos"] = cliente.Apellidos
+		responseData["usuario"].(gin.H)["nombre_completo"] = cliente.Nombres + " " + cliente.Apellidos
+	}
+
+	if gin.Mode() != gin.ReleaseMode {
+		responseData["token"] = newToken
+		responseData["refresh_token"] = newRefreshToken
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Token actualizado exitosamente", responseData))
+}
+
+// Logout cierra la sesión de un cliente
+func (c *ClienteController) Logout(ctx *gin.Context) {
+	fmt.Println("Logout Cliente: Cerrando sesión")
+
+	// ⭐ SOLUCIÓN: Usar la función helper que garantiza parámetros consistentes
+	c.deleteCookie(ctx, cookieAccessToken)
+	c.deleteCookie(ctx, cookieRefreshToken)
+
+	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Sesión cerrada exitosamente", nil))
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRUD DE CLIENTES (Mantener el resto del código igual)
+// ═══════════════════════════════════════════════════════════════
+
+func (c *ClienteController) Create(ctx *gin.Context) {
+	var clienteReq entidades.NuevoClienteRequest
+
+	if err := ctx.ShouldBindJSON(&clienteReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	if err := utils.ValidateStruct(clienteReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	id, err := c.clienteService.Create(&clienteReq)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al crear cliente", err))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, utils.SuccessResponse("Cliente creado exitosamente", gin.H{"id": id}))
+}
+
+func (c *ClienteController) GetByID(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	cliente, err := c.clienteService.GetByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Cliente no encontrado", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente obtenido", cliente))
+}
+
+func (c *ClienteController) GetByDocumento(ctx *gin.Context) {
+	tipoDocumento := ctx.Query("tipo")
+	numeroDocumento := ctx.Query("numero")
+
+	if tipoDocumento == "" || numeroDocumento == "" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Tipo y número de documento son requeridos", nil))
+		return
+	}
+
+	cliente, err := c.clienteService.GetByDocumento(tipoDocumento, numeroDocumento)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Cliente no encontrado", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente obtenido", cliente))
+}
+
+func (c *ClienteController) Update(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	var clienteReq entidades.ActualizarClienteRequest
+
+	if err := ctx.ShouldBindJSON(&clienteReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	if clienteReq.TipoDocumento != "" && clienteReq.NumeroDocumento != "" {
+		if err := utils.ValidateStruct(clienteReq); err != nil {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+			return
+		}
+	}
+
+	err = c.clienteService.Update(id, &clienteReq)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar cliente", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente actualizado exitosamente", nil))
+}
+
+func (c *ClienteController) UpdateDatosEmpresa(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	var datosReq entidades.ActualizarDatosEmpresaRequest
+
+	if err := ctx.ShouldBindJSON(&datosReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	if err := utils.ValidateStruct(datosReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error de validación", err))
+		return
+	}
+
+	err = c.clienteService.UpdateDatosEmpresa(id, &datosReq)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al actualizar datos de empresa", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Datos de empresa actualizados exitosamente", nil))
+}
+
+func (c *ClienteController) Delete(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("ID inválido", err))
+		return
+	}
+
+	err = c.clienteService.Delete(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al eliminar cliente", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Cliente eliminado exitosamente", nil))
+}
+
+func (c *ClienteController) List(ctx *gin.Context) {
+	query := ctx.Query("search")
+	searchType := ctx.Query("type")
+
+	var clientes []*entidades.Cliente
+	var err error
+
+	if query != "" {
+		if searchType == "doc" {
+			clientes, err = c.clienteService.SearchByDocumento(query)
+		} else {
+			clientes, err = c.clienteService.SearchByName(query)
+		}
+	} else {
+		clientes, err = c.clienteService.List()
+	}
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error al listar clientes", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Clientes listados exitosamente", clientes))
+}
+
+func (c *ClienteController) ChangePassword(ctx *gin.Context) {
+	clienteIDValue, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no autenticado", nil))
+		return
+	}
+
+	clienteID, ok := clienteIDValue.(int)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error en identificación de usuario", nil))
+		return
+	}
+
+	var changePassReq struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=6"`
+	}
+
+	if err := ctx.ShouldBindJSON(&changePassReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Datos inválidos", err))
+		return
+	}
+
+	err := c.clienteService.ChangePassword(clienteID, changePassReq.CurrentPassword, changePassReq.NewPassword)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorResponse("Error al cambiar contraseña", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.SuccessResponse("Contraseña actualizada exitosamente", nil))
+}
+
+func (c *ClienteController) GetPerfilCliente(ctx *gin.Context) {
+	clienteIDValue, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Usuario no autenticado", nil))
+		return
+	}
+
+	clienteID, ok := clienteIDValue.(int)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorResponse("Error en identificación de usuario", nil))
+		return
+	}
+
+	cliente, err := c.clienteService.GetByID(clienteID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, utils.ErrorResponse("Cliente no encontrado", err))
+		return
+	}
+
 	ctx.JSON(http.StatusOK, utils.SuccessResponse("Perfil obtenido", cliente))
 }
