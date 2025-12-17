@@ -717,33 +717,29 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 func (c *ClienteController) Logout(ctx *gin.Context) {
 	fmt.Println("Logout Cliente: Cerrando sesión")
 
-	// ⭐ CORREGIDO: Eliminar cookies de manera más explícita
-	// Primero intentar con MaxAge negativo
+	// ✅ Eliminar cookie access_token
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie(
 		"access_token", // nombre
-		"",             // valor vacío
-		-1,             // MaxAge negativo para eliminar
+		"deleted",      // ✅ CAMBIO: Usar valor distinto de vacío
+		-1,             // MaxAge negativo (0 también funciona)
 		"/",            // path
 		"",             // domain
 		true,           // secure
 		true,           // httpOnly
 	)
 
+	// ✅ Eliminar cookie refresh_token
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	ctx.SetCookie(
 		"refresh_token", // nombre
-		"",              // valor vacío
-		-1,              // MaxAge negativo para eliminar
+		"deleted",       // ✅ CAMBIO:  Usar valor distinto de vacío
+		-1,              // MaxAge negativo
 		"/",             // path
 		"",              // domain
 		true,            // secure
 		true,            // httpOnly
 	)
-
-	// ⭐ NUEVO: También intentar eliminar con Expires en el pasado como fallback
-	ctx.Header("Set-Cookie", "access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=None")
-	ctx.Header("Set-Cookie", "refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=None")
 
 	fmt.Println("Logout Cliente: Cookies eliminadas exitosamente")
 

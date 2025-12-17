@@ -658,6 +658,8 @@ export class RepoClienteHttp implements RepositorioCliente {
       
       if (response.data && response.data.success) {
         console.log("✅ RepoClienteHttp: Sesión cerrada exitosamente");
+              window.location. href = '/ingresar';
+
         return;
       }
       
