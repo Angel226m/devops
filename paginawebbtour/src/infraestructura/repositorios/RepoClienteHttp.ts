@@ -392,7 +392,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       throw error;
     }
   }
-/*
+
   async cerrarSesion(): Promise<void> {
     try {
       console.log("📡 RepoClienteHttp: Cerrando sesión...");
@@ -411,28 +411,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       console.error("❌ RepoClienteHttp: Error al cerrar sesión:", error);
       // Incluso si hay error, consideramos que la sesión está cerrada en el frontend
     }
-  }*/
-
-    
-async cerrarSesion(): Promise<void> {
-  try {
-    console.log("📡 RepoClienteHttp: Cerrando sesión...");
-    
-    // ⭐ NO eliminar cookies aquí - eso lo hace AuthService.marcarLogout()
-    // Solo llamar al endpoint del backend
-    const response = await clienteAxios.post('/cliente/logout');
-    
-    if (response.data && response.data.success) {
-      console.log("✅ RepoClienteHttp: Sesión cerrada exitosamente en backend");
-      return;
-    }
-    
-    throw new Error(response.data.message || "Error al cerrar sesión");
-  } catch (error: any) {
-    console.error("❌ RepoClienteHttp: Error al cerrar sesión:", error);
-    // Incluso si hay error en backend, la sesión está cerrada en frontend
   }
-}
 
   // ⭐ CORREGIDO: Cambiar contraseña
    // ⭐ CORREGIDO: Cambiar contraseña
