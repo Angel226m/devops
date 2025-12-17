@@ -131,15 +131,17 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 }
 
 // ClienteAuthMiddleware crea un middleware para autenticación JWT de clientes
+// ClienteAuthMiddleware crea un middleware para autenticación JWT de clientes
 func ClienteAuthMiddleware(config *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Agregar logs para depuración
 		fmt.Println("ClienteAuthMiddleware: Iniciando verificación de autenticación de cliente")
 		fmt.Printf("Headers recibidos: %v\n", ctx.Request.Header)
-		fmt.Printf("Cookies recibidas: %v\n", ctx.Request.Cookies())
+		fmt.Printf("Cookies recibidas:  %v\n", ctx.Request.Cookies())
 
-		// Obtener token de la cookie
+		// ✅ PRIORIZAR cookies (porque HttpOnly = true)
 		tokenString, err := ctx.Cookie("access_token")
+
 		if err != nil {
 			fmt.Printf("ClienteAuthMiddleware: Cookie access_token no encontrada: %v\n", err)
 		} else if len(tokenString) > 20 {
@@ -148,12 +150,14 @@ func ClienteAuthMiddleware(config *config.Config) gin.HandlerFunc {
 			fmt.Printf("Token de cookie: %v\n", tokenString)
 		}
 
-		// Si no hay cookie, intentar obtenerlo del header Authorization
+		// ✅ Fallback al header Authorization solo si no hay cookie
+		// (útil para testing con Postman/herramientas de desarrollo)
 		if err != nil || tokenString == "" {
 			authHeader := ctx.GetHeader("Authorization")
-			fmt.Printf("ClienteAuthMiddleware: Authorization header: %v\n", authHeader != "")
+			fmt.Printf("ClienteAuthMiddleware: Authorization header presente: %v\n", authHeader != "")
 
 			if authHeader == "" {
+				fmt.Println("ClienteAuthMiddleware:  No se encontró token en cookies ni en header")
 				ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Token no proporcionado", nil))
 				ctx.Abort()
 				return
@@ -162,14 +166,17 @@ func ClienteAuthMiddleware(config *config.Config) gin.HandlerFunc {
 			// Verificar formato Bearer
 			tokenParts := strings.Split(authHeader, " ")
 			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+				fmt.Println("ClienteAuthMiddleware: Formato de token Bearer inválido")
 				ctx.JSON(http.StatusUnauthorized, utils.ErrorResponse("Formato de token inválido", nil))
 				ctx.Abort()
 				return
 			}
 
-			// Extraer token
+			// Extraer token del header
 			tokenString = tokenParts[1]
 			fmt.Printf("ClienteAuthMiddleware: Token obtenido del header Authorization\n")
+		} else {
+			fmt.Println("ClienteAuthMiddleware:  Token obtenido de cookie (HttpOnly)")
 		}
 
 		// Usar ValidateClienteToken para validar tokens de clientes
@@ -189,6 +196,9 @@ func ClienteAuthMiddleware(config *config.Config) gin.HandlerFunc {
 		ctx.Set("userID", claims.ClienteID)
 		ctx.Set("userEmail", claims.Correo)
 		ctx.Set("userType", "CLIENTE") // Para distinguir de usuarios administrativos
+
+		fmt.Printf("ClienteAuthMiddleware:  Contexto establecido - ClienteID: %d, Correo: %s\n",
+			claims.ClienteID, claims.Correo)
 
 		ctx.Next()
 	}

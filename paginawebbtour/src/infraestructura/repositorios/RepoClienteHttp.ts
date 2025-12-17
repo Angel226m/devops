@@ -211,6 +211,13 @@ async refrescarToken(refreshToken?: string): Promise<RespuestaAutenticacion> {
   }
 }*/
 
+
+
+
+
+
+
+/*
 import { 
   ActualizarClienteRequest, 
   CambiarContrasenaRequest, 
@@ -442,6 +449,250 @@ export class RepoClienteHttp implements RepositorioCliente {
       // Extraer mensaje de error más específico
       if (error.response && error.response.data) {
         const errorMsg = error.response.data.message || error.response.data.error || "Error al cambiar contraseña";
+        throw new Error(errorMsg);
+      }
+      
+      throw error;
+    }
+  }
+}*/
+
+
+
+import { 
+  ActualizarClienteRequest, 
+  CambiarContrasenaRequest, 
+  Cliente, 
+  LoginClienteRequest, 
+  NuevoClienteRequest, 
+  RespuestaAutenticacion 
+} from "../../dominio/entidades/Cliente";
+import { RepositorioCliente } from "../../aplicacion/puertos/salida/RepositorioCliente";
+import { clienteAxios } from "../api/clienteAxios";
+import { clientePublico } from "../api/clientePublico";
+import { endpoints } from "../api/endpoints";
+import axios from "axios";
+
+export class RepoClienteHttp implements RepositorioCliente {
+  async registrar(cliente: NuevoClienteRequest): Promise<number> {
+    try {
+      console.log("📡 RepoClienteHttp: Registrando cliente.. .");
+      
+      // Validaciones del frontend
+      if (cliente.tipo_documento === 'DNI' && !/^\d{8}$/.test(cliente.numero_documento)) {
+        throw new Error("El DNI debe tener 8 dígitos numéricos");
+      }
+      
+      if (!/^\d{9}$/.test(cliente.numero_celular)) {
+        throw new Error("El número de celular debe tener 9 dígitos");
+      }
+      
+      if (!/\S+@\S+\.\S+/.test(cliente.correo)) {
+        throw new Error("El formato del correo electrónico es inválido");
+      }
+      
+      if (cliente.contrasena. length < 6) {
+        throw new Error("La contraseña debe tener al menos 6 caracteres");
+      }
+      
+      const response = await clientePublico.post(endpoints.cliente. registro, cliente);
+      console.log("✅ RepoClienteHttp: Cliente registrado exitosamente");
+      
+      if (response.data && response.data.success) {
+        return response.data.data.id;
+      }
+      
+      throw new Error(response. data. message || "Error al registrar cliente");
+    } catch (error:  any) {
+      console.error("❌ RepoClienteHttp: Error al registrar cliente:", error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          let mensajeError = "Error al crear cliente";
+          
+          if (error.response.data) {
+            if (typeof error.response.data === 'string') {
+              mensajeError = error.response.data;
+            } else if (error.response.data.message) {
+              mensajeError = error.response.data.message;
+            } else if (error.response.data.error) {
+              mensajeError = error.response.data.error;
+            }
+          }
+          
+          if (error.response.status === 400 || error.response.status === 409) {
+            if (mensajeError.toLowerCase().includes("correo") || mensajeError.toLowerCase().includes("email")) {
+              throw new Error("El correo electrónico ya está registrado");
+            }
+            if (mensajeError.toLowerCase().includes("documento")) {
+              throw new Error("El número de documento ya está registrado");
+            }
+          }
+          
+          throw new Error(mensajeError);
+        } else if (error.request) {
+          throw new Error("No se recibió respuesta del servidor.  Verifique su conexión a Internet.");
+        } else {
+          throw new Error(`Error en la solicitud: ${error.message}`);
+        }
+      }
+      
+      if (error instanceof Error) {
+        throw error;
+      }
+      
+      throw new Error("Error al registrar cliente");
+    }
+  }
+
+  async obtenerPorId(id: number): Promise<Cliente | null> {
+    try {
+      console.log("📡 RepoClienteHttp: Obteniendo cliente por ID:", id);
+      
+      const response = await clienteAxios.get('/cliente/mi-perfil');
+      
+      console.log("📡 RepoClienteHttp: Respuesta obtenida:", response.data);
+      
+      if (response.data && response.data.success) {
+        return response.data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error("❌ RepoClienteHttp: Error al obtener cliente por ID:", error);
+      return null;
+    }
+  }
+
+  async actualizar(id: number, datos:  ActualizarClienteRequest): Promise<void> {
+    try {
+      console.log("📡 RepoClienteHttp: Actualizando cliente", { id, datos });
+      
+      const response = await clienteAxios.put('/cliente/mi-perfil', datos);
+      
+      console.log("📡 RepoClienteHttp: Respuesta de actualización:", response.data);
+      
+      if (response.data && response.data.success) {
+        console.log("✅ RepoClienteHttp: Cliente actualizado exitosamente");
+        return;
+      }
+      
+      throw new Error(response.data. message || "Error al actualizar cliente");
+    } catch (error:  any) {
+      console.error("❌ RepoClienteHttp: Error al actualizar cliente:", error);
+      
+      if (error.response && error.response.data) {
+        const errorMsg = error.response.data.message || error.response.data.error || "Error al actualizar cliente";
+        throw new Error(errorMsg);
+      }
+      
+      throw error;
+    }
+  }
+
+  async autenticar(credenciales: LoginClienteRequest): Promise<RespuestaAutenticacion> {
+    try {
+      console.log("📡 RepoClienteHttp: Autenticando cliente...");
+      
+      const response = await clientePublico.post(
+        `${endpoints.cliente.login}?remember_me=${credenciales.recordarme || false}`, 
+        {
+          correo: credenciales.correo,
+          contrasena: credenciales.contrasena
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        console.log("✅ RepoClienteHttp: Autenticación exitosa");
+        
+        // ✅ CAMBIO: NO extraer tokens de la respuesta (están en cookies HttpOnly)
+        return {
+          usuario: response.data.data. usuario,
+          // Los tokens NO se devuelven porque están en cookies HttpOnly
+          token: undefined,
+          refresh_token: undefined
+        };
+      }
+      throw new Error(response.data.message || "Error de autenticación");
+    } catch (error: any) {
+      console.error("❌ RepoClienteHttp: Error de autenticación:", error);
+      throw error;
+    }
+  }
+
+  async refrescarToken(refreshToken?:  string): Promise<RespuestaAutenticacion> {
+    try {
+      console.log("📡 RepoClienteHttp: Refrescando token...");
+      
+      // ✅ CAMBIO: NO enviar refreshToken en el body (está en cookie HttpOnly)
+      const response = await clientePublico.post(endpoints.cliente.refrescarToken);
+      
+      if (response. data && response.data.success) {
+        console.log("✅ RepoClienteHttp: Token refrescado exitosamente");
+        
+        // ✅ CAMBIO: NO extraer tokens de la respuesta
+        return {
+          usuario: response.data.data.usuario,
+          token: undefined,
+          refresh_token: undefined
+        };
+      }
+      
+      throw new Error(response.data.message || "Error al refrescar token");
+    } catch (error: any) {
+      console.error("❌ RepoClienteHttp: Error al refrescar token:", error);
+      throw error;
+    }
+  }
+
+  async cerrarSesion(): Promise<void> {
+    try {
+      console.log("📡 RepoClienteHttp: Cerrando sesión...");
+      
+      // ✅ ELIMINAR: No intentar eliminar cookies manualmente (HttpOnly no permite acceso desde JS)
+      // ❌ BORRAR ESTAS LÍNEAS: 
+      // document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
+      // document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
+      
+      // ✅ Solo llamar al endpoint (el backend eliminará las cookies)
+      const response = await clienteAxios.post('/cliente/logout');
+      
+      if (response.data && response.data.success) {
+        console.log("✅ RepoClienteHttp: Sesión cerrada exitosamente");
+        return;
+      }
+      
+      throw new Error(response.data. message || "Error al cerrar sesión");
+    } catch (error: any) {
+      console.error("❌ RepoClienteHttp: Error al cerrar sesión:", error);
+      // Incluso si hay error, consideramos que la sesión está cerrada en el frontend
+    }
+  }
+
+  async cambiarContrasena(id: number, datos: CambiarContrasenaRequest): Promise<void> {
+    try {
+      console.log("📡 RepoClienteHttp: Cambiando contraseña para cliente ID:", id);
+      
+      const response = await clienteAxios. post(
+        '/cliente/change-password', 
+        {
+          current_password: datos.contrasena_actual,
+          new_password:  datos.nueva_contrasena
+        }
+      );
+      
+      console.log("📡 RepoClienteHttp: Respuesta de cambio de contraseña:", response.data);
+      
+      if (response.data && response. data.success) {
+        console.log("✅ RepoClienteHttp: Contraseña cambiada exitosamente");
+        return;
+      }
+      
+      throw new Error(response.data.message || "Error al cambiar contraseña");
+    } catch (error: any) {
+      console.error("❌ RepoClienteHttp: Error al cambiar contraseña:", error);
+      
+      if (error.response && error.response.data) {
+        const errorMsg = error.response. data.message || error.response. data.error || "Error al cambiar contraseña";
         throw new Error(errorMsg);
       }
       

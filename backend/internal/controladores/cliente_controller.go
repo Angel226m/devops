@@ -299,7 +299,7 @@ func (c *ClienteController) Login(ctx *gin.Context) {
 		"/",            // Path
 		"",             // Domain (vacío = dominio actual)
 		true,           // Secure (true para producción)
-		false,          // HttpOnly (false para permitir acceso desde JS)
+		true,           // HttpOnly (false para permitir acceso desde JS)
 	)
 
 	// Configurar cookie para el refresh token con duración variable
@@ -318,7 +318,7 @@ func (c *ClienteController) Login(ctx *gin.Context) {
 		"/",             // Path
 		"",              // Domain
 		true,            // Secure (true para producción)
-		false,           // HttpOnly (false para permitir acceso desde JS)
+		true,            // HttpOnly (false para permitir acceso desde JS)
 	)
 
 	// Preparar respuesta según tipo de cliente (persona natural o empresa)
@@ -597,7 +597,7 @@ func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 		"/",            // Path
 		"",             // Domain (vacío = dominio actual)
 		true,           // Secure
-		false,          // HttpOnly
+		true,           // HttpOnly
 	)
 
 	// Configurar cookie para el nuevo refresh token manteniendo la misma duración
@@ -616,7 +616,7 @@ func (c *ClienteController) RefreshToken(ctx *gin.Context) {
 		"/",             // Path
 		"",              // Domain
 		true,            // Secure
-		false,           // HttpOnly
+		true,            // HttpOnly
 	)
 
 	fmt.Println("RefreshToken Cliente: Cookies establecidas exitosamente")
@@ -727,7 +727,7 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 		"/",            // path
 		"",             // domain
 		true,           // secure
-		false,          // httpOnly
+		true,           // httpOnly
 	)
 
 	ctx.SetSameSite(http.SameSiteNoneMode)
@@ -738,7 +738,7 @@ func (c *ClienteController) Logout(ctx *gin.Context) {
 		"/",             // path
 		"",              // domain
 		true,            // secure
-		false,           // httpOnly
+		true,            // httpOnly
 	)
 
 	// ⭐ NUEVO: También intentar eliminar con Expires en el pasado como fallback

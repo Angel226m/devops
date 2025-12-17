@@ -71,10 +71,11 @@ func main() {
 			"X-Requested-With",
 			"X-CSRF-Token",
 		},
-		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Authorization"},
+
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Authorization", "Set-Cookie"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
-		AllowWildcard:    false, // ⚠️ Seguridad en producción
+		AllowWildcard:    true, // ⚠️ Seguridad en producción
 		AllowWebSockets:  true,
 	}
 

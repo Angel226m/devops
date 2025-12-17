@@ -122,6 +122,18 @@ export { clienteAxios };*/
 
 
 
+
+
+
+
+
+
+
+
+
+
+/*
+
 import axios from 'axios';
 
 // Determinar la URL base según el entorno
@@ -187,6 +199,64 @@ clienteAxios.interceptors.response.use(
 );
 
 // Log de configuración
+console.log(`🔧 Cliente API configurado con baseURL: ${getBaseURL()}`);
+
+export { clienteAxios };*/
+
+
+import axios from 'axios';
+
+const getBaseURL = () => {
+  if (import.meta.env. PROD) {
+    return '/api/v1';
+  }
+  return import.meta.env. VITE_API_URL || 'http://localhost:8080/api/v1';
+};
+
+const clienteAxios = axios.create({
+  baseURL: getBaseURL(),
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  withCredentials: true  // ✅ ESENCIAL para cookies HttpOnly
+});
+
+// ✅ CAMBIO:  Simplificar interceptor (no manejar tokens manualmente)
+clienteAxios.interceptors.request.use(
+  (config) => {
+    // ✅ NO agregar tokens manualmente (se envían automáticamente en cookies)
+    
+    if (import.meta.env.DEV) {
+      console.log(`🔍 Petición autenticada a:  ${config.baseURL}${config.url}`);
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+clienteAxios.interceptors.response.use(
+  (response) => {
+    if (import.meta.env.DEV) {
+      console.log(`✅ Respuesta autenticada de ${response.config.url}:`, response.status);
+    }
+    return response;
+  },
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn('🔒 Sesión expirada, redirigiendo al login');
+      const { store } = await import('../store');
+      const { cerrarSesion } = await import('../store/slices/sliceAutenticacion');
+      store.dispatch(cerrarSesion());
+      window.location.href = '/ingresar';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 console.log(`🔧 Cliente API configurado con baseURL: ${getBaseURL()}`);
 
 export { clienteAxios };
