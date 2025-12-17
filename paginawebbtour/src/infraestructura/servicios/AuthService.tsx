@@ -598,11 +598,37 @@ class AuthService {
     this._logoutReciente = true;
     this.detenerRenovacionToken();
     
+    // ⭐ CRÍTICO: Eliminar cookies INMEDIATAMENTE del lado del cliente
+    this.eliminarCookiesCliente();
+    
     // ⭐ Resetear el flag después de 2 segundos para permitir verificaciones futuras
     setTimeout(() => {
       this._logoutReciente = false;
       console.log("✅ AuthService: Flag de logout reseteado");
     }, 2000);
+  }
+
+  // ⭐ NUEVO: Función para eliminar cookies del lado del cliente
+  private eliminarCookiesCliente() {
+    console.log("🧹 AuthService: Eliminando cookies del cliente");
+    
+    // Eliminar todas las variantes posibles de las cookies
+    const cookieNames = ['access_token', 'refresh_token'];
+    const paths = ['/', ''];
+    const domains = [window.location.hostname, `.${window.location.hostname}`, ''];
+    
+    cookieNames.forEach(name => {
+      paths.forEach(path => {
+        domains.forEach(domain => {
+          // Eliminar con diferentes combinaciones
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}; domain=${domain}; SameSite=None; Secure`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}; domain=${domain}`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}`;
+        });
+      });
+    });
+    
+    console.log("✅ AuthService: Cookies eliminadas del cliente");
   }
 }
 

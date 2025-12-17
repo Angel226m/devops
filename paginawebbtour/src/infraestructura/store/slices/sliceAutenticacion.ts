@@ -1133,11 +1133,19 @@ export const iniciarSesion = createAsyncThunk(
 
 export const cerrarSesion = createAsyncThunk(
   "autenticacion/cerrarSesion",
-  async () => {
-    // ⭐ NUEVO: Detener renovación automática ANTES de cerrar sesión
-    authService.detenerRenovacionToken();
+  async (_, { dispatch }) => {
+    // ⭐ NUEVO: Marcar logout y eliminar cookies ANTES de llamar al backend
+    authService.marcarLogout();
     
-    await repoCliente.cerrarSesion();
+    // ⭐ NUEVO: Limpiar estado INMEDIATAMENTE
+    dispatch(limpiarEstadoAutenticacion());
+    
+    try {
+      // Intentar cerrar sesión en backend (puede fallar, no es crítico)
+      await repoCliente.cerrarSesion();
+    } catch (error) {
+      console.warn("⚠️ Error al cerrar sesión en backend (no crítico):", error);
+    }
   }
 );
 
