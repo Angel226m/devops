@@ -32,7 +32,8 @@ type Config struct {
 	Env      string
 
 	// ✅ Nuevos campos para producción
-	CORSOrigin string
+	CORSOrigin    string
+	EncryptionKey string
 }
 
 func LoadConfig() *Config {
@@ -60,9 +61,9 @@ func LoadConfig() *Config {
 		JWTExpiration:    time.Hour * 24,
 
 		// Aplicación
-		LogLevel: getEnv("LOG_LEVEL", "info"),
-		Env:      getEnv("APP_ENV", "development"),
-
+		LogLevel:      getEnv("LOG_LEVEL", "info"),
+		Env:           getEnv("APP_ENV", "development"),
+		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
 		// ✅ CORS
 		/*CORSOrigin: getEnv("CORS_ORIGIN", "http://localhost:5173"),*/ /*falta linea de configuración para producción*/
 
@@ -76,7 +77,9 @@ func LoadConfig() *Config {
 		config.CORSOrigin = getEnv("CORS_ORIGIN", "http://localhost:5173,http://localhost:5174")
 		log.Printf("✅ CORS configurado para desarrollo: %s", config.CORSOrigin)
 	}
-
+	if config.EncryptionKey != "" && len(config.EncryptionKey) != 32 {
+		log.Fatalf("❌ ENCRYPTION_KEY debe ser de 32 caracteres, tiene %d", len(config.EncryptionKey))
+	}
 	// Parsear duración de JWT
 	if jwtExp := getEnv("JWT_EXPIRATION_HOURS", ""); jwtExp != "" {
 		if hours, err := strconv.Atoi(jwtExp); err == nil {

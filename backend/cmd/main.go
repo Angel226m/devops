@@ -46,6 +46,21 @@ func main() {
 	//
 	// Cargar configuración
 	cfg := config.LoadConfig()
+	encryptionKey := cfg.EncryptionKey
+	if encryptionKey == "" {
+		log.Fatal("❌ ENCRYPTION_KEY no está configurada en las variables de entorno")
+	}
+
+	if len(encryptionKey) != 32 {
+		log.Fatalf("❌ ENCRYPTION_KEY debe ser de 32 caracteres, tiene %d", len(encryptionKey))
+	}
+
+	if err := utils.InitCrypto(encryptionKey); err != nil {
+		log.Fatalf("❌ Error al inicializar encriptación: %v", err)
+	}
+
+	// ✅ NUEVO: Inicializar sistema de encriptación
+	// La clave debe ser de 64 caracteres (32 para cifrado + 32 para HMAC)
 
 	// Configurar modo de Gin según entorno
 	if cfg.Env == "production" {
