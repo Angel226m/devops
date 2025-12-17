@@ -666,8 +666,6 @@ export const {
 export default autenticacionSlice.reducer;*/
 
 
-
-
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { 
   ActualizarClienteRequest, 
@@ -739,7 +737,7 @@ export const registrarCliente = createAsyncThunk(
           
           const respuestaLogin = await repoCliente.autenticar(credenciales);
           
-          // ⭐ NUEVO: Configurar renovación automática después del registro
+          // Configurar renovación automática después del registro
           authService.configurarRenovacionToken();
           
           return { 
@@ -769,44 +767,34 @@ export const iniciarSesion = createAsyncThunk(
   async (credenciales: LoginClienteRequest) => {
     const respuesta = await repoCliente.autenticar(credenciales);
     
-    // ⭐ NUEVO: Configurar renovación automática después del login
+    // Configurar renovación automática después del login
     authService.configurarRenovacionToken();
     
     return respuesta;
   }
 );
-/*
-export const cerrarSesion = createAsyncThunk(
-  "autenticacion/cerrarSesion",
-  async () => {
-    // ⭐ NUEVO: Detener renovación automática ANTES de cerrar sesión
-    authService.detenerRenovacionToken();
-    
-    await repoCliente.cerrarSesion();
-  }
-);
-*/
+
 export const cerrarSesion = createAsyncThunk(
   "autenticacion/cerrarSesion",
   async (_, { dispatch }) => {
     try {
       console.log("🔴 Redux: Iniciando proceso de logout");
       
-      // ⭐ 1. Detener renovación automática PRIMERO
+      // 1. Detener renovación automática PRIMERO
       authService.prepararLogout();
       
-      // ⭐ 2. Llamar al backend para eliminar cookies
+      // 2. Llamar al backend para eliminar cookies
       await repoCliente.cerrarSesion();
       console.log("✅ Redux: Logout exitoso en backend");
       
-      // ⭐ 3. Limpiar estado de Redux DESPUÉS de que el backend responda
+      // 3. Limpiar estado de Redux DESPUÉS de que el backend responda
       dispatch(limpiarEstadoAutenticacion());
       
       return true;
     } catch (error: any) {
       console.warn("⚠️ Redux: Error en logout (no crítico):", error);
       
-      // ⭐ IMPORTANTE: Limpiar estado SIEMPRE, incluso si el backend falla
+      // IMPORTANTE: Limpiar estado SIEMPRE, incluso si el backend falla
       dispatch(limpiarEstadoAutenticacion());
       
       return true; // No propagar error
@@ -876,7 +864,6 @@ const autenticacionSlice = createSlice({
     finalizarCargaAutenticacion: (state) => {
       state.cargandoAutenticacion = false;
     },
-    // ⭐ NUEVO: Action para limpiar completamente el estado
     limpiarEstadoAutenticacion: (state) => {
       console.log("🧹 Redux: Limpiando estado de autenticación");
       state.usuario = null;
@@ -890,7 +877,9 @@ const autenticacionSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Verificar sesión
+      // ═══════════════════════════════════════════════════════════════
+      // VERIFICAR SESIÓN
+      // ═══════════════════════════════════════════════════════════════
       .addCase(verificarSesion.pending, (state) => {
         console.log("⏳ Redux: Verificando sesión...");
         state.cargandoAutenticacion = true;
@@ -904,7 +893,9 @@ const autenticacionSlice = createSlice({
         state.cargandoAutenticacion = false;
       })
       
-      // Registrar cliente
+      // ═══════════════════════════════════════════════════════════════
+      // REGISTRAR CLIENTE
+      // ═══════════════════════════════════════════════════════════════
       .addCase(registrarCliente.pending, (state) => {
         state.cargando = true;
         state.error = null;
@@ -925,7 +916,9 @@ const autenticacionSlice = createSlice({
         state.error = action.error.message || "Error al registrar cliente";
       })
       
-      // Iniciar sesión
+      // ═══════════════════════════════════════════════════════════════
+      // INICIAR SESIÓN
+      // ═══════════════════════════════════════════════════════════════
       .addCase(iniciarSesion.pending, (state) => {
         state.cargando = true;
         state.error = null;
@@ -944,20 +937,15 @@ const autenticacionSlice = createSlice({
         state.error = action.error.message || "Error al iniciar sesión";
       })
       
-      // ⭐ CORREGIDO: Cerrar sesión
-    .addCase(cerrarSesion.pending, (state) => {
-  console.log("⏳ Redux: Cerrando sesión...");
-  state.cargando = true;
-})
-.addCase(cerrarSesion.fulfilled, (state) => {
-  console.log("✅ Redux: Sesión cerrada - Estado limpio");
-  
-  // El estado ya fue limpiado por limpiarEstadoAutenticacion
-  state.cargando = false;
-  state.cargandoAutenticacion = false;
-})
+      // ═══════════════════════════════════════════════════════════════
+      // CERRAR SESIÓN (⭐ CORREGIDO - SIN DUPLICADOS)
+      // ═══════════════════════════════════════════════════════════════
+      .addCase(cerrarSesion.pending, (state) => {
+        console.log("⏳ Redux: Cerrando sesión...");
+        state.cargando = true;
+      })
       .addCase(cerrarSesion.fulfilled, (state) => {
-        console.log("✅ Redux: Sesión cerrada exitosamente - Limpiando estado");
+        console.log("✅ Redux: Sesión cerrada exitosamente - Estado limpio");
         
         // Limpiar estado completamente
         state.cargando = false;
@@ -969,18 +957,21 @@ const autenticacionSlice = createSlice({
         state.error = null;
       })
       .addCase(cerrarSesion.rejected, (state) => {
-  console.log("⚠️ Redux: Error en logout - Limpiando estado de todas formas");
-  
-  // Limpiar estado incluso si falló
-  state.cargando = false;
-  state.cargandoAutenticacion = false;
-  state.usuario = null;
-  state.token = null;
-  state.refreshToken = null;
-  state.autenticado = false;
-})
+        console.log("⚠️ Redux: Error en logout - Limpiando estado de todas formas");
+        
+        // Limpiar estado incluso si falló
+        state.cargando = false;
+        state.cargandoAutenticacion = false;
+        state.usuario = null;
+        state.token = null;
+        state.refreshToken = null;
+        state.autenticado = false;
+        state.error = null;
+      })
       
-      // Refrescar token
+      // ═══════════════════════════════════════════════════════════════
+      // REFRESCAR TOKEN
+      // ═══════════════════════════════════════════════════════════════
       .addCase(refrescarToken.pending, (state) => {
         state.cargando = true;
       })
@@ -1001,7 +992,9 @@ const autenticacionSlice = createSlice({
         state.autenticado = false;
       })
       
-      // Actualizar cliente
+      // ═══════════════════════════════════════════════════════════════
+      // ACTUALIZAR CLIENTE
+      // ═══════════════════════════════════════════════════════════════
       .addCase(actualizarCliente.pending, (state) => {
         state.cargando = true;
         state.error = null;
@@ -1022,7 +1015,9 @@ const autenticacionSlice = createSlice({
         state.error = action.payload as string || "Error al actualizar datos del cliente";
       })
       
-      // Cambiar contraseña
+      // ═══════════════════════════════════════════════════════════════
+      // CAMBIAR CONTRASEÑA
+      // ═══════════════════════════════════════════════════════════════
       .addCase(cambiarContrasena.pending, (state) => {
         state.cargando = true;
         state.error = null;
