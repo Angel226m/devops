@@ -420,8 +420,7 @@ func main() {
 
 		return nil
 	}
-*/
-package main
+*/package main
 
 import (
 	"database/sql"
@@ -560,8 +559,13 @@ func main() {
 	}
 	defer db.Close()
 
-	// ✅ NO ejecutar migraciones (BD ya configurada manualmente)
-	log.Println("ℹ️ Base de datos lista (sin migraciones automáticas)")
+	log.Println("ℹ️ Base de datos lista")
+
+	// ✅ MIGRAR DATOS ANTIGUOS (cifrar correos, documentos y celulares existentes)
+	if err := migrateExistingClientes(db); err != nil {
+		log.Printf("⚠️ Error al migrar datos antiguos:  %v", err)
+		log.Println("⚠️ Continuando...Los nuevos registros se cifrarán correctamente")
+	}
 
 	// Inicializar repositorios
 	usuarioRepo := repositorios.NewUsuarioRepository(db)
@@ -741,12 +745,11 @@ func connectDBWithRetry(cfg *config.Config) (*sql.DB, error) {
 
 		db, err = sql.Open("postgres", dsn)
 		if err != nil {
-			log.Printf("❌ Error al abrir conexión: %v.  Reintentando en %s.. .", err, retryInterval)
+			log.Printf("❌ Error al abrir conexión: %v.Reintentando en %s...", err, retryInterval)
 			time.Sleep(retryInterval)
 			continue
 		}
 
-		// Configurar pool de conexiones
 		db.SetMaxOpenConns(25)
 		db.SetMaxIdleConns(5)
 		db.SetConnMaxLifetime(5 * time.Minute)
@@ -757,10 +760,127 @@ func connectDBWithRetry(cfg *config.Config) (*sql.DB, error) {
 			return db, nil
 		}
 
-		log.Printf("❌ Error al verificar conexión: %v.  Reintentando en %s.. .", err, retryInterval)
+		log.Printf("❌ Error al verificar conexión: %v.Reintentando en %s...", err, retryInterval)
 		db.Close()
 		time.Sleep(retryInterval)
 	}
 
 	return nil, fmt.Errorf("❌ No se pudo conectar a la base de datos después de %d intentos:  %v", maxRetries, err)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ MIGRACIÓN DE DATOS ANTIGUOS (Cifrar clientes existentes)
+// ═══════════════════════════════════════════════════════════════
+
+func migrateExistingClientes(db *sql.DB) error {
+	log.Println("📋 Verificando si hay clientes con datos sin cifrar...")
+
+	// Verificar si ya se ejecutó la migración
+	var migrated bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM cliente 
+			WHERE correo IS NOT NULL 
+			AND correo != '' 
+			AND LENGTH(correo) < 50
+			LIMIT 1
+		)
+	`).Scan(&migrated)
+
+	if err != nil {
+		return fmt.Errorf("error al verificar migración: %v", err)
+	}
+
+	if !migrated {
+		log.Println("ℹ️ No hay datos antiguos para migrar")
+		return nil
+	}
+
+	log.Println("🔄 Migrando clientes antiguos (cifrando datos sensibles)...")
+
+	// Obtener todos los clientes con datos sin cifrar
+	rows, err := db.Query(`
+		SELECT id_cliente, correo, numero_documento, numero_celular 
+		FROM cliente 
+		WHERE eliminado = FALSE 
+		AND (
+			(correo IS NOT NULL AND correo != '' AND LENGTH(correo) < 50) OR
+			(numero_documento IS NOT NULL AND LENGTH(numero_documento) < 50) OR
+			(numero_celular IS NOT NULL AND LENGTH(numero_celular) < 50)
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("error al obtener clientes:  %v", err)
+	}
+	defer rows.Close()
+
+	count := 0
+	errors := 0
+
+	for rows.Next() {
+		var id int
+		var correo, numeroDocumento, numeroCelular sql.NullString
+
+		if err := rows.Scan(&id, &correo, &numeroDocumento, &numeroCelular); err != nil {
+			log.Printf("⚠️ Error al leer cliente %d: %v", id, err)
+			errors++
+			continue
+		}
+
+		// Cifrar datos
+		var correoEncriptado, documentoEncriptado, celularEncriptado string
+
+		if correo.Valid && correo.String != "" {
+			correoEncriptado, err = utils.EncryptCorreo(correo.String)
+			if err != nil {
+				log.Printf("⚠️ Error al cifrar correo del cliente %d: %v", id, err)
+				errors++
+				continue
+			}
+		}
+
+		if numeroDocumento.Valid && numeroDocumento.String != "" {
+			documentoEncriptado, err = utils.EncryptNumeroDocumento(numeroDocumento.String)
+			if err != nil {
+				log.Printf("⚠️ Error al cifrar documento del cliente %d: %v", id, err)
+				errors++
+				continue
+			}
+		}
+
+		if numeroCelular.Valid && numeroCelular.String != "" {
+			celularEncriptado, err = utils.EncryptNumeroCelular(numeroCelular.String)
+			if err != nil {
+				log.Printf("⚠️ Error al cifrar celular del cliente %d: %v", id, err)
+				errors++
+				continue
+			}
+		}
+
+		// Actualizar en BD
+		_, err = db.Exec(`
+			UPDATE cliente 
+			SET 
+				correo = COALESCE(NULLIF($1, ''), correo),
+				numero_documento = COALESCE(NULLIF($2, ''), numero_documento),
+				numero_celular = COALESCE(NULLIF($3, ''), numero_celular)
+			WHERE id_cliente = $4
+		`, correoEncriptado, documentoEncriptado, celularEncriptado, id)
+
+		if err != nil {
+			log.Printf("⚠️ Error al actualizar cliente %d: %v", id, err)
+			errors++
+			continue
+		}
+
+		count++
+		log.Printf("✅ Cliente %d migrado correctamente", id)
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("error al iterar clientes: %v", err)
+	}
+
+	log.Printf("✅ Migración completada: %d clientes cifrados, %d errores", count, errors)
+	return nil
 }
