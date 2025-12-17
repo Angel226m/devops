@@ -786,25 +786,34 @@ export const cerrarSesion = createAsyncThunk(
   }
 );
 */
-
 export const cerrarSesion = createAsyncThunk(
   "autenticacion/cerrarSesion",
   async (_, { dispatch }) => {
-    // ⭐ 1. Marcar logout ANTES de hacer la llamada
-    authService.marcarLogout();
-    
-    // ⭐ 2. Limpiar estado INMEDIATAMENTE
-    dispatch(limpiarEstadoAutenticacion());
-    
     try {
-      // ⭐ 3. Llamar al backend (puede fallar, no es crítico)
+      console.log("🔴 Redux: Iniciando proceso de logout");
+      
+      // ⭐ 1. Detener renovación automática PRIMERO
+      authService.prepararLogout();
+      
+      // ⭐ 2. Llamar al backend para eliminar cookies
       await repoCliente.cerrarSesion();
-      console.log("✅ Redux: Sesión cerrada en backend");
-    } catch (error) {
-      console.warn("⚠️ Redux: Error al cerrar sesión en backend (no crítico):", error);
+      console.log("✅ Redux: Logout exitoso en backend");
+      
+      // ⭐ 3. Limpiar estado de Redux DESPUÉS de que el backend responda
+      dispatch(limpiarEstadoAutenticacion());
+      
+      return true;
+    } catch (error: any) {
+      console.warn("⚠️ Redux: Error en logout (no crítico):", error);
+      
+      // ⭐ IMPORTANTE: Limpiar estado SIEMPRE, incluso si el backend falla
+      dispatch(limpiarEstadoAutenticacion());
+      
+      return true; // No propagar error
     }
   }
 );
+
 export const refrescarToken = createAsyncThunk(
   "autenticacion/refrescarToken",
   async (refreshToken: string | undefined) => {
@@ -936,10 +945,17 @@ const autenticacionSlice = createSlice({
       })
       
       // ⭐ CORREGIDO: Cerrar sesión
-      .addCase(cerrarSesion.pending, (state) => {
-        console.log("⏳ Redux: Cerrando sesión...");
-        state.cargando = true;
-      })
+    .addCase(cerrarSesion.pending, (state) => {
+  console.log("⏳ Redux: Cerrando sesión...");
+  state.cargando = true;
+})
+.addCase(cerrarSesion.fulfilled, (state) => {
+  console.log("✅ Redux: Sesión cerrada - Estado limpio");
+  
+  // El estado ya fue limpiado por limpiarEstadoAutenticacion
+  state.cargando = false;
+  state.cargandoAutenticacion = false;
+})
       .addCase(cerrarSesion.fulfilled, (state) => {
         console.log("✅ Redux: Sesión cerrada exitosamente - Limpiando estado");
         
@@ -953,16 +969,16 @@ const autenticacionSlice = createSlice({
         state.error = null;
       })
       .addCase(cerrarSesion.rejected, (state) => {
-        console.log("⚠️ Redux: Error al cerrar sesión - Limpiando estado de todas formas");
-        
-        // Incluso si falla, limpiar estado completamente
-        state.cargando = false;
-        state.cargandoAutenticacion = false;
-        state.usuario = null;
-        state.token = null;
-        state.refreshToken = null;
-        state.autenticado = false;
-      })
+  console.log("⚠️ Redux: Error en logout - Limpiando estado de todas formas");
+  
+  // Limpiar estado incluso si falló
+  state.cargando = false;
+  state.cargandoAutenticacion = false;
+  state.usuario = null;
+  state.token = null;
+  state.refreshToken = null;
+  state.autenticado = false;
+})
       
       // Refrescar token
       .addCase(refrescarToken.pending, (state) => {

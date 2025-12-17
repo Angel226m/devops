@@ -399,7 +399,24 @@ const BarraNavegacion = () => {
   );
 };
 
-export default BarraNavegacion; */import { useState, useEffect } from 'react';
+export default BarraNavegacion; */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../store';
@@ -729,6 +746,355 @@ const BarraNavegacion = () => {
                       <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
                     </svg>
                     {t('autenticacion.cerrarSesion')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/ingresar" 
+                    className="px-4 py-3 text-white bg-white/20 hover:bg-white/30 rounded-lg flex items-center text-base"
+                    onClick={() => setMenuAbierto(false)}
+                    aria-label={t('autenticacion.ingresar')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    {t('autenticacion.ingresar')}
+                  </Link>
+                  <Link 
+                    to="/registrarse" 
+                    className="px-4 py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg flex items-center justify-center text-base"
+                    onClick={() => setMenuAbierto(false)}
+                    aria-label={t('autenticacion.registrarse')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                    </svg>
+                    {t('autenticacion.registrarse')}
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default BarraNavegacion;*/
+
+
+import { useState, useEffect } from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../../store';
+import { cerrarSesion } from '../../store/slices/sliceAutenticacion';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import CambiadorIdioma from '../componentes/navegacion/CambiadorIdioma';
+
+const BarraNavegacion = () => {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [cerrandoSesion, setCerrandoSesion] = useState(false);
+  
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  const { usuario, autenticado } = useSelector((state: RootState) => state.autenticacion);
+
+  useEffect(() => {
+    setMenuAbierto(false);
+    setMenuUsuarioAbierto(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setScrolled(window.scrollY > 50);
+      }, 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // ⭐ CORREGIDO: Manejo mejorado del logout
+  const handleCerrarSesion = async () => {
+    if (cerrandoSesion) return; // Prevenir clics múltiples
+    
+    try {
+      setCerrandoSesion(true);
+      console.log("🔴 BarraNavegacion: Iniciando cierre de sesión");
+      
+      // Cerrar menús inmediatamente
+      setMenuUsuarioAbierto(false);
+      setMenuAbierto(false);
+      
+      // Mostrar toast de carga
+      const toastId = toast.loading('Cerrando sesión...');
+      
+      // Dispatch de logout
+      await dispatch(cerrarSesion()).unwrap();
+      
+      // Cerrar toast de carga
+      toast.dismiss(toastId);
+      
+      // Mostrar toast de éxito
+      toast.success('Sesión cerrada exitosamente');
+      
+      console.log("✅ BarraNavegacion: Sesión cerrada, redirigiendo a /inicio");
+      
+      // Redirigir a inicio
+      navigate('/inicio', { replace: true });
+      
+    } catch (error: any) {
+      console.error("❌ BarraNavegacion: Error al cerrar sesión:", error);
+      toast.error('Error al cerrar sesión');
+      
+      // Incluso si hay error, redirigir
+      navigate('/inicio', { replace: true });
+    } finally {
+      setCerrandoSesion(false);
+    }
+  };
+
+  const claseActiva = "text-white bg-ocean-600 px-4 py-2 rounded-full font-semibold";
+  const claseNormal = "text-ocean-600 dark:text-ocean-300 hover:text-white hover:bg-ocean-500 px-4 py-2 rounded-full transition-all duration-300";
+
+  return (
+    <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+      scrolled 
+        ? 'bg-gradient-to-r from-ocean-600 via-ocean-500 to-cyan-500 dark:from-ocean-800 dark:via-ocean-700 dark:to-cyan-700 text-white backdrop-blur-md shadow-lg' 
+        : 'bg-gradient-to-r from-ocean-500 via-ocean-400 to-cyan-400 dark:from-ocean-700 dark:via-ocean-600 dark:to-cyan-600 text-white'
+    }`}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="flex items-center justify-between h-16 sm:h-20">
+          <Link to="/" className="flex items-center" aria-label="Ir a la página principal">
+            <span className="text-xl sm:text-2xl font-bold text-white">
+              <span className="bg-cyan-500 dark:bg-cyan-600 px-3 py-1 rounded-l-full">NAYARAK</span>
+              <span className="bg-ocean-600 dark:bg-ocean-700 px-3 py-1 rounded-r-full ml-[-5px]">Tours</span>
+            </span>
+          </Link>
+
+          <div className="hidden md:flex items-center space-x-2 bg-white/15 backdrop-blur-sm rounded-full px-3 py-2">
+            <NavLink to="/inicio" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.inicio')}>
+              {t('menu.inicio')}
+            </NavLink>
+            <NavLink to="/tours" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.tours')}>
+              {t('menu.tours')}
+            </NavLink>
+            <NavLink to="/sedes" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.sedes')}>
+              {t('menu.sedes')}
+            </NavLink>
+            <NavLink to="/conservacion" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.conservacion')}>
+              {t('menu.conservacion', 'Conservación')}
+            </NavLink>
+            <NavLink to="/sobre-nosotros" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.sobreNosotros')}>
+              {t('menu.sobreNosotros')}
+            </NavLink>
+            <NavLink to="/contacto" className={({ isActive }) => isActive ? claseActiva : claseNormal} aria-label={t('menu.contacto')}>
+              {t('menu.contacto')}
+            </NavLink>
+          </div>
+
+          <div className="hidden md:flex items-center space-x-3">
+            <div className="bg-white/15 backdrop-blur-sm rounded-full p-1">
+              <CambiadorIdioma />
+            </div>
+            
+            {autenticado ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setMenuUsuarioAbierto(!menuUsuarioAbierto)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/15 hover:bg-white/25 rounded-full transition-colors duration-300 min-w-[44px] min-h-[44px]"
+                  aria-label={t('menu.perfilUsuario')}
+                  aria-expanded={menuUsuarioAbierto}
+                  disabled={cerrandoSesion}
+                >
+                  <div className="h-8 w-8 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold">
+                    {usuario?.nombres?.charAt(0)}{usuario?.apellidos?.charAt(0)}
+                  </div>
+                  <span className="max-w-[120px] truncate hidden lg:inline">
+                    {usuario?.nombres?.split(' ')[0]}
+                  </span>
+                  <svg className={`h-4 w-4 transition-transform ${menuUsuarioAbierto ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {menuUsuarioAbierto && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-50 transition-all duration-200">
+                    <div className="px-4 py-3 text-sm text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
+                      <div className="font-medium truncate">{usuario?.nombre_completo}</div>
+                      <div className="truncate text-gray-500 dark:text-gray-400">{usuario?.correo}</div>
+                    </div>
+                    <Link 
+                      to="/perfil" 
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setMenuUsuarioAbierto(false)}
+                      aria-label={t('menu.perfil')}
+                    >
+                      <div className="flex items-center">
+                        <svg className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                        {t('menu.perfil')}
+                      </div>
+                    </Link>
+                    <Link 
+                      to="/mis-reservas" 
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setMenuUsuarioAbierto(false)}
+                      aria-label={t('menu.misReservas')}
+                    >
+                      <div className="flex items-center">
+                        <svg className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        </svg>
+                        {t('menu.misReservas')}
+                      </div>
+                    </Link>
+                    <button 
+                      onClick={handleCerrarSesion}
+                      disabled={cerrandoSesion}
+                      className={`block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 ${cerrandoSesion ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      aria-label={t('autenticacion.cerrarSesion')}
+                    >
+                      <div className="flex items-center">
+                        <svg className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                        </svg>
+                        {cerrandoSesion ? 'Cerrando...' : t('autenticacion.cerrarSesion')}
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link to="/ingresar" className="px-4 py-2 text-white hover:bg-white/20 rounded-full transition-colors duration-300 min-w-[44px] min-h-[44px]" aria-label={t('autenticacion.ingresar')}>
+                  {t('autenticacion.ingresar')}
+                </Link>
+                <Link to="/registrarse" className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full transition-colors duration-300 shadow-md hover:shadow-lg border-2 border-white min-w-[44px] min-h-[44px]" aria-label={t('autenticacion.registrarse')}>
+                  {t('autenticacion.registrarse')}
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div className="md:hidden flex items-center space-x-2">
+            <div className="bg-white/15 backdrop-blur-sm rounded-full p-1">
+              <CambiadorIdioma />
+            </div>
+            
+            {autenticado && (
+              <button 
+                onClick={() => setMenuUsuarioAbierto(!menuUsuarioAbierto)}
+                disabled={cerrandoSesion}
+                className="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-600 text-white font-bold min-w-[44px] min-h-[44px]"
+                aria-label={t('menu.perfilUsuario')}
+                aria-expanded={menuUsuarioAbierto}
+              >
+                {usuario?.nombres?.charAt(0)}{usuario?.apellidos?.charAt(0)}
+              </button>
+            )}
+            
+            <button 
+              className="bg-white/15 text-white hover:bg-white/25 p-2 rounded-full transition-colors duration-300 min-w-[44px] min-h-[44px]"
+              onClick={() => setMenuAbierto(!menuAbierto)}
+              aria-label={menuAbierto ? t('menu.cerrarMenu') : t('menu.abrirMenu')}
+              aria-expanded={menuAbierto}
+            >
+              {menuAbierto ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      {menuAbierto && (
+        <div className="md:hidden bg-gradient-to-b from-ocean-500 to-cyan-500 dark:from-ocean-700 dark:to-cyan-700 shadow-lg text-white animate-slide-down">
+          <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-col space-y-3">
+            {autenticado && (
+              <div className="bg-white/10 rounded-lg p-4 mb-2">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-full bg-cyan-600 flex items-center justify-center text-white text-lg font-bold">
+                    {usuario?.nombres?.charAt(0)}{usuario?.apellidos?.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-base truncate">{usuario?.nombre_completo}</div>
+                    <div className="text-sm text-white/80 truncate">{usuario?.correo}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Enlaces de navegación */}
+            <NavLink 
+              to="/inicio" 
+              className={({ isActive }) => `px-4 py-3 rounded-lg flex items-center text-base ${isActive ? 'bg-white/30 font-semibold' : 'hover:bg-white/20'}`}
+              onClick={() => setMenuAbierto(false)}
+              aria-label={t('menu.inicio')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              </svg>
+              {t('menu.inicio')}
+            </NavLink>
+            {/* Resto de enlaces... (mantener igual) */}
+            
+            <div className="pt-3 border-t border-white/30 flex flex-col space-y-3">
+              {autenticado ? (
+                <>
+                  <NavLink 
+                    to="/perfil" 
+                    className={({ isActive }) => `px-4 py-3 rounded-lg flex items-center text-base ${isActive ? 'bg-white/30 font-semibold' : 'bg-white/10 hover:bg-white/20'}`}
+                    onClick={() => setMenuAbierto(false)}
+                    aria-label={t('menu.perfil')}
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    {t('menu.perfil')}
+                  </NavLink>
+                  <NavLink 
+                    to="/mis-reservas" 
+                    className={({ isActive }) => `px-4 py-3 rounded-lg flex items-center text-base ${isActive ? 'bg-white/30 font-semibold' : 'bg-white/10 hover:bg-white/20'}`}
+                    onClick={() => setMenuAbierto(false)}
+                    aria-label={t('menu.misReservas')}
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                    </svg>
+                    {t('menu.misReservas')}
+                  </NavLink>
+                  <button 
+                    onClick={handleCerrarSesion}
+                    disabled={cerrandoSesion}
+                    className={`px-4 py-3 text-white bg-red-500/80 hover:bg-red-600 rounded-lg flex items-center text-base ${cerrandoSesion ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    aria-label={t('autenticacion.cerrarSesion')}
+                  >
+                    <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                    </svg>
+                    {cerrandoSesion ? 'Cerrando...' : t('autenticacion.cerrarSesion')}
                   </button>
                 </>
               ) : (

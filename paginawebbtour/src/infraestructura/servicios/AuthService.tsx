@@ -451,7 +451,7 @@ class AuthService {
 
 export const authService = new AuthService();*/
 
-
+/*
 import { clientePublico } from "../api/clientePublico";
 import { store } from "../store";
 import { establecerUsuario, finalizarCargaAutenticacion, limpiarEstadoAutenticacion } from "../store/slices/sliceAutenticacion";
@@ -566,6 +566,108 @@ class AuthService {
       this._logoutReciente = false;
       console.log("✅ AuthService: Flag de logout reseteado");
     }, 3000);
+  }
+}
+
+export const authService = new AuthService();*/
+import { clientePublico } from "../api/clientePublico";
+import { store } from "../store";
+import { establecerUsuario, finalizarCargaAutenticacion, limpiarEstadoAutenticacion } from "../store/slices/sliceAutenticacion";
+import { endpoints } from "../api/endpoints";
+
+class AuthService {
+  private _intervalId: NodeJS.Timeout | undefined = undefined;
+  private _verificandoSesion: boolean = false;
+
+  async verificarSesion(): Promise<boolean> {
+    // ⭐ Prevenir verificaciones concurrentes
+    if (this._verificandoSesion) {
+      console.log("⏸️ AuthService: Verificación ya en progreso, saltando...");
+      return false;
+    }
+
+    try {
+      this._verificandoSesion = true;
+      console.log("🔍 AuthService: Iniciando verificación de sesión...");
+
+      const refreshResponse = await clientePublico.post(endpoints.cliente.refrescarToken);
+
+      if (refreshResponse.data && refreshResponse.data.success) {
+        console.log("✅ AuthService: Token refrescado exitosamente");
+        const usuario = refreshResponse.data.data.usuario;
+
+        store.dispatch(establecerUsuario(usuario));
+        this.configurarRenovacionToken();
+        
+        console.log("✅ AuthService: Estado Redux actualizado");
+        return true;
+      } else {
+        console.log("❌ AuthService: Respuesta no exitosa");
+        store.dispatch(limpiarEstadoAutenticacion());
+        return false;
+      }
+    } catch (error: any) {
+      console.warn("⚠️ AuthService: Error al verificar sesión:", error.response?.status);
+      
+      if (error.response?.status === 401) {
+        console.log("🔒 AuthService: No hay sesión válida (401)");
+        store.dispatch(limpiarEstadoAutenticacion());
+      }
+      
+      return false;
+    } finally {
+      this._verificandoSesion = false;
+      console.log("🏁 AuthService: Finalizando carga de autenticación");
+      store.dispatch(finalizarCargaAutenticacion());
+    }
+  }
+
+  configurarRenovacionToken() {
+    const INTERVALO_RENOVACION = 14 * 60 * 1000; // 14 minutos
+
+    // ⭐ Limpiar intervalo anterior si existe
+    if (this._intervalId) {
+      clearInterval(this._intervalId);
+    }
+
+    this._intervalId = setInterval(async () => {
+      try {
+        console.log("🔄 AuthService: Renovando token automáticamente...");
+        const response = await clientePublico.post(endpoints.cliente.refrescarToken);
+
+        if (response.data && response.data.success) {
+          console.log("✅ AuthService: Token renovado automáticamente");
+          const usuario = response.data.data.usuario;
+          store.dispatch(establecerUsuario(usuario));
+        }
+      } catch (error: any) {
+        console.error("❌ AuthService: Error al renovar token:", error.response?.status);
+
+        // Detener renovación si hay error
+        this.detenerRenovacionToken();
+
+        if (error.response?.status === 401) {
+          console.log("🔒 AuthService: Sesión expirada");
+          store.dispatch(limpiarEstadoAutenticacion());
+        }
+      }
+    }, INTERVALO_RENOVACION);
+
+    console.log("⏰ AuthService: Renovación automática configurada");
+  }
+
+  detenerRenovacionToken() {
+    if (this._intervalId) {
+      clearInterval(this._intervalId);
+      this._intervalId = undefined;
+      console.log("⏹️ AuthService: Renovación detenida");
+    }
+  }
+
+  // ⭐ SIMPLIFICADO: Solo detener renovación
+  prepararLogout() {
+    console.log("🛑 AuthService: Preparando logout - deteniendo renovación");
+    this.detenerRenovacionToken();
   }
 }
 
