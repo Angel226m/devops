@@ -214,6 +214,9 @@ type DatosClienteCifrados struct {
 // CifrarDatosCliente cifra todos los datos sensibles de un cliente
 func CifrarDatosCliente(correo, numeroDocumento, numeroCelular string) (*DatosClienteCifrados, error) {
 	// Cifrar correo (rápido - determinístico)
+	fmt.Printf("🔐 CifrarDatosCliente llamado\n")
+	fmt.Printf("  - encryptionKey está configurada: %v\n", encryptionKey != nil)
+	fmt.Printf("  - longitud encryptionKey: %d\n", len(encryptionKey))
 	correoEncriptado, err := EncryptCorreo(correo)
 	if err != nil {
 		return nil, fmt.Errorf("error al cifrar correo: %v", err)
@@ -224,12 +227,13 @@ func CifrarDatosCliente(correo, numeroDocumento, numeroCelular string) (*DatosCl
 	if err != nil {
 		return nil, fmt.Errorf("error al cifrar número de documento: %v", err)
 	}
-
+	fmt.Printf("  - Cifrando documento: %s\n", numeroDocumento)
 	// Cifrar número de celular (seguro - aleatorio)
 	celularEncriptado, err := EncryptNumeroCelular(numeroCelular)
 	if err != nil {
 		return nil, fmt.Errorf("error al cifrar número de celular:  %v", err)
 	}
+	fmt.Printf("  - Cifrando celular: %s\n", numeroCelular)
 
 	return &DatosClienteCifrados{
 		Correo:          correoEncriptado,
