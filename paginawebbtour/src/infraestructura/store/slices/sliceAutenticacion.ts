@@ -775,7 +775,7 @@ export const iniciarSesion = createAsyncThunk(
     return respuesta;
   }
 );
-
+/*
 export const cerrarSesion = createAsyncThunk(
   "autenticacion/cerrarSesion",
   async () => {
@@ -785,7 +785,26 @@ export const cerrarSesion = createAsyncThunk(
     await repoCliente.cerrarSesion();
   }
 );
+*/
 
+export const cerrarSesion = createAsyncThunk(
+  "autenticacion/cerrarSesion",
+  async (_, { dispatch }) => {
+    // ⭐ 1. Marcar logout ANTES de hacer la llamada
+    authService.marcarLogout();
+    
+    // ⭐ 2. Limpiar estado INMEDIATAMENTE
+    dispatch(limpiarEstadoAutenticacion());
+    
+    try {
+      // ⭐ 3. Llamar al backend (puede fallar, no es crítico)
+      await repoCliente.cerrarSesion();
+      console.log("✅ Redux: Sesión cerrada en backend");
+    } catch (error) {
+      console.warn("⚠️ Redux: Error al cerrar sesión en backend (no crítico):", error);
+    }
+  }
+);
 export const refrescarToken = createAsyncThunk(
   "autenticacion/refrescarToken",
   async (refreshToken: string | undefined) => {

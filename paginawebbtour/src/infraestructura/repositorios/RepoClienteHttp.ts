@@ -393,7 +393,7 @@ export class RepoClienteHttp implements RepositorioCliente {
     }
   }
 
-  async cerrarSesion(): Promise<void> {
+ /* async cerrarSesion(): Promise<void> {
     try {
       console.log("📡 RepoClienteHttp: Cerrando sesión...");
          document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
@@ -411,8 +411,29 @@ export class RepoClienteHttp implements RepositorioCliente {
       console.error("❌ RepoClienteHttp: Error al cerrar sesión:", error);
       // Incluso si hay error, consideramos que la sesión está cerrada en el frontend
     }
-  }
+  }*/
 
+async cerrarSesion(): Promise<void> {
+  try {
+    console.log("📡 RepoClienteHttp: Cerrando sesión...");
+    
+    // ⭐ NO INTENTAR ELIMINAR COOKIES CON JAVASCRIPT
+    // Las cookies HttpOnly solo pueden ser eliminadas por el backend
+    
+    // Llamar al endpoint de logout del backend
+    const response = await clienteAxios.post('/cliente/logout');
+    
+    if (response.data && response.data.success) {
+      console.log("✅ RepoClienteHttp: Sesión cerrada en backend");
+      return;
+    }
+    
+    throw new Error(response.data.message || "Error al cerrar sesión");
+  } catch (error: any) {
+    console.error("❌ RepoClienteHttp: Error al cerrar sesión:", error);
+    // Incluso si hay error, consideramos sesión cerrada en frontend
+  }
+}
   // ⭐ CORREGIDO: Cambiar contraseña
    // ⭐ CORREGIDO: Cambiar contraseña
   async cambiarContrasena(id: number, datos: CambiarContrasenaRequest): Promise<void> {
