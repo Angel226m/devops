@@ -654,7 +654,7 @@ export class RepoClienteHttp implements RepositorioCliente {
       // document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=None; Secure";
       
       // ✅ Solo llamar al endpoint (el backend eliminará las cookies)
-      const response = await clienteAxios.post('/cliente/logout');
+      const response = await clienteAxios.post('/clientes/logout');
       
       if (response.data && response.data.success) {
         console.log("✅ RepoClienteHttp: Sesión cerrada exitosamente");
