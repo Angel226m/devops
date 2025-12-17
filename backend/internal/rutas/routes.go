@@ -87,6 +87,7 @@ func SetupRoutes(
 		public.POST("/clientes/login", clienteController.Login)
 		public.POST("/clientes/refresh", clienteController.RefreshToken)
 		public.POST("/clientes/logout", clienteController.Logout)
+		public.POST("/cliente/logout", clienteController.Logout) // Sin 's'
 
 		// En la sección de rutas públicas:
 		// Tipos de tour (acceso público)
