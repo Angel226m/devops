@@ -34,31 +34,43 @@ func InitCrypto(masterKey string) error {
 // EncryptFast cifra rápidamente usando un nonce derivado del contenido
 // Ideal para correo y DNI donde necesitas rapidez
 func EncryptFast(plaintext string) (string, error) {
+	fmt.Printf("    🔹 EncryptFast llamado con texto de longitud: %d\n", len(plaintext))
+
 	if plaintext == "" {
+		fmt.Println("    ⚠️ Texto vacío, devolviendo cadena vacía")
 		return "", nil
 	}
 
 	// Normalizar:  quitar espacios y a minúsculas
 	plaintext = strings.ToLower(strings.TrimSpace(plaintext))
+	fmt.Printf("    🔹 Texto normalizado:  '%s' (longitud: %d)\n", plaintext, len(plaintext))
 
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
+		fmt.Printf("    ❌ Error al crear cifrador AES: %v\n", err)
 		return "", fmt.Errorf("error al crear cifrador:  %v", err)
 	}
+	fmt.Println("    ✅ Cifrador AES creado")
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
+		fmt.Printf("    ❌ Error al crear GCM: %v\n", err)
 		return "", fmt.Errorf("error al crear GCM: %v", err)
 	}
+	fmt.Printf("    ✅ GCM creado (nonce size: %d)\n", gcm.NonceSize())
 
-	// Generar nonce determinístico (más rápido que aleatorio)
-	// Esto hace que el mismo texto siempre dé el mismo cifrado
+	// Generar nonce determinístico
 	nonce := make([]byte, gcm.NonceSize())
-	// Usar los primeros bytes del plaintext como nonce
 	copy(nonce, []byte(plaintext))
+	fmt.Printf("    🔹 Nonce generado (primeros bytes del plaintext)\n")
 
 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
+	fmt.Printf("    ✅ Texto cifrado (longitud: %d bytes)\n", len(ciphertext))
+
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
+	fmt.Printf("    ✅ Codificado en base64 (longitud: %d)\n", len(encoded))
+
+	return encoded, nil
 }
 
 // DecryptFast descifra datos cifrados con EncryptFast
@@ -212,34 +224,54 @@ type DatosClienteCifrados struct {
 }
 
 // CifrarDatosCliente cifra todos los datos sensibles de un cliente
+// CifrarDatosCliente cifra todos los datos sensibles de un cliente
 func CifrarDatosCliente(correo, numeroDocumento, numeroCelular string) (*DatosClienteCifrados, error) {
-	// Cifrar correo (rápido - determinístico)
 	fmt.Printf("🔐 CifrarDatosCliente llamado\n")
 	fmt.Printf("  - encryptionKey está configurada: %v\n", encryptionKey != nil)
-	fmt.Printf("  - longitud encryptionKey: %d\n", len(encryptionKey))
+	fmt.Printf("  - longitud encryptionKey:  %d\n", len(encryptionKey))
+
+	// ✅ Cifrar correo (rápido - determinístico)
+	fmt.Printf("  - Cifrando correo: '%s'\n", correo)
 	correoEncriptado, err := EncryptCorreo(correo)
 	if err != nil {
+		fmt.Printf("  ❌ ERROR al cifrar correo: %v\n", err)
 		return nil, fmt.Errorf("error al cifrar correo: %v", err)
 	}
+	fmt.Printf("  ✅ Correo cifrado: %s.. .\n", correoEncriptado[:min(20, len(correoEncriptado))])
 
-	// Cifrar número de documento (rápido - determinístico)
+	// ✅ Cifrar número de documento (rápido - determinístico)
+	fmt.Printf("  - Cifrando documento: '%s'\n", numeroDocumento)
 	documentoEncriptado, err := EncryptNumeroDocumento(numeroDocumento)
 	if err != nil {
+		fmt.Printf("  ❌ ERROR al cifrar documento: %v\n", err)
 		return nil, fmt.Errorf("error al cifrar número de documento: %v", err)
 	}
-	fmt.Printf("  - Cifrando documento: %s\n", numeroDocumento)
-	// Cifrar número de celular (seguro - aleatorio)
+	fmt.Printf("  ✅ Documento cifrado: %s...\n", documentoEncriptado[:min(20, len(documentoEncriptado))])
+
+	// ✅ Cifrar número de celular (seguro - aleatorio)
+	fmt.Printf("  - Cifrando celular: '%s'\n", numeroCelular)
 	celularEncriptado, err := EncryptNumeroCelular(numeroCelular)
 	if err != nil {
-		return nil, fmt.Errorf("error al cifrar número de celular:  %v", err)
+		fmt.Printf("  ❌ ERROR al cifrar celular: %v\n", err)
+		return nil, fmt.Errorf("error al cifrar número de celular: %v", err)
 	}
-	fmt.Printf("  - Cifrando celular: %s\n", numeroCelular)
+	fmt.Printf("  ✅ Celular cifrado:  %s...\n", celularEncriptado[:min(20, len(celularEncriptado))])
+
+	fmt.Println("✅ Todos los datos cifrados exitosamente")
 
 	return &DatosClienteCifrados{
 		Correo:          correoEncriptado,
 		NumeroDocumento: documentoEncriptado,
 		NumeroCelular:   celularEncriptado,
 	}, nil
+}
+
+// Helper para evitar panic si el string es muy corto
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // DescifrarDatosCliente descifra todos los datos sensibles de un cliente
