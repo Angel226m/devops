@@ -519,6 +519,14 @@ func (s *ClienteService) ValidarDocumento(tipoDocumento, numeroDocumento string)
 // Create crea un nuevo cliente CIFRANDO datos sensibles
 func (s *ClienteService) Create(cliente *entidades.NuevoClienteRequest) (int, error) {
 	// Validar documento según su tipo (ANTES de cifrar)
+	// ✅ LOG:  Ver datos recibidos
+	fmt.Printf("🔍 Create Cliente - Datos recibidos:\n")
+	fmt.Printf("  TipoDocumento: %s\n", cliente.TipoDocumento)
+	fmt.Printf("  NumeroDocumento: %s\n", cliente.NumeroDocumento)
+	fmt.Printf("  Correo: %s\n", cliente.Correo)
+	fmt.Printf("  NumeroCelular: %s\n", cliente.NumeroCelular)
+	fmt.Printf("  Nombres: %s\n", cliente.Nombres)
+	fmt.Printf("  Apellidos: %s\n", cliente.Apellidos)
 	if err := s.ValidarDocumento(cliente.TipoDocumento, cliente.NumeroDocumento); err != nil {
 		return 0, err
 	}
