@@ -64,14 +64,11 @@ jobs:
       
       - name: Transferir archivos al servidor
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude 'node_modules' --exclude '.git' \
-            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/${{ secrets.SERVER_USER }}/sistema-tours/
-      
+           rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude 'node_modules' --exclude '.git' \
+           ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/sistema-tours/
+
       - name: Ejecutar despliegue en servidor
         run: |
-         ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd ~/sistema-tours && \
-          docker compose down && \
-          docker compose up -d --build"
-
-
- 
+           ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd ~/sistema-tours && \
+            docker compose down && \
+            docker compose up -d --build"
