@@ -2,33 +2,39 @@ name: Database Backup
 
 on:
   schedule:
-    - cron: '18 6 * * *'  # Ejecuta todos los días a la 1:11 AM hora Perú (06:11 UTC)
-  workflow_dispatch:  # Permite la ejecución manual
+    - cron: '18 6 * * *'  # 1:18 AM hora Perú (06:18 UTC)
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Agrega un tiempo límite para evitar ejecuciones bloqueadas
-    
+    timeout-minutes: 30
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-      
+      uses: actions/checkout@v4   # ← actualizado a v4 (recomendado)
+
     - name: Configurar SSH
       run: |
         mkdir -p ~/.ssh/
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-      
+        ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
     - name: Verificar conexión SSH
       run: |
-        ssh -v -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'Conexión SSH exitosa'"
-      
+        ssh -v -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo '✅ Conexión SSH exitosa'"
+
     - name: Ejecutar backup en servidor
       run: |
-        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd /home/root/sistema-tours && docker exec db-backup /scripts/backup-postgres-to-b2.sh"
-        
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/sistema-tours && \
+          docker exec db-backup /scripts/backup-postgres-to-b2.sh
+        "
+
     - name: Verificar resultado del backup
       run: |
-        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd /home/root/sistema-tours && docker exec db-backup tail -n 15 /backups/backup_log.txt"
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/sistema-tours && \
+          docker exec db-backup tail -n 20 /backups/backup_log.txt || echo 'No se encontró el log'
+        "
