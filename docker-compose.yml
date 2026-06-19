@@ -24,7 +24,7 @@ services:
       retries: 5
       start_period: 30s
 
-  backend:
+  backend_jotekl:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -95,6 +95,7 @@ services:
     networks:
       - frontend-network
       - backend-network
+      - hotelflux_core
     depends_on:
       - frontend
       - paginawebbtour
