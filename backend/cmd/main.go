@@ -122,7 +122,7 @@ func main() {
 	router.Use(cors.New(corsConfig))
 
 	// ✅ Health check mejorado
-	router.GET("/health", func(c *gin.Context) {
+	healthHandler := func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status":    "ok",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
@@ -131,7 +131,9 @@ func main() {
 			"env":       cfg.Env,
 			"cors":      corsConfig.AllowOrigins,
 		})
-	})
+	}
+	router.GET("/health", healthHandler)
+	router.HEAD("/health", healthHandler)
 
 	// ✅ Health check adicional para API
 	router.GET("/api/health", func(c *gin.Context) {
