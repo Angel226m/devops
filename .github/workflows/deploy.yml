@@ -70,5 +70,6 @@ jobs:
       - name: Ejecutar despliegue en servidor
         run: |
            ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "cd ~/sistema-tours && \
+            docker compose up -d --remove-orphans
             docker compose down && \
             docker compose up -d --build"
