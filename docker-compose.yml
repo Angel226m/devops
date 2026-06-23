@@ -1,3 +1,4 @@
+ 
 services:
   db:
     image: postgres:15-alpine
@@ -96,12 +97,12 @@ services:
     networks:
       - frontend-network
       - backend-network
+      - hotelflux_core  # <- AGREGADO: Permite al proxy ver el backend de HotelFlux
     depends_on:
       - frontend
       - paginawebbtour
       - backend_jotekl
 
-  # Cambio: Usando una imagen que ya tiene Python instalado
   backup:
     image: python:3.10-alpine
     container_name: db-backup
@@ -146,3 +147,6 @@ networks:
         - subnet: 172.30.0.0/16
   frontend-network:
     driver: bridge
+  # -> AGREGADO: Declaramos la red externa de HotelFlux para que Compose sepa que ya existe
+  hotelflux_core:
+    external: true
