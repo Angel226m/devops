@@ -1,4 +1,13 @@
 # Sistema de Gestión de Tours — Ocean Tours
+Para ver si ya baneó alguna IP:
+bashfail2ban-client status nginx-badbots
+fail2ban-client status nginx-noscript
+fail2ban-client status nginx-limit-req
+Y para ver el log en tiempo real mientras llegan ataques:
+bashtail -f /var/log/fail2ban.log
+Son dos cosas distintas:
+ArchivoPara qué sirvedomain.cert.pemTu certificado SSL (identidad del dominio)private.key.pemLa clave privada de ese certificadodhparam.pemParámetro matemático extra que hace el cifrado más robusto
+El dhparam.pem no viene con ningún proveedor, lo generas vos una vez y ya. No reemplaza nada de lo que tienes, se suma.
 
 Plataforma integral para la administración y gestión de tours turísticos, desarrollada con arquitectura de hexagonal y desplegada en un vps mediante contenedores Docker. El sistema proporciona un panel administrativo completo, una página pública de reservas en línea, streaming en vivo de tours, y automatización de procesos de respaldo y despliegue continuo.
 

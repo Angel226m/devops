@@ -90,7 +90,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend/certs:/etc/nginx/certs:ro
-      - ./ssl:/etc/nginx/ssl:ro  # Certificados SSL
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./html:/usr/share/nginx/html:ro  # Certificados SSL
     restart: unless-stopped
     networks:
       - frontend-network
