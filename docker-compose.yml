@@ -1,4 +1,5 @@
- 
+version: '3.8'
+
 services:
   db:
     image: postgres:15-alpine
@@ -9,7 +10,7 @@ services:
       - POSTGRES_DB=sistema_tours
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     ports:
-      - "127.0.0.1:5432:5432"  # Solo acceso local
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
@@ -43,7 +44,7 @@ services:
       - ENCRYPTION_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
       - CORS_ORIGIN=https://admin.angelproyect.com,https://reservas.angelproyect.com
     ports:
-      - "127.0.0.1:8080:8080"  # Solo acceso local para nginx
+      - "127.0.0.1:8080:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -82,7 +83,7 @@ services:
       - backend_jotekl
 
   nginx:
-    image: nginx:alpine
+    build: .  # <- CAMBIO: Ahora compila usando el Dockerfile del Paso 1
     container_name: nginx-proxy
     ports:
       - "80:80"
@@ -90,14 +91,13 @@ services:
       - "18889:18889"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend/certs:/etc/nginx/certs:ro
       - ./ssl:/etc/nginx/ssl:ro
-      - ./html:/usr/share/nginx/html:ro  # Certificados SSL
+      - ./html:/usr/share/nginx/html:ro
     restart: unless-stopped
     networks:
       - frontend-network
       - backend-network
-      - hotelflux_core  # <- AGREGADO: Permite al proxy ver el backend de HotelFlux
+      - hotelflux_core
     depends_on:
       - frontend
       - paginawebbtour
@@ -147,6 +147,5 @@ networks:
         - subnet: 172.30.0.0/16
   frontend-network:
     driver: bridge
-  # -> AGREGADO: Declaramos la red externa de HotelFlux para que Compose sepa que ya existe
   hotelflux_core:
     external: true
